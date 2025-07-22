@@ -1,0 +1,311 @@
+{{- if .Values.patroni.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "lakehouse.fullname" . }}-patroni
+  labels:
+    {{- include "lakehouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: patroni
+spec:
+  serviceName: {{ include "lakehouse.fullname" . }}-patroni
+  replicas: 3
+  selector:
+    matchLabels:
+      {{- include "lakehouse.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: patroni
+  template:
+    metadata:
+      labels:
+        {{- include "lakehouse.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: patroni
+    spec:
+      containers:
+      - name: patroni
+        image: {{ .Values.global.imageRepo }}/{{ .Values.patroni.image.repository }}:{{ .Values.patroni.image.tag }}
+        imagePullPolicy: {{ .Values.patroni.image.pullPolicy }}
+        ports:
+        - containerPort: 5432
+          name: postgresql
+        - containerPort: 8008
+          name: patroni-api
+        env:
+        - name: POSTGRESQL_POSTGRES_PASSWORD
+          value: {{ .Values.postgresql.auth.postgresPassword }}
+        - name: POSTGRESQL_USERNAME
+          value: {{ .Values.postgresql.auth.username }}
+        - name: POSTGRESQL_PASSWORD
+          value: {{ .Values.postgresql.auth.password }}
+        - name: POSTGRESQL_DATABASE
+          value: {{ .Values.postgresql.auth.database }}
+        - name: PATRONI_SCOPE
+          value: "lakehouse"
+        - name: PATRONI_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: ETCD_HOSTS
+          value: "{{ include "lakehouse.fullname" . }}-etcd:2379"
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        - name: config
+          mountPath: /etc/patroni
+        resources:
+          {{- toYaml .Values.postgresql.resources | nindent 10 }}
+      volumes:
+      - name: data
+        {{- if .Values.postgresql.primary.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ include "lakehouse.fullname" . }}-patroni-$(MY_POD_NAME)
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+      - name: config
+        configMap:
+          name: {{ include "lakehouse.fullname" . }}-patroni-config
+  volumeClaimTemplates:
+  {{- if .Values.postgresql.primary.persistence.enabled }}
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: {{ .Values.global.storageClass | default "standard" }}
+      resources:
+        requests:
+          storage: {{ .Values.postgresql.primary.persistence.size }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "lakehouse.fullname" . }}-patroni
+  labels:
+    {{- include "lakehouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: patroni
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    name: postgresql
+  - port: 8008
+    targetPort: 8008
+    name: patroni-api
+  selector:
+    {{- include "lakehouse.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: patroni
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "lakehouse.fullname" . }}-patroni-config
+  labels:
+    {{- include "lakehouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: patroni
+data:
+  patroni.yml: |
+    scope: lakehouse
+    namespace: /db/
+    name: ${PATRONI_NAME}
+
+    restapi:
+      listen: 0.0.0.0:8008
+      connect_address: ${PATRONI_NAME}:8008
+      authentication:
+        username: patroni
+        password: patroni123
+
+    kubernetes:
+      namespace: ${PATRONI_K8S_NAMESPACE}
+      labels: {}
+      scope_label: cluster-name
+      role_label: role
+      use_endpoints: true
+
+    bootstrap:
+      dcs:
+        ttl: 30
+        loop_wait: 10
+        retry_timeout: 10
+        maximum_lag_on_failover: 1048576
+        postgresql:
+          use_pg_rewind: true
+          use_slots: true
+          parameters:
+            max_connections: 100
+            shared_buffers: 256MB
+            wal_level: replica
+            hot_standby: "on"
+            max_wal_senders: 10
+            max_replication_slots: 10
+            wal_keep_segments: 8
+            archive_mode: "on"
+            archive_command: "cp %p /var/lib/postgresql/archive/%f"
+            archive_timeout: 1800s
+            log_destination: "stderr"
+            logging_collector: "on"
+            log_directory: "log"
+            log_filename: "postgresql-%Y-%m-%d_%H%M%S.log"
+            log_rotation_age: 1d
+            log_rotation_size: 100MB
+            log_min_duration_statement: 1000
+            log_checkpoints: "on"
+            log_connections: "on"
+            log_disconnections: "on"
+            log_lock_waits: "on"
+            log_temp_files: -1
+            log_autovacuum_min_duration: 0
+            log_error_verbosity: verbose
+            track_activities: "on"
+            track_counts: "on"
+            track_io_timing: "on"
+            track_functions: all
+            stats_temp_directory: "pg_stat_tmp"
+            autovacuum: "on"
+            log_autovacuum_min_duration: 0
+            autovacuum_max_workers: 3
+            autovacuum_naptime: 1min
+            datestyle: "iso, mdy"
+            timezone: "UTC"
+            lc_messages: "C"
+            lc_monetary: "C"
+            lc_numeric: "C"
+            lc_time: "C"
+            default_text_search_config: "pg_catalog.english"
+            deadlock_timeout: 1s
+            max_locks_per_transaction: 64
+            array_nulls: "on"
+            backslash_quote: safe_encoding
+            default_with_oids: "off"
+            escape_string_warning: "on"
+            lo_compat_privileges: "off"
+            operator_precedence_warning: "off"
+            quote_all_identifiers: "off"
+            sql_inheritance: "on"
+            standard_conforming_strings: "on"
+            synchronize_seqscans: "on"
+            log_line_prefix: "%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h "
+            log_lock_waits: "on"
+            log_statement: "none"
+            log_temp_files: -1
+
+      initdb:
+        - encoding: UTF8
+        - data-checksums
+
+      pg_hba:
+        - local   all             all                                     trust
+        - host    all             all             127.0.0.1/32            trust
+        - host    all             all             ::1/128                 trust
+        - host    all             all             0.0.0.0/0               trust
+        - host    all             all             ::/0                     trust
+        - local   replication     all                                     trust
+        - host    replication     all             127.0.0.1/32            trust
+        - host    replication     all             ::1/128                 trust
+        - host    replication     all             0.0.0.0/0               trust
+        - host    replication     all             ::/0                     trust
+
+      users:
+        admin:
+          password: ${POSTGRESQL_POSTGRES_PASSWORD}
+          options:
+            - createrole
+            - createdb
+        ${POSTGRESQL_USERNAME}:
+          password: ${POSTGRESQL_PASSWORD}
+          options:
+            - createrole
+            - createdb
+
+    postgresql:
+      listen: 0.0.0.0:5432
+      connect_address: ${PATRONI_NAME}:5432
+      data_dir: ${PGDATA}
+      pgpass: /tmp/pgpass
+      authentication:
+        replication:
+          username: replicator
+          password: replicator123
+        superuser:
+          username: postgres
+          password: ${POSTGRESQL_POSTGRES_PASSWORD}
+        rewind:
+          username: rewind_user
+          password: rewind123
+      parameters:
+        unix_socket_directories: '/tmp'
+        wal_level: replica
+        hot_standby: "on"
+        max_connections: 100
+        max_prepared_transactions: 0
+        max_locks_per_transaction: 64
+        wal_keep_segments: 8
+        max_wal_senders: 10
+        max_replication_slots: 10
+        track_commit_timestamp: off
+        archive_mode: "on"
+        archive_timeout: 1800s
+        archive_command: "cp %p /var/lib/postgresql/archive/%f"
+        shared_buffers: 256MB
+        effective_cache_size: 512MB
+        work_mem: 4MB
+        maintenance_work_mem: 64MB
+        checkpoint_completion_target: 0.9
+        wal_buffers: 16MB
+        default_statistics_target: 100
+        random_page_cost: 1.1
+        effective_io_concurrency: 200
+        min_wal_size: 1GB
+        max_wal_size: 4GB
+        log_destination: "stderr"
+        logging_collector: "on"
+        log_directory: "log"
+        log_filename: "postgresql-%Y-%m-%d_%H%M%S.log"
+        log_rotation_age: 1d
+        log_rotation_size: 100MB
+        log_min_duration_statement: 1000
+        log_checkpoints: "on"
+        log_connections: "on"
+        log_disconnections: "on"
+        log_lock_waits: "on"
+        log_temp_files: -1
+        log_autovacuum_min_duration: 0
+        log_error_verbosity: verbose
+        track_activities: "on"
+        track_counts: "on"
+        track_io_timing: "on"
+        track_functions: all
+        stats_temp_directory: "pg_stat_tmp"
+        autovacuum: "on"
+        log_autovacuum_min_duration: 0
+        autovacuum_max_workers: 3
+        autovacuum_naptime: 1min
+        datestyle: "iso, mdy"
+        timezone: "UTC"
+        lc_messages: "C"
+        lc_monetary: "C"
+        lc_numeric: "C"
+        lc_time: "C"
+        default_text_search_config: "pg_catalog.english"
+        deadlock_timeout: 1s
+        array_nulls: "on"
+        backslash_quote: safe_encoding
+        default_with_oids: "off"
+        escape_string_warning: "on"
+        lo_compat_privileges: "off"
+        operator_precedence_warning: "off"
+        quote_all_identifiers: "off"
+        sql_inheritance: "on"
+        standard_conforming_strings: "on"
+        synchronize_seqscans: "on"
+        log_line_prefix: "%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h "
+        log_lock_waits: "on"
+        log_statement: "none"
+        log_temp_files: -1
+
+    tags:
+        nofailover: false
+        noloadbalance: false
+        clonefrom: false
+        nosync: false
+{{- end }} 

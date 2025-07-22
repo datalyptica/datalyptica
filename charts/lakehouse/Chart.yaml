@@ -1,0 +1,19 @@
+apiVersion: v2
+name: lakehouse
+description: A Helm chart for on-prem Data Lakehouse Platform
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - lakehouse
+  - iceberg
+  - nessie
+  - trino
+  - spark
+  - minio
+home: https://github.com/Shugur-Network/shudl
+sources:
+  - https://github.com/Shugur-Network/shudl
+maintainers:
+  - name: DevOps Team
+    email: devops@shugur.com

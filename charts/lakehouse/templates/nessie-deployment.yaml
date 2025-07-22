@@ -1,0 +1,86 @@
+{{- if .Values.nessie.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "lakehouse.fullname" . }}-nessie
+  labels:
+    {{- include "lakehouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nessie
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "lakehouse.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: nessie
+  template:
+    metadata:
+      labels:
+        {{- include "lakehouse.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: nessie
+    spec:
+      containers:
+      - name: nessie
+        image: {{ .Values.global.imageRepo }}/{{ .Values.nessie.image.repository }}:{{ .Values.nessie.image.tag }}
+        imagePullPolicy: {{ .Values.nessie.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.nessie.service.port }}
+          name: http
+        env:
+        - name: QUARKUS_HTTP_PORT
+          value: "{{ .Values.nessie.service.port }}"
+        - name: NESSIE_DATABASE_HOST
+          value: "{{ if .Values.patroni.enabled }}{{ include "lakehouse.fullname" . }}-patroni{{ else }}{{ include "lakehouse.fullname" . }}-postgresql{{ end }}"
+        - name: NESSIE_DATABASE_NAME
+          value: "nessie"
+        - name: NESSIE_DATABASE_USER
+          value: "nessie"
+        - name: NESSIE_DATABASE_PASSWORD
+          value: "nessie123"
+        volumeMounts:
+        - name: data
+          mountPath: /opt/nessie/data
+        resources:
+          {{- toYaml .Values.nessie.resources | nindent 10 }}
+      volumes:
+      - name: data
+        {{- if .Values.nessie.persistence.enabled }}
+        persistentVolumeClaim:
+          claimName: {{ include "lakehouse.fullname" . }}-nessie
+        {{- else }}
+        emptyDir: {}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "lakehouse.fullname" . }}-nessie
+  labels:
+    {{- include "lakehouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nessie
+spec:
+  type: {{ .Values.nessie.service.type }}
+  ports:
+  - port: {{ .Values.nessie.service.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "lakehouse.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: nessie
+{{- if .Values.nessie.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "lakehouse.fullname" . }}-nessie
+  labels:
+    {{- include "lakehouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nessie
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.nessie.persistence.size }}
+{{- end }}
+{{- end }} 

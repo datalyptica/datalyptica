@@ -1,0 +1,105 @@
+{{- if .Values.trino.enabled }}
+{{- if .Values.trino.coordinator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "lakehouse.fullname" . }}-trino-coordinator
+  labels:
+    {{- include "lakehouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: trino-coordinator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "lakehouse.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: trino-coordinator
+  template:
+    metadata:
+      labels:
+        {{- include "lakehouse.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: trino-coordinator
+    spec:
+      containers:
+      - name: trino-coordinator
+        image: {{ .Values.global.imageRepo }}/{{ .Values.trino.image.repository }}:{{ .Values.trino.image.tag }}
+        imagePullPolicy: {{ .Values.trino.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.trino.coordinator.service.port }}
+          name: http
+        env:
+        - name: TRINO_PORT
+          value: "{{ .Values.trino.coordinator.service.port }}"
+        resources:
+          {{- toYaml .Values.trino.coordinator.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "lakehouse.fullname" . }}-trino-coordinator
+  labels:
+    {{- include "lakehouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: trino-coordinator
+spec:
+  type: {{ .Values.trino.coordinator.service.type }}
+  ports:
+  - port: {{ .Values.trino.coordinator.service.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "lakehouse.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: trino-coordinator
+{{- end }}
+{{- if .Values.trino.workers.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "lakehouse.fullname" . }}-trino-workers
+  labels:
+    {{- include "lakehouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: trino-workers
+spec:
+  replicas: {{ .Values.trino.workers.replicas }}
+  selector:
+    matchLabels:
+      {{- include "lakehouse.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: trino-workers
+  template:
+    metadata:
+      labels:
+        {{- include "lakehouse.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: trino-workers
+    spec:
+      containers:
+      - name: trino-worker
+        image: {{ .Values.global.imageRepo }}/{{ .Values.trino.image.repository }}:{{ .Values.trino.image.tag }}
+        imagePullPolicy: {{ .Values.trino.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.trino.coordinator.service.port }}
+          name: http
+        env:
+        - name: TRINO_PORT
+          value: "{{ .Values.trino.coordinator.service.port }}"
+        resources:
+          {{- toYaml .Values.trino.workers.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "lakehouse.fullname" . }}-trino-workers
+  labels:
+    {{- include "lakehouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: trino-workers
+spec:
+  type: {{ .Values.trino.coordinator.service.type }}
+  ports:
+  - port: {{ .Values.trino.coordinator.service.port }}
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "lakehouse.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: trino-workers
+{{- end }}
+{{- end }} 

@@ -1,0 +1,130 @@
+version: '3.8'
+
+services:
+  # PostgreSQL for Nessie metadata
+  postgresql:
+    image: ghcr.io/shugur-network/shudl/postgresql:latest
+    container_name: shudl-postgresql
+    environment:
+      POSTGRES_DB: nessie
+      POSTGRES_USER: nessie
+      POSTGRES_PASSWORD: nessie123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    networks:
+      - shudl-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nessie -d nessie"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # MinIO for object storage
+  minio:
+    image: ghcr.io/shugur-network/shudl/minio:latest
+    container_name: shudl-minio
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - shudl-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Nessie catalog service
+  nessie:
+    image: ghcr.io/shugur-network/shudl/nessie:latest
+    container_name: shudl-nessie
+    environment:
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgresql:5432/nessie
+      QUARKUS_DATASOURCE_USERNAME: nessie
+      QUARKUS_DATASOURCE_PASSWORD: nessie123
+      NESSIE_VERSION_STORE_TYPE: JDBC
+    ports:
+      - "19120:19120"
+    networks:
+      - shudl-network
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:19120/api/v2/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Trino query engine
+  trino:
+    image: ghcr.io/shugur-network/shudl/trino:latest
+    container_name: shudl-trino
+    environment:
+      ICEBERG_REST_URI: http://nessie:19120/iceberg/main/
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: admin
+      S3_SECRET_KEY: password123
+    ports:
+      - "8080:8080"
+    networks:
+      - shudl-network
+    depends_on:
+      nessie:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Spark compute engine
+  spark:
+    image: ghcr.io/shugur-network/shudl/spark:latest
+    container_name: shudl-spark
+    environment:
+      SPARK_MODE: master
+      ICEBERG_REST_URI: http://nessie:19120/iceberg/main/
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: admin
+      S3_SECRET_KEY: password123
+    ports:
+      - "8081:8080"  # Spark UI
+      - "7077:7077"  # Spark master
+    networks:
+      - shudl-network
+    depends_on:
+      nessie:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  postgresql_data:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  shudl-network:
+    driver: bridge
