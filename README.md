@@ -22,18 +22,17 @@ A comprehensive on-premises Data Lakehouse Platform with Apache Iceberg, Project
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-## 📁 Standardized Directory Structure
+## 📁 Project Structure
 
 ```
 shudl/
-├── docker-compose.yml              # Main Docker Compose file
-├── docker/
-│   ├── base/                       # Base images
-│   │   ├── alpine/
-│   │   │   └── Dockerfile
-│   │   └── java/
-│   │       └── Dockerfile
-│   ├── services/                   # Service images
+├── docker/                         # Docker-based deployment
+│   ├── .env                        # Environment configuration
+│   ├── docker-compose.yml          # Main Docker Compose file
+│   ├── env-manager.sh              # Environment management script
+│   ├── test-config.sh              # Configuration validation
+│   ├── README-config.md            # Configuration documentation
+│   ├── services/                   # Service Docker images
 │   │   ├── minio/
 │   │   │   ├── Dockerfile
 │   │   │   └── scripts/
@@ -109,79 +108,94 @@ All service images follow these standards:
 git clone https://github.com/Shugur-Network/shudl.git
 cd shudl
 
+# Navigate to docker directory
+cd docker
+
 # Configure environment (recommended)
-./configure.sh setup
+./env-manager.sh setup dev
 
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # Check service status
-docker-compose ps
+docker compose ps
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ### Access Services
-- **MinIO Console**: http://localhost:9001 (admin/[check .env file])
+- **MinIO Console**: http://localhost:9001 (admin/password123)
 - **Trino**: http://localhost:8080
 - **Spark UI**: http://localhost:4040
-- **Nessie API**: http://localhost:19120
+- **Nessie API**: http://localhost:19120/api/v2
 
-> 💡 **Tip**: Use `./configure.sh show` to see current credentials
+> 💡 **Tip**: Use `./env-manager.sh show` to see current credentials
 
 ## 🔧 Configuration
 
 ### Configuration Management
 
-ShuDL uses a secure, template-based configuration system:
+ShuDL uses an environment-based configuration system managed through Docker Compose:
 
 ```bash
-# Setup initial configuration with secure passwords
-./configure.sh setup
+# Navigate to docker directory
+cd docker
+
+# Setup development environment
+./env-manager.sh setup dev
+
+# Setup production environment (requires password updates)
+./env-manager.sh setup prod
 
 # Validate current configuration
-./configure.sh validate
+./env-manager.sh validate
 
-# Show current configuration (redacted)
-./configure.sh show
+# Show current configuration (secrets hidden)
+./env-manager.sh show
 
-# Generate new secure passwords
-./configure.sh generate
-
-# Test configuration files
-./configure.sh test
+# Test configuration
+./test-config.sh
 ```
 
 ### Environment Variables
-All services use environment variables for configuration. These are managed through the configuration system:
+All services use environment variables for configuration. These are managed through the `.env` file:
 
-```yaml
-# MinIO (configured via .env)
-MINIO_ROOT_USER=admin
-MINIO_ROOT_PASSWORD=<generated-secure-password>
+```bash
+# Core Configuration
+COMPOSE_PROJECT_NAME=shudl
+POSTGRES_PASSWORD=nessie123
+S3_SECRET_KEY=password123
 
-# PostgreSQL (configured via .env)
-POSTGRES_DB=shudl
-POSTGRES_USER=shudl
-POSTGRES_PASSWORD=<generated-secure-password>
-
-# Nessie (configured via templates)
-QUARKUS_DATASOURCE_HOST=postgresql
-QUARKUS_DATASOURCE_DB_NAME=nessie
-
-# Trino (configured via templates)
-TRINO_COORDINATOR=true
-TRINO_DISCOVERY_URI=http://trino:8080
-
-# Spark (configured via templates)
-SPARK_MODE=master
-SPARK_MASTER_URL=spark://spark:7077
+# Performance Settings
+TRINO_QUERY_MAX_MEMORY=2GB
+SPARK_DRIVER_MEMORY=2g
 ```
 
-**Security Features:**
-- ✅ No hardcoded passwords in any files
-- ✅ Secure password generation
+For detailed configuration documentation, see [`docker/README-config.md`](docker/README-config.md).
+
+### Environment Templates
+
+ShuDL provides environment templates for different deployment scenarios:
+
+- **Development** (`.env.dev`): Lower resources, development passwords
+- **Production** (`.env.prod`): Production resources, secure password placeholders
+
+```bash
+# Use development template
+cd docker
+./env-manager.sh setup dev
+
+# Use production template (remember to update passwords!)
+./env-manager.sh setup prod
+```
+
+**Configuration Features:**
+- ✅ Environment-based configuration (no config file mounting)
+- ✅ 160+ configurable parameters
+- ✅ Security-focused (credentials via environment variables)
+- ✅ Easy environment switching (dev/staging/prod)
+- ✅ Comprehensive validation and testing
 - ✅ Template-based configuration
 - ✅ Runtime environment validation
 

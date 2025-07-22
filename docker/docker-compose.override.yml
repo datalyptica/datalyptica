@@ -1,0 +1,35 @@
+# Docker Compose Override for Development
+# This file can be used to override settings for local development
+# Use: docker-compose -f docker-compose.yml -f docker-compose.override.yml up
+
+services:
+  postgresql:
+    # Enable debug logging for development
+    command: ["postgres", "-c", "log_statement=all", "-c", "log_min_duration_statement=0"]
+    
+  minio:
+    # Expose additional MinIO configuration for development
+    environment:
+      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
+      
+  nessie:
+    # Enable debug logging
+    environment:
+      QUARKUS_LOG_LEVEL: DEBUG
+      QUARKUS_LOG_CATEGORY_ORG_PROJECTNESSIE_LEVEL: DEBUG
+      
+  trino:
+    # Enable query logging for development
+    environment:
+      TRINO_LOG_LEVEL: DEBUG
+      
+  spark-master:
+    # Enable Spark history server for development
+    environment:
+      SPARK_HISTORY_OPTS: "-Dspark.history.fs.logDirectory=/tmp/spark-events"
+    volumes:
+      - spark_events:/tmp/spark-events
+
+volumes:
+  spark_events:
+    driver: local

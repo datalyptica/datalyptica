@@ -1,0 +1,302 @@
+version: '3.8'
+
+services:
+  # MinIO Object Storage
+  minio:
+    image: ghcr.io/shugur-network/shudl/minio:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-minio
+    ports:
+      - "${MINIO_API_PORT}:9000"  # API
+      - "${MINIO_CONSOLE_PORT}:9001"  # Console
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_VOLUMES=/data
+      - MINIO_OPTS=--console-address :9001
+      - MINIO_REGION=${MINIO_REGION}
+      - MINIO_DEFAULT_BUCKETS=${MINIO_BUCKET_NAME}
+    volumes:
+      - minio_data:/data
+    networks:
+      - ${NETWORK_NAME}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: ${HEALTHCHECK_INTERVAL}
+      timeout: ${HEALTHCHECK_TIMEOUT}
+      retries: ${HEALTHCHECK_RETRIES}
+      start_period: ${HEALTHCHECK_START_PERIOD}
+
+  # PostgreSQL Database
+  postgresql:
+    image: ghcr.io/shugur-network/shudl/postgresql:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-postgresql
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      # Database Configuration
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      
+      # ShuDL specific database settings
+      - SHUDL_DB=${SHUDL_DB}
+      - SHUDL_USER=${SHUDL_USER}
+      - SHUDL_PASSWORD=${SHUDL_PASSWORD}
+      - NESSIE_DB=${NESSIE_DB}
+      
+      # Performance Configuration
+      - POSTGRES_MAX_CONNECTIONS=${POSTGRES_MAX_CONNECTIONS}
+      - POSTGRES_SHARED_BUFFERS=${POSTGRES_SHARED_BUFFERS}
+      - POSTGRES_EFFECTIVE_CACHE_SIZE=${POSTGRES_EFFECTIVE_CACHE_SIZE}
+      - POSTGRES_WORK_MEM=${POSTGRES_WORK_MEM}
+      - POSTGRES_MAINTENANCE_WORK_MEM=${POSTGRES_MAINTENANCE_WORK_MEM}
+      - POSTGRES_WAL_LEVEL=${POSTGRES_WAL_LEVEL}
+      - POSTGRES_MAX_WAL_SIZE=${POSTGRES_MAX_WAL_SIZE}
+      - POSTGRES_MIN_WAL_SIZE=${POSTGRES_MIN_WAL_SIZE}
+      - POSTGRES_CHECKPOINT_COMPLETION_TARGET=${POSTGRES_CHECKPOINT_COMPLETION_TARGET}
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    networks:
+      - ${NETWORK_NAME}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: ${HEALTHCHECK_INTERVAL}
+      timeout: ${HEALTHCHECK_TIMEOUT}
+      retries: ${HEALTHCHECK_RETRIES}
+      start_period: ${HEALTHCHECK_START_PERIOD}
+
+  # Nessie Catalog Service
+  nessie:
+    image: ghcr.io/shugur-network/shudl/nessie:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-nessie
+    ports:
+      - "${NESSIE_PORT}:19120"
+    environment:
+      # Server Configuration
+      - QUARKUS_HTTP_PORT=${NESSIE_PORT}
+      - QUARKUS_HTTP_HOST=${NESSIE_HOST}
+      
+      # CORS Configuration
+      - QUARKUS_HTTP_CORS=${NESSIE_CORS_ENABLED}
+      - QUARKUS_HTTP_CORS_ORIGINS=${NESSIE_CORS_ORIGINS}
+      - QUARKUS_HTTP_CORS_METHODS=${NESSIE_CORS_METHODS}
+      - QUARKUS_HTTP_CORS_HEADERS=${NESSIE_CORS_HEADERS}
+      - QUARKUS_HTTP_CORS_EXPOSED_HEADERS=${NESSIE_CORS_EXPOSED_HEADERS}
+      - QUARKUS_HTTP_CORS_ACCESS_CONTROL_MAX_AGE=${NESSIE_CORS_MAX_AGE}
+      
+      # Database Configuration
+      - NESSIE_VERSION_STORE_TYPE=${NESSIE_VERSION_STORE_TYPE}
+      - NESSIE_VERSION_STORE_PERSIST_JDBC_DATASOURCE=${NESSIE_DATASOURCE_NAME}
+      - QUARKUS_DATASOURCE_POSTGRESQL_JDBC_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
+      - QUARKUS_DATASOURCE_POSTGRESQL_USERNAME=${POSTGRES_USER}
+      - QUARKUS_DATASOURCE_POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      - QUARKUS_DATASOURCE_POSTGRESQL_JDBC_INITIAL_SIZE=${NESSIE_DB_INITIAL_SIZE}
+      - QUARKUS_DATASOURCE_POSTGRESQL_JDBC_MIN_SIZE=${NESSIE_DB_MIN_SIZE}
+      - QUARKUS_DATASOURCE_POSTGRESQL_JDBC_MAX_SIZE=${NESSIE_DB_MAX_SIZE}
+      
+      # Legacy environment variables for compatibility
+      - QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
+      - QUARKUS_DATASOURCE_USERNAME=${QUARKUS_DATASOURCE_USERNAME}
+      - QUARKUS_DATASOURCE_PASSWORD=${QUARKUS_DATASOURCE_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      
+      # Catalog Configuration
+      - NESSIE_CATALOG_DEFAULT_WAREHOUSE=${NESSIE_DEFAULT_WAREHOUSE}
+      - NESSIE_CATALOG_WAREHOUSES_WAREHOUSE_LOCATION=${NESSIE_WAREHOUSE_LOCATION}
+      - WAREHOUSE_LOCATION=${WAREHOUSE_LOCATION}
+      
+      # S3/MinIO Configuration
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - MINIO_REGION=${MINIO_REGION}
+    networks:
+      - ${NETWORK_NAME}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:19120/api/v2/config"]
+      interval: ${HEALTHCHECK_INTERVAL}
+      timeout: ${HEALTHCHECK_TIMEOUT}
+      retries: 5
+      start_period: 60s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Nessie Catalog (Updated to 0.104.2 with JDBC backend and REST catalog)
+  nessie:
+    image: ghcr.io/shugur-network/shudl/nessie:latest
+    container_name: shunessie
+    ports:
+      - "19120:19120"
+    environment:
+      - QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
+      - QUARKUS_DATASOURCE_USERNAME=${QUARKUS_DATASOURCE_USERNAME}
+      - QUARKUS_DATASOURCE_PASSWORD=${QUARKUS_DATASOURCE_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - WAREHOUSE_LOCATION=${WAREHOUSE_LOCATION}
+      - MINIO_REGION=${MINIO_REGION}
+    networks:
+      - shunetwork
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:19120/api/v2/config"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Trino Query Engine (Updated to 448 with Iceberg 1.9.1 and REST catalog)
+  trino:
+    image: ghcr.io/shugur-network/shudl/trino:latest
+    container_name: shutrino
+    ports:
+      - "8080:8080"
+    environment:
+      - TRINO_COORDINATOR=true
+      - TRINO_DISCOVERY_URI=http://trino:8080
+      # Iceberg REST Catalog Configuration
+      - TRINO_CATALOG_ICEBERG_CATALOG_TYPE=rest
+      - TRINO_CATALOG_ICEBERG_REST_CATALOG_URI=${NESSIE_URI}
+      - TRINO_CATALOG_ICEBERG_REST_CATALOG_WAREHOUSE=${WAREHOUSE_LOCATION}
+      # S3/MinIO Configuration
+      - TRINO_CATALOG_ICEBERG_S3_ENDPOINT=${S3_ENDPOINT}
+      - TRINO_CATALOG_ICEBERG_S3_REGION=${MINIO_REGION}
+      - TRINO_CATALOG_ICEBERG_S3_PATH_STYLE_ACCESS=true
+      - TRINO_CATALOG_ICEBERG_S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - TRINO_CATALOG_ICEBERG_S3_SECRET_KEY=${S3_SECRET_KEY}
+    volumes:
+      - ./config/trino:/opt/trino/etc:ro
+    networks:
+      - shunetwork
+    depends_on:
+      minio:
+        condition: service_healthy
+      nessie:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Spark Master
+  spark-master:
+    image: ghcr.io/shugur-network/shudl/spark:latest
+    container_name: shuspark-master
+    ports:
+      - "4040:4040"  # Spark UI
+      - "7077:7077"  # Spark Master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_WEBUI_PORT=4040
+      - SPARK_RPC_AUTHENTICATION_ENABLED=false
+      - SPARK_RPC_ENCRYPTION_ENABLED=false
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=false
+      - SPARK_SSL_ENABLED=false
+      - SPARK_MASTER_URL=${SPARK_MASTER_URL}
+      # Environment variables for template processing
+      - NESSIE_URI=${NESSIE_URI}
+      - WAREHOUSE_LOCATION=${WAREHOUSE_LOCATION}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - MINIO_REGION=${MINIO_REGION}
+      # Iceberg REST Catalog Configuration
+      - SPARK_SQL_CATALOG_NESSIE_TYPE=rest
+      - SPARK_SQL_CATALOG_NESSIE_URI=${NESSIE_URI}
+      - SPARK_SQL_CATALOG_NESSIE_WAREHOUSE=${WAREHOUSE_LOCATION}
+      # S3/MinIO Configuration
+      - SPARK_SQL_CATALOG_NESSIE_S3_ENDPOINT=${S3_ENDPOINT}
+      - SPARK_SQL_CATALOG_NESSIE_S3_REGION=${MINIO_REGION}
+      - SPARK_SQL_CATALOG_NESSIE_S3_PATH_STYLE_ACCESS=true
+      - SPARK_SQL_CATALOG_NESSIE_S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - SPARK_SQL_CATALOG_NESSIE_S3_SECRET_KEY=${S3_SECRET_KEY}
+    volumes:
+      - ./config/spark:/opt/spark/conf:ro
+      - ./config/spark/spark-defaults.conf.template:/opt/spark/conf/spark-defaults.conf.template:ro
+    networks:
+      - shunetwork
+    depends_on:
+      minio:
+        condition: service_healthy
+      nessie:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Spark Worker
+  spark-worker:
+    image: ghcr.io/shugur-network/shudl/spark:latest
+    container_name: shuspark-worker
+    ports:
+      - "4041:4040"  # Spark Worker UI
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_RPC_AUTHENTICATION_ENABLED=false
+      - SPARK_RPC_ENCRYPTION_ENABLED=false
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=false
+      - SPARK_SSL_ENABLED=false
+      - SPARK_MASTER_URL=${SPARK_MASTER_URL}
+      - SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY}
+      - SPARK_WORKER_CORES=${SPARK_WORKER_CORES}
+      # Iceberg REST Catalog Configuration
+      - SPARK_SQL_CATALOG_NESSIE_TYPE=rest
+      - SPARK_SQL_CATALOG_NESSIE_URI=${NESSIE_URI}
+      - SPARK_SQL_CATALOG_NESSIE_WAREHOUSE=${WAREHOUSE_LOCATION}
+      # S3/MinIO Configuration
+      - SPARK_SQL_CATALOG_NESSIE_S3_ENDPOINT=${S3_ENDPOINT}
+      - SPARK_SQL_CATALOG_NESSIE_S3_REGION=${MINIO_REGION}
+      - SPARK_SQL_CATALOG_NESSIE_S3_PATH_STYLE_ACCESS=true
+      - SPARK_SQL_CATALOG_NESSIE_S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - SPARK_SQL_CATALOG_NESSIE_S3_SECRET_KEY=${S3_SECRET_KEY}
+    volumes:
+      - ./config/spark:/opt/spark/conf:ro
+    networks:
+      - shunetwork
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  minio_data:
+    driver: local
+  postgresql_data:
+    driver: local
+
+networks:
+  shunetwork:
+    driver: bridge 
