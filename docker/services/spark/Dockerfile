@@ -16,8 +16,7 @@ ENV SPARK_HOME=/opt/spark
 ENV JAVA_HOME=/opt/java/openjdk
 ENV PATH=$JAVA_HOME/bin:$SPARK_HOME/bin:$PATH
 
-# Set default AWS region for Iceberg S3FileIO (credentials set via docker-compose)
-ENV AWS_REGION=us-east-1
+# AWS region will be set via environment variables from docker-compose
 
 # Switch to root for installation
 USER root
@@ -75,7 +74,8 @@ RUN wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.20.16
 RUN mkdir -p /tmp/spark-events
 
 # Copy Spark configuration files
-COPY config/spark/spark-defaults.conf ${SPARK_HOME}/conf/spark-defaults.conf
+# Static spark-defaults.conf removed - using template-based configuration only
+COPY config/spark/spark-defaults.conf.template ${SPARK_HOME}/conf/spark-defaults.conf.template
 COPY config/spark/spark-env.sh ${SPARK_HOME}/conf/spark-env.sh
 RUN chmod +x ${SPARK_HOME}/conf/spark-env.sh
 

@@ -1,72 +1,74 @@
 # Spark Configuration Template
 # This file is processed at runtime to substitute environment variables
+# Based on the working static configuration
 
-# Application Configuration
-spark.app.name                   ShuDL-Spark
+# Spark Core Configuration
 spark.master                     ${SPARK_MASTER_URL}
-spark.submit.deployMode          client
+spark.driver.memory              ${SPARK_DRIVER_MEMORY:-2g}
+spark.driver.maxResultSize       ${SPARK_DRIVER_MAX_RESULT_SIZE:-1g}
+spark.executor.memory            ${SPARK_EXECUTOR_MEMORY:-2g}
+spark.executor.cores             ${SPARK_EXECUTOR_CORES:-2}
+spark.executor.instances         ${SPARK_EXECUTOR_INSTANCES:-2}
+spark.dynamicAllocation.enabled  ${SPARK_DYNAMIC_ALLOCATION_ENABLED:-false}
+spark.serializer                ${SPARK_SERIALIZER:-org.apache.spark.serializer.KryoSerializer}
+spark.sql.adaptive.enabled       ${SPARK_SQL_ADAPTIVE_ENABLED:-true}
+spark.sql.adaptive.coalescePartitions.enabled ${SPARK_SQL_ADAPTIVE_COALESCE_PARTITIONS_ENABLED:-true}
+spark.sql.adaptive.skewJoin.enabled ${SPARK_SQL_ADAPTIVE_SKEW_JOIN_ENABLED:-true}
 
-# Memory Configuration
-spark.driver.memory              1g
-spark.driver.maxResultSize       512m
-spark.executor.memory            1g
-spark.executor.cores             1
+# Spark SQL Configuration with Iceberg Nessie Catalog (matches working Trino config)
+spark.sql.extensions             org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+spark.sql.catalog.iceberg        org.apache.iceberg.spark.SparkCatalog
+spark.sql.catalog.iceberg.catalog-impl org.apache.iceberg.nessie.NessieCatalog
+spark.sql.catalog.iceberg.uri    ${SPARK_ICEBERG_URI}
+spark.sql.catalog.iceberg.ref    ${SPARK_ICEBERG_REF:-main}
+spark.sql.catalog.iceberg.warehouse ${SPARK_ICEBERG_WAREHOUSE}
+spark.sql.catalog.iceberg.io-impl ${SPARK_ICEBERG_IO_IMPL}
+spark.sql.catalog.iceberg.s3.endpoint ${S3_ENDPOINT}
+spark.sql.catalog.iceberg.s3.access-key-id ${S3_ACCESS_KEY}
+spark.sql.catalog.iceberg.s3.secret-access-key ${S3_SECRET_KEY}
+spark.sql.catalog.iceberg.s3.path-style-access ${S3_PATH_STYLE_ACCESS:-true}
+spark.sql.defaultCatalog         ${SPARK_ICEBERG_CATALOG_NAME:-iceberg}
 
-# SQL Configuration
-spark.sql.adaptive.enabled       true
-spark.sql.adaptive.coalescePartitions.enabled true
-
-# Iceberg Catalog Configuration (REST)
-spark.sql.catalog.nessie                    org.apache.iceberg.spark.SparkCatalog
-spark.sql.catalog.nessie.catalog-impl      org.apache.iceberg.rest.RESTCatalog
-spark.sql.catalog.nessie.uri               ${NESSIE_URI}
-spark.sql.catalog.nessie.warehouse         ${WAREHOUSE_LOCATION}
-spark.sql.catalog.nessie.s3.endpoint       ${S3_ENDPOINT}
-spark.sql.catalog.nessie.s3.path-style-access true
-
-# Legacy Iceberg Configuration (for compatibility)
-spark.sql.catalog.iceberg.type   nessie
-spark.sql.catalog.iceberg.uri    ${NESSIE_URI}
-spark.sql.catalog.iceberg.ref    main
-spark.sql.catalog.iceberg.authentication.type NONE
-spark.sql.catalog.iceberg.warehouse ${WAREHOUSE_LOCATION}
-
-# S3 Configuration (credentials provided via environment variables)
+# S3 Configuration (Hadoop S3A for legacy compatibility)
 spark.hadoop.fs.s3a.endpoint    ${S3_ENDPOINT}
 spark.hadoop.fs.s3a.access.key  ${S3_ACCESS_KEY}
 spark.hadoop.fs.s3a.secret.key  ${S3_SECRET_KEY}
-spark.hadoop.fs.s3a.path.style.access true
+spark.hadoop.fs.s3a.path.style.access ${S3_PATH_STYLE_ACCESS:-true}
 spark.hadoop.fs.s3a.impl        org.apache.hadoop.fs.s3a.S3AFileSystem
 spark.hadoop.fs.s3a.aws.credentials.provider org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
 
 # Spark UI Configuration
-spark.ui.port                    4040
+spark.ui.port                    ${SPARK_UI_PORT:-4040}
 spark.ui.retainedJobs            100
 spark.ui.retainedStages          100
 spark.ui.retainedTasks           100
 
 # Spark History Server Configuration
-spark.history.ui.port            18080
-spark.history.fs.logDirectory    ${WAREHOUSE_LOCATION}/spark-history
-spark.history.fs.update.interval 10s
-spark.history.retainedApplications 50
+spark.history.fs.logDirectory    ${SPARK_ICEBERG_WAREHOUSE}/spark-history
+spark.history.fs.cleaner.enabled true
+spark.history.fs.cleaner.interval 1d
+spark.history.fs.cleaner.maxAge  7d
 
-# Spark SQL Configuration
-spark.sql.warehouse.dir          ${WAREHOUSE_LOCATION}/spark-warehouse
-spark.sql.catalogImplementation hive
+# Spark Event Log Configuration
+spark.eventLog.enabled           false
 
-# Delta Lake Configuration (if using Delta)
-spark.sql.extensions            io.delta.sql.DeltaSparkSessionExtension,org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
-spark.sql.catalog.spark_catalog  org.apache.spark.sql.delta.catalog.DeltaCatalog
+# Spark Network Configuration
+spark.network.timeout            800s
+spark.executor.heartbeatInterval 60s
+spark.rpc.askTimeout             800s
+spark.rpc.lookupTimeout          800s
 
-# Serialization Configuration
-spark.serializer                 org.apache.spark.serializer.KryoSerializer
-spark.kryo.registrator           org.apache.iceberg.spark.IcebergKryoRegistrator
+# Spark Shuffle Configuration
+spark.sql.shuffle.partitions     200
+spark.default.parallelism        200
 
-# Network Configuration
-spark.sql.adaptive.advisoryPartitionSizeInBytes 128MB
-spark.sql.adaptive.skewJoin.enabled true
+# Spark Memory Configuration
+spark.memory.fraction            0.8
+spark.memory.storageFraction     0.3
+spark.memory.offHeap.enabled     false
+spark.memory.offHeap.size        0
 
-# Performance Configuration
-spark.sql.adaptive.localShuffleReader.enabled true
-spark.sql.adaptive.optimizeSkewsInRebalancePartitions.enabled true
+# Spark Serialization Configuration
+spark.serializer                org.apache.spark.serializer.KryoSerializer
+spark.kryoserializer.buffer.max  2047m
+spark.kryo.registrationRequired   false

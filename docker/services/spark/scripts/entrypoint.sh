@@ -18,20 +18,10 @@ process_config_templates() {
     echo "Configuration templates processed."
 }
 
-# Set default AWS environment variables if not provided (for development only)
-export AWS_REGION=${AWS_REGION:-us-east-1}
-
-# Validate required environment variables
-if [ -z "$S3_ACCESS_KEY" ] || [ -z "$S3_SECRET_KEY" ]; then
-    echo "WARNING: S3_ACCESS_KEY and S3_SECRET_KEY environment variables should be set"
-    echo "Using fallback values for development (not secure for production)"
-    export S3_ACCESS_KEY=${S3_ACCESS_KEY:-minioadmin}
-    export S3_SECRET_KEY=${S3_SECRET_KEY:-"CHANGE_ME"}
-fi
-
-# Set AWS credentials from S3 variables for compatibility
-export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-$S3_ACCESS_KEY}
-export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-$S3_SECRET_KEY}
+# Set AWS credentials from S3 variables for compatibility (no fallbacks - must be provided via docker-compose)
+export AWS_ACCESS_KEY_ID=${S3_ACCESS_KEY}
+export AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}
+export AWS_REGION=${S3_REGION}
 
 # Install additional Python packages if needed (check if already installed)
 install_python_packages() {
@@ -53,6 +43,7 @@ start_master() {
     echo "Starting Spark master..."
     echo "Web UI Port: ${SPARK_WEBUI_PORT:-4040}"
     echo "RPC Port: 7077"
+    echo "Daemon Memory: ${SPARK_DAEMON_MEMORY:-1g}"
     
     # Process configuration templates
     process_config_templates
@@ -61,6 +52,7 @@ start_master() {
     HADOOP_USER_NAME=spark \
     USER=spark \
     exec ${SPARK_HOME}/bin/spark-class \
+        -Xmx${SPARK_DAEMON_MEMORY:-1g} \
         -Dhadoop.security.authentication=simple \
         -Dhadoop.security.authorization=false \
         -Duser.name=spark \
@@ -77,6 +69,7 @@ start_worker() {
     echo "Master: $SPARK_MASTER_URL"
     echo "Cores: ${SPARK_WORKER_CORES:-2}"
     echo "Memory: ${SPARK_WORKER_MEMORY:-2g}"
+    echo "Daemon Memory: ${SPARK_DAEMON_MEMORY:-1g}"
     echo "Web UI Port: 4040"
     
     # Process configuration templates
@@ -93,6 +86,7 @@ start_worker() {
     HADOOP_USER_NAME=spark \
     USER=spark \
     exec ${SPARK_HOME}/bin/spark-class \
+        -Xmx${SPARK_DAEMON_MEMORY:-1g} \
         -Dhadoop.security.authentication=simple \
         -Dhadoop.security.authorization=false \
         -Duser.name=spark \

@@ -1,182 +1,274 @@
-# ShuDL (Shugur Data Lakehouse) - AI Coding Agent Instructions
+# GitHub Copilot Instructions for ShuDL
 
-## Architecture Overview
+> **Project**: Shugur Data Lakehouse Platform (ShuDL)  
+> **Purpose**: Comprehensive on-premises data lakehouse with Apache Iceberg, Nessie, MinIO, PostgreSQL, Trino, and Spark  
+> **Architecture**: Docker Compose orchestrated multi-service platform with environment-driven configuration
 
-ShuDL is a comprehensive Data Lakehouse platform integrating:
-- **MinIO** (S3-compatible object storage) 
-- **PostgreSQL/Patroni** (metadata store with HA)
-- **Nessie** (Git-like catalog with JDBC2 backend + REST API)
-- **Trino** (query engine with REST catalog integration)
-- **Spark** (compute engine with Iceberg support)
+## 📋 Project Overview
 
-ShuDL bundles  
-| Layer | Component | Version | Notes |
-|-------|-----------|---------|-------|
-| Object store | **MinIO** | RELEASE.2025-06-13 | S3, erasure 8 + 3 |
-| Metadata DB | **PostgreSQL 16 / Patroni** | HA via K8s DCS / etcd |
-| Table catalog | **Project Nessie** | **0.104.2** | JDBC2 backend |
-| Table format | **Apache Iceberg** | **1.9.1** | Spec v3 |
-| Ingestion | **Debezium 2.5** + **Kafka (KRaft) 4.x** | No ZooKeeper |
-| SQL engine | **Trino** | **448** | REST catalog |
-| Batch engine | **Spark** | **3.5** | Iceberg jars |
-| Security | Keycloak OIDC · Apache Ranger 3.x |
-| Observability | Prometheus 2.50, Grafana 11, Loki |
-| Admin UI | Lakehouse Manager portal (React + Go) |
----
+ShuDL is a production-ready data lakehouse platform that combines:
+- **Apache Iceberg**: Table format with ACID transactions and time travel
+- **Project Nessie**: Git-like data catalog with versioning
+- **MinIO**: S3-compatible object storage
+- **PostgreSQL/Patroni**: Metadata storage with optional HA
+- **Trino**: Distributed SQL query engine
+- **Apache Spark**: Big data processing framework
 
-ShuDL is designed for both development and production use cases, providing a unified platform for data ingestion, storage, and analytics. It supports a variety of deployment models, from local Docker setups to full-scale Kubernetes clusters.
-ShuDL is built with a focus on modularity and extensibility, allowing users to customize and scale their data lakehouse as needed. The platform is optimized for performance and reliability, ensuring that data operations can be performed efficiently across large datasets.
+## 🏗️ Architecture Patterns
 
-The platform supports both standalone (Docker) and distributed or H/A (Kubernetes / VM) deployments with identical configurations.
-
-## 2 Deployment Types
-
-| Driver (`lakectl`) | Modes | Target | P0 status |
-|-------------------|-------|--------|-----------|
-| **docker** | **stand-alone only** | Dev / PoC | working |
-| **k8s** | stand-alone or **HA** | KinD & prod K8s | stand-alone in P0 |
-| **vm** | stand-alone or **HA** | Bare-metal / VMs | placeholder |
----
-
-## Project Structure
+### Docker Compose Stack Architecture
 ```
-docker/                  # Dockerfiles
-charts/lakehouse/        # Helm umbrella chart
-installer/cmd/lakectl/   # Interactive installer
-infra/terraform/         # bare-metal K8s later
-portal/                  # React + Go later
-.github/workflows/       # CI pipelines
+MinIO (Object Storage) ←→ Nessie (Catalog) ←→ PostgreSQL (Metadata)
+    ↓                         ↓                      ↓
+  Trino (Query Engine) ←→ Spark (Compute) ←→ Lakehouse Tables
 ```
-
-## Critical Project Patterns
-
-### Docker Image Hierarchy
-```
-base/alpine → services/minio,nessie,trino
-base/java → services/spark,trino  
-base/postgresql → services/postgresql,patroni
-```
-- All images use non-root users (`shusr`)
-- LABEL maintainer="devops@shugur.com".
-- Multi-architecture builds (amd64/arm64) via `--platform` flag
-- Standardized health checks on service-specific ports
-- Build order enforced: base images → postgresql base → services
-
-### Configuration Management
-- External configs in `docker/config/<service>/` mounted as volumes
-- Environment variables for runtime settings (credentials, endpoints)
-- **Pattern**: JDBC URLs use service names: `jdbc:postgresql://postgresql:5432/nessie`
-- **Pattern**: REST catalog endpoints: `http://nessie:19120/iceberg/main/`
-- S3 endpoints always use path-style access: `s3.path-style-access=true`
-- Kafka in KRaft mode (broker,controller) — no ZooKeeper.
 
 ### Service Dependencies
-- **PostgreSQL** must be healthy before starting Nessie
-- **MinIO** must be ready before Trino/Spark can access Iceberg tables
-- **Nessie** must be fully initialized before Trino/Spark can query Iceberg tables
-- **Trino** and **Spark** must be configured to use Nessie REST catalog
-
-
-### Service Integration Model
-The stack follows a dependency chain:
 1. **PostgreSQL** (foundational metadata store)
-2. **MinIO** (object storage, auto-creates `lakehouse` bucket)
-3. **Nessie** (waits for PostgreSQL, provides REST catalog at `/iceberg/main/`)
-4. **Trino + Spark** (consume Nessie REST catalog)
-5. **Debezium + Kafka** (for CDC, not in P0)
-6. **Keycloak** (for security, not in P0)
+2. **MinIO** (object storage, parallel to PostgreSQL)
+3. **Nessie** (depends on PostgreSQL + MinIO)
+4. **Trino & Spark** (depend on Nessie + MinIO)
 
+### Health Check System
+- All services use standardized health checks
+- Dependency management via Docker Compose `depends_on` with conditions
+- Configurable timeouts, retries, and grace periods
 
+## 🔧 Configuration Management System
 
-### Development Workflows
+### Environment-Driven Configuration
+- **Central Configuration**: All settings in `docker/.env` file
+- **No Config File Mounting**: Dynamic generation from environment variables
+- **Template-Based**: Development (`.env.dev`) and production (`.env.prod`) templates
+- **160+ Environment Variables**: Comprehensive configuration coverage
 
-**Build Everything:**
+### Key Configuration Files
+- `docker/.env` - Active environment configuration
+- `docker/docker-compose.yml` - Service orchestration with env var substitution
+- `docker/env-manager.sh` - Environment management utilities
+- `docker/test-config.sh` - Configuration validation and testing
+
+### Configuration Patterns
 ```bash
-./docker/build.sh [tag]  # Builds in dependency order
+# Environment setup
+./env-manager.sh setup dev|prod|custom
+
+# Validation
+./test-config.sh
+
+# Service access patterns
+POSTGRES_*=    # Database configuration
+MINIO_*=       # Object storage
+NESSIE_*=      # Catalog service
+TRINO_*=       # Query engine
+SPARK_*=       # Compute engine
+S3_*=          # Shared storage credentials
 ```
 
-**Test Integration:**
-```bash
-./tmp/run_all_tests.sh          # Full integration test suite
-./tmp/comprehensive_integration_test.sh  # Component health checks
-./tmp/<service>_test.sh         # Individual service tests
+## 🐳 Docker Image Architecture
+
+### Base Image Hierarchy
+```
+base-alpine (50MB)
+├── base-postgresql → postgresql/patroni
+├── base-java (200MB) → nessie/trino/spark
+└── minio (standalone)
 ```
 
-**Deploy:**
-```bash
-# Docker Compose (development)
-docker-compose up -d
+### Standardized User: `shusr` (UID 1000)
+- All containers run as non-root user
+- Consistent permissions across all services
+- Security-focused design
 
-# Kubernetes (production)
-./installer/cmd/lakectl/lakectl  # Interactive installer
-helm install lakehouse ./charts/lakehouse --set global.clusterMode=high-availability
+### Service Images
+- **minio**: S3-compatible storage (~100MB)
+- **postgresql**: Standalone database (~155MB)  
+- **patroni**: HA PostgreSQL (~350MB)
+- **nessie**: Data catalog (~300MB)
+- **trino**: Query engine (~400MB)
+- **spark**: Data processing (~500MB)
+
+## 🛠️ Development Workflows
+
+### Quick Start Pattern
+```bash
+cd docker/
+./env-manager.sh setup dev
+docker compose up -d
+docker compose ps
+./test-config.sh
 ```
 
-### Key Version Dependencies
-- **Nessie 0.104.2** with JDBC2 backend (not JPA)
-- **Iceberg 1.9.1** libraries for Spark/Trino integration  
-- **Trino 448** with REST catalog connector
-- **Spark 3.5** with Iceberg runtime dependencies
-- **PostgreSQL 16** with Patroni for HA
+### Configuration Changes
+```bash
+# Backup current configuration
+./env-manager.sh backup
 
+# Edit configuration
+vim .env
 
-## Component-Specific Conventions
+# Validate changes
+./test-config.sh
 
-### MinIO (`docker/services/minio/`)
-- Entrypoint auto-creates `lakehouse` bucket using MinIO client (`mc`)
-- Credentials: `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD` (default: admin/password123)
-- Console on port 9001, API on port 9000
+# Apply changes
+docker compose down
+docker compose up -d
+```
 
-### Nessie (`docker/services/nessie/`)
-- **Critical**: Uses JDBC2 backend, not MongoDB or JPA
-- Startup script waits for PostgreSQL with `pg_isready` checks
-- REST catalog endpoint: `/iceberg/main/` (note the trailing slash)
-- JAR downloaded and configured via environment in Dockerfile
+### Build and Deployment
+```bash
+# Build all images
+./build-all-images.sh
 
-### Trino (`docker/services/trino/`)
-- **Pattern**: Catalog configs go in `/opt/trino/etc/catalog/iceberg.properties`
-- Uses `connector.name=iceberg` with `iceberg.catalog.type=rest`
-- S3 configuration for MinIO includes `s3.endpoint` and `s3.path-style-access=true`
+# Push to registry
+./push-all-images.sh
 
-### Spark (`docker/services/spark/`)
-- **Runtime Dependencies**: Downloads Iceberg JARs to `${SPARK_HOME}/jars/`
-- **Modes**: `master`, `worker`, `shell`, `pyspark`, `sql` via `SPARK_MODE` env
-- Python packages auto-installed: pandas, numpy, requests (versions pinned)
-- REST catalog config via spark-defaults.conf: `spark.sql.catalog.nessie.catalog-impl=org.apache.iceberg.rest.RESTCatalog`
+# Status checking
+./docker/status.sh
+```
 
-### PostgreSQL/Patroni (`docker/services/patroni/`)
-- Development uses standalone PostgreSQL, production uses Patroni with Kubernetes DCS
-- Patroni waits for etcd/Kubernetes API, creates cluster scope: `lakehouse`
-- Database initialization via `scripts/init-db.sh` pattern
+## 📁 Important File Locations
 
-## Testing Patterns
+### Docker Compose Stack
+- `docker/docker-compose.yml` - Main orchestration file
+- `docker/.env` - Active configuration
+- `docker/services/*/` - Service-specific Dockerfiles and scripts
+- `docker/config/*/` - Legacy configuration files (reference only)
 
-**Integration Test Structure:**
-- `wait_for_service()` functions with health endpoint polling
-- Each test validates service health before proceeding to integration
-- **Pattern**: Create test data → verify cross-service visibility → cleanup
-- All tests use curl for REST API validation and SQL for query validation
+### Infrastructure
+- `infra/terraform/` - Infrastructure as Code
+- `infra/ansible/` - Configuration management
+- `charts/lakehouse/` - Kubernetes Helm charts
 
-**Health Check Endpoints:**
-- MinIO: `http://localhost:9000/minio/health/live`
-- Nessie: `http://localhost:19120/api/v2/config`  
-- Trino: `http://localhost:8080/v1/info`
-- Spark: `http://localhost:4040` (UI)
-- PostgreSQL: `pg_isready -h postgresql -p 5432`
+### Documentation
+- `README.md` - Main project documentation
+- `docker/README-config.md` - Configuration management guide
+- `docs/` - Detailed technical documentation
 
-## Common Gotchas
+## 🔍 Troubleshooting Patterns
 
-1. **Nessie Backend**: Must use JDBC2, not JPA or MongoDB
-2. **REST Catalog URLs**: Always include trailing slash: `/iceberg/main/`
-3. **S3 Configuration**: MinIO requires `path-style-access=true` in all consumers
-4. **Build Dependencies**: Base images must be built before service images
-5. **Service Dependencies**: PostgreSQL must be healthy before Nessie starts
-6. **Catalog Names**: Use `nessie` as catalog name in Trino/Spark configurations
+### Service Health Checks
+```bash
+# Check all services
+docker compose ps
 
-## File Patterns to Follow
+# View service logs
+docker compose logs <service-name>
 
-- Entrypoint scripts: Always include dependency waiting + service-specific initialization
-- Dockerfiles: Multi-stage builds with explicit layer optimization
-- Config files: Environment variable substitution with defaults
-- Health checks: 30s interval, 60s start period, 3 retries standard
-- Volume mounts: External configs as read-only, data volumes as read-write
+# Check specific service health
+docker compose exec <service> health-check-command
+```
+
+### Configuration Debugging
+```bash
+# Validate configuration
+./test-config.sh
+
+# Show resolved configuration
+./env-manager.sh show
+
+# Check environment variables in container
+docker compose exec <service> env | grep POSTGRES
+```
+
+### Common Service Endpoints
+- MinIO Console: `http://localhost:9001` (admin/password123)
+- Trino UI: `http://localhost:8080`
+- Spark Master UI: `http://localhost:4040`
+- Nessie API: `http://localhost:19120/api/v2`
+
+## 🚀 Development Best Practices
+
+### When Making Changes
+
+1. **Always backup configuration first**: `./env-manager.sh backup`
+2. **Validate before applying**: Use `./test-config.sh`
+3. **Follow dependency order**: PostgreSQL → MinIO → Nessie → Trino/Spark
+4. **Check service health**: Use health checks and logs
+5. **Test integration**: Verify services can communicate
+
+### Code Patterns to Follow
+
+#### Environment Variable Naming
+- Service prefix: `POSTGRES_*`, `MINIO_*`, `NESSIE_*`, etc.
+- Consistent naming: `SERVICE_COMPONENT_SETTING`
+- Example: `TRINO_QUERY_MAX_MEMORY`, `SPARK_DRIVER_MEMORY`
+
+#### Service Configuration Generation
+- Use entrypoint scripts for dynamic config generation
+- Generate config files from environment variables at runtime
+- Example: `docker/services/trino/scripts/entrypoint.sh`
+
+#### Health Check Implementation
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=60s \
+  CMD ["health-check-command"]
+```
+
+### Iceberg Integration Patterns
+- **Nessie REST Catalog**: `NESSIE_URI=http://nessie:19120/api/v2`
+- **S3 Storage**: MinIO with path-style access
+- **Table Format**: Parquet with Snappy compression
+- **Catalog Configuration**: REST-based with shared credentials
+
+## 🔒 Security Considerations
+
+### Authentication Patterns
+- **PostgreSQL**: Username/password authentication
+- **MinIO**: Access key/secret key (S3-compatible)
+- **Nessie**: Optional JWT authentication
+- **Trino**: Basic authentication support
+- **Cross-service**: Shared S3 credentials
+
+### Network Security
+- **Internal networking**: Docker bridge network isolation
+- **External access**: Only necessary ports exposed
+- **Service communication**: Internal hostname resolution
+
+### Secrets Management
+- **Environment variables**: All credentials via .env
+- **No hardcoded secrets**: Template-based configuration
+- **Production security**: Placeholder values requiring updates
+
+## 📊 Monitoring and Observability
+
+### Health Monitoring
+- **Service health checks**: Automated container health validation
+- **Dependency health**: `depends_on` with health conditions
+- **Endpoint monitoring**: HTTP health endpoints for all services
+
+### Logging Patterns
+- **Structured logging**: Consistent format across services
+- **Service logs**: `docker compose logs <service>`
+- **Debug logging**: Configurable log levels via environment variables
+
+## 🎯 Common Tasks for AI Agents
+
+### Configuration Tasks
+- Environment variable management and validation
+- Service dependency configuration
+- Performance tuning (memory, connections, etc.)
+- Security credential rotation
+
+### Development Tasks  
+- Service troubleshooting and debugging
+- Integration testing between services
+- Performance optimization
+- Documentation updates
+
+### Infrastructure Tasks
+- Docker image building and optimization
+- Service orchestration improvements
+- Health check refinements
+- Resource allocation tuning
+
+## 📚 Key Resources
+
+- **Main README**: `/README.md` - Project overview and quick start
+- **Configuration Guide**: `/docker/README-config.md` - Environment management
+- **Image Architecture**: `/docs/image-architecture.md` - Container structure
+- **Migration Documentation**: `/docker/MIGRATION-SUMMARY.md` - Configuration evolution
+
+---
+
+**Note**: This is a production-ready data lakehouse platform. Always test configuration changes in development environment first and follow the established patterns for consistency and maintainability.
