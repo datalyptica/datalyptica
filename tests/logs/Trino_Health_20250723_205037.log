@@ -1,0 +1,10 @@
+[0;35m==== Trino Health Check ====[0m
+[0;36m🔄 Checking Trino container status...[0m
+[0;36m🔄 Testing Trino port connectivity...[0m
+[0;36m🔄 Testing Trino REST API...[0m
+[0;36m🔄 Checking Trino cluster info...[0m
+[0;34mℹ️  ✓ Trino cluster info accessible[0m
+[0;34mℹ️  ✓ Trino version: 476[0m
+[0;36m🔄 Testing basic SQL queries...[0m
+"1"
+[0;31m❌ Cannot execute basic SQL query (31s)[0m

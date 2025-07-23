@@ -1,0 +1,14 @@
+[0;35m==== MinIO Health Check ====[0m
+[0;36m🔄 Checking MinIO container status...[0m
+[0;36m🔄 Testing MinIO API port connectivity...[0m
+[0;36m🔄 Testing MinIO Console port connectivity...[0m
+[0;36m🔄 Testing MinIO API health endpoint...[0m
+[0;36m🔄 Testing bucket operations...[0m
+[0;34mℹ️  ✓ Lakehouse bucket accessible[0m
+[0;34mℹ️  ✓ File upload successful[0m
+[0;34mℹ️  ✓ File download and content verification successful[0m
+[0;36m🔄 Checking storage information...[0m
+[1;33m⚠️  Cannot retrieve storage information[0m
+[0;36m🔄 Validating MinIO configuration...[0m
+[0;34mℹ️  ✓ S3 API is responding (access control working)[0m
+[0;32m✅ MinIO is healthy and operational (0s)[0m

@@ -108,9 +108,10 @@ generate_iceberg_catalog() {
     
     cat > /opt/trino/etc/catalog/iceberg.properties << EOF
 connector.name=iceberg
-iceberg.catalog.type=${TRINO_CATALOG_ICEBERG_CATALOG_TYPE:-rest}
-iceberg.rest-catalog.uri=${TRINO_CATALOG_ICEBERG_REST_CATALOG_URI:-http://nessie:19120/iceberg/main/}
-iceberg.rest-catalog.warehouse=${TRINO_CATALOG_ICEBERG_REST_CATALOG_WAREHOUSE:-s3://lakehouse/warehouse/}
+iceberg.catalog.type=${TRINO_CATALOG_ICEBERG_CATALOG_TYPE:-nessie}
+iceberg.nessie-catalog.uri=${TRINO_CATALOG_ICEBERG_REST_CATALOG_URI:-http://nessie:19120/api/v2}
+iceberg.nessie-catalog.default-warehouse-dir=${TRINO_CATALOG_ICEBERG_REST_CATALOG_WAREHOUSE:-s3://lakehouse/}
+iceberg.nessie-catalog.ref=${TRINO_ICEBERG_REF:-main}
 fs.native-s3.enabled=${FS_NATIVE_S3_ENABLED:-true}
 s3.endpoint=${TRINO_CATALOG_ICEBERG_S3_ENDPOINT:-http://minio:9000}
 s3.region=${TRINO_CATALOG_ICEBERG_S3_REGION:-us-east-1}

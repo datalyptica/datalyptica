@@ -18,20 +18,10 @@ process_config_templates() {
     echo "Configuration templates processed."
 }
 
-# Set default AWS environment variables if not provided (for development only)
-export AWS_REGION=${AWS_REGION:-us-east-1}
-
-# Validate required environment variables
-if [ -z "$S3_ACCESS_KEY" ] || [ -z "$S3_SECRET_KEY" ]; then
-    echo "WARNING: S3_ACCESS_KEY and S3_SECRET_KEY environment variables should be set"
-    echo "Using fallback values for development (not secure for production)"
-    export S3_ACCESS_KEY=${S3_ACCESS_KEY:-minioadmin}
-    export S3_SECRET_KEY=${S3_SECRET_KEY:-"CHANGE_ME"}
-fi
-
-# Set AWS credentials from S3 variables for compatibility
-export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-$S3_ACCESS_KEY}
-export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-$S3_SECRET_KEY}
+# Set AWS credentials from S3 variables for compatibility (no fallbacks - must be provided via docker-compose)
+export AWS_ACCESS_KEY_ID=${S3_ACCESS_KEY}
+export AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}
+export AWS_REGION=${S3_REGION}
 
 # Install additional Python packages if needed (check if already installed)
 install_python_packages() {

@@ -12,9 +12,8 @@ LABEL org.opencontainers.image.description="MinIO object storage server for ShuD
 # Set build arguments for architecture
 ARG TARGETARCH
 
-# Set environment variables (password should be provided at runtime)
-ENV MINIO_ROOT_USER=admin \
-    MINIO_VOLUMES="/data" \
+# Set environment variables (credentials provided via docker-compose)
+ENV MINIO_VOLUMES="/data" \
     MINIO_OPTS="--console-address :9001"
 
 # Switch to root for installation

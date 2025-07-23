@@ -1,0 +1,23 @@
+[0;35m==== Trino Health Check ====[0m
+[0;36m🔄 Checking Trino container status...[0m
+[0;36m🔄 Testing Trino port connectivity...[0m
+[0;36m🔄 Testing Trino REST API...[0m
+[0;36m🔄 Checking Trino cluster info...[0m
+[0;34mℹ️  ✓ Trino cluster info accessible[0m
+[0;34mℹ️  ✓ Trino version: 476[0m
+[0;36m🔄 Testing basic SQL queries...[0m
+"1"
+[0;36m🔄 Checking available catalogs...[0m
+[0;36m🔄 Testing Iceberg catalog connectivity...[0m
+"information_schema"
+"shudl_test"
+"system"
+[0;36m🔄 Checking system information...[0m
+[1;33m⚠️  Coordinator node information not found[0m
+[0;34mℹ️  Active queries: 0[0m
+[0;36m🔄 Testing Trino memory and performance...[0m
+[1;33m⚠️  Memory information not available[0m
+[0;36m🔄 Validating Iceberg configuration...[0m
+[0;34mℹ️  ✓ Iceberg catalog type is correctly set to nessie[0m
+[0;34mℹ️  ✓ Nessie URI is correctly configured[0m
+[0;32m✅ Trino is healthy and operational (9s)[0m

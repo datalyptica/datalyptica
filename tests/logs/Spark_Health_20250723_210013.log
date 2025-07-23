@@ -1,0 +1,12 @@
+[0;35m==== Spark Health Check ====[0m
+[0;36m🔄 Checking Spark Master container status...[0m
+[0;36m🔄 Checking Spark Worker container status...[0m
+[0;36m🔄 Testing Spark Master port connectivity...[0m
+[0;36m🔄 Testing Spark UI accessibility...[0m
+[0;36m🔄 Testing basic Spark functionality...[0m
+[0;36m🔄 Checking Spark cluster status...[0m
+[0;34mℹ️  Spark applications endpoint accessible[0m
+[0;36m🔄 Validating Spark environment configuration...[0m
+[0;34mℹ️  ✓ Iceberg jars found in Spark classpath[0m
+[0;34mℹ️  ✓ Spark configuration file exists[0m
+[0;32m✅ Spark cluster is healthy and operational (30s)[0m

@@ -1,0 +1,18 @@
+[0;35m==== PostgreSQL Health Check ====[0m
+[0;36m🔄 Checking PostgreSQL container status...[0m
+[0;36m🔄 Testing PostgreSQL port connectivity...[0m
+[0;36m🔄 Testing PostgreSQL authentication...[0m
+ ?column? 
+----------
+        1
+(1 row)
+
+[0;36m🔄 Checking Nessie database exists...[0m
+[0;36m🔄 Testing database operations...[0m
+CREATE TABLE
+INSERT 0 1
+DROP TABLE
+[0;36m🔄 Checking PostgreSQL configuration...[0m
+[0;36m🔄 Checking disk space...[0m
+/home/ubuntu/shudl/tests/health/test_postgresql.sh: line 77: bc: command not found
+[0;32m✅ PostgreSQL is healthy and operational (1s)[0m

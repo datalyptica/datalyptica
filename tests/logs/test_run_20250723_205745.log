@@ -1,0 +1,25 @@
+[0;36m[20:57:45][0m Phase 1: Prerequisites and Environment Validation
+[0;36m[20:57:45][0m Running test: Environment Variables
+[0;32m✅ Environment Variables completed in 0s[0m
+[0;36m[20:57:45][0m Running test: Docker Compose Validation
+[0;32m✅ Docker Compose Validation completed in 3s[0m
+[0;36m[20:57:48][0m Phase 2: Service Health Checks
+[0;34mℹ️  Skipping PostgreSQL Health (category: health)[0m
+[0;34mℹ️  Skipping MinIO Health (category: health)[0m
+[0;34mℹ️  Skipping Nessie Health (category: health)[0m
+[0;34mℹ️  Skipping Trino Health (category: health)[0m
+[0;34mℹ️  Skipping Spark Health (category: health)[0m
+[0;36m[20:57:48][0m Phase 3: Integration Tests
+[0;34mℹ️  Skipping Trino-Nessie Integration (category: integration)[0m
+[0;34mℹ️  Skipping Trino-Iceberg Integration (category: integration)[0m
+[0;34mℹ️  Skipping Spark-Nessie Integration (category: integration)[0m
+[0;34mℹ️  Skipping Spark-Iceberg Integration (category: integration)[0m
+[0;34mℹ️  Skipping Cross-Engine Data Access (category: integration)[0m
+[0;36m[20:57:48][0m Phase 4: Data Pipeline Tests
+[0;34mℹ️  Skipping Data Ingestion Pipeline (category: integration)[0m
+[0;34mℹ️  Skipping Schema Evolution Test (category: integration)[0m
+[0;34mℹ️  Skipping ACID Transactions Test (category: integration)[0m
+[0;36m[20:57:48][0m Phase 5: Performance Tests
+[0;34mℹ️  Skipping Query Performance Test (category: performance)[0m
+[0;34mℹ️  Skipping Concurrent Access Test (category: performance)[0m
+[0;34mℹ️  Skipping Large Dataset Test (category: performance)[0m

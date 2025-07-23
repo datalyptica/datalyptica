@@ -1,0 +1,28 @@
+[0;35m==== Docker Compose Validation ====[0m
+[0;36m🔄 Checking docker/docker-compose.yml exists...[0m
+[0;36m🔄 Validating docker-compose.yml syntax...[0m
+[0;36m🔄 Checking required services...[0m
+[0;34mℹ️  ✓ Service 'postgresql' found[0m
+[0;34mℹ️  ✓ Service 'minio' found[0m
+[0;34mℹ️  ✓ Service 'nessie' found[0m
+[0;34mℹ️  ✓ Service 'trino' found[0m
+[0;34mℹ️  ✓ Service 'spark-master' found[0m
+[0;34mℹ️  ✓ Service 'spark-worker' found[0m
+[0;36m🔄 Validating service dependencies...[0m
+[1;33m⚠️  Spark master service should have dependencies defined[0m
+[0;36m🔄 Checking network configuration...[0m
+[0;36m🔄 Validating health checks...[0m
+[1;33m⚠️  Service 'postgresql' missing health check configuration[0m
+[1;33m⚠️  Service 'minio' missing health check configuration[0m
+[1;33m⚠️  Service 'nessie' missing health check configuration[0m
+[0;34mℹ️  ✓ Service 'trino' has health check configured[0m
+[1;33m⚠️  Service 'spark-master' missing health check configuration[0m
+[0;34mℹ️  ✓ Service 'spark-worker' has health check configured[0m
+[0;36m🔄 Checking volume mounts...[0m
+[1;33m⚠️  MinIO should have volume mounts for data persistence[0m
+[0;36m🔄 Validating environment variables mapping...[0m
+[1;33m⚠️  Environment variable 'POSTGRES_PASSWORD' may not be properly mapped[0m
+[1;33m⚠️  Environment variable 'MINIO_ROOT_PASSWORD' may not be properly mapped[0m
+[1;33m⚠️  Environment variable 'TRINO_PORT' may not be properly mapped[0m
+[1;33m⚠️  Environment variable 'SPARK_MASTER_PORT' may not be properly mapped[0m
+[0;32m✅ Docker Compose configuration is valid (3s)[0m

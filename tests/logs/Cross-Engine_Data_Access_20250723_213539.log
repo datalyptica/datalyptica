@@ -1,0 +1,152 @@
+[0;35m==== Cross-Engine Data Access Test ====[0m
+[0;36m🔄 Creating test data with Trino...[0m
+[0;34mℹ️  ✓ Test data created with Trino[0m
+[0;36m🔄 Reading Trino data with Spark...[0m
+[0;31m❌ Spark failed to access Trino data (34s)[0m
+25/07/23 21:38:02 INFO SparkContext: Running Spark version 3.5.6
+25/07/23 21:38:02 INFO SparkContext: OS info Linux, 6.8.0-1028-oracle, aarch64
+25/07/23 21:38:02 INFO SparkContext: Java version 17.0.15
+25/07/23 21:38:02 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+25/07/23 21:38:02 INFO ResourceUtils: ==============================================================
+25/07/23 21:38:02 INFO ResourceUtils: No custom resources configured for spark.driver.
+25/07/23 21:38:02 INFO ResourceUtils: ==============================================================
+25/07/23 21:38:02 INFO SparkContext: Submitted application: Cross_Engine_Read_Test
+25/07/23 21:38:02 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 2, script: , vendor: , memory -> name: memory, amount: 2048, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+25/07/23 21:38:02 INFO ResourceProfile: Limiting resource is cpus at 2 tasks per executor
+25/07/23 21:38:02 INFO ResourceProfileManager: Added ResourceProfile id: 0
+25/07/23 21:38:02 INFO SecurityManager: Changing view acls to: spark
+25/07/23 21:38:02 INFO SecurityManager: Changing modify acls to: spark
+25/07/23 21:38:02 INFO SecurityManager: Changing view acls groups to: 
+25/07/23 21:38:02 INFO SecurityManager: Changing modify acls groups to: 
+25/07/23 21:38:02 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark; groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY
+25/07/23 21:38:03 INFO Utils: Successfully started service 'sparkDriver' on port 41799.
+25/07/23 21:38:03 INFO SparkEnv: Registering MapOutputTracker
+25/07/23 21:38:03 INFO SparkEnv: Registering BlockManagerMaster
+25/07/23 21:38:03 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+25/07/23 21:38:03 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+25/07/23 21:38:03 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+25/07/23 21:38:03 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-e376b6b2-67bb-4bbb-a07e-56dc67381923
+25/07/23 21:38:03 INFO MemoryStore: MemoryStore started with capacity 1398.4 MiB
+25/07/23 21:38:03 INFO SparkEnv: Registering OutputCommitCoordinator
+25/07/23 21:38:03 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+25/07/23 21:38:03 WARN Utils: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
+25/07/23 21:38:03 INFO Utils: Successfully started service 'SparkUI' on port 4041.
+25/07/23 21:38:03 INFO StandaloneAppClient$ClientEndpoint: Connecting to master spark://shudl-spark-master:7077...
+25/07/23 21:38:03 INFO TransportClientFactory: Successfully created connection to shudl-spark-master/172.19.0.5:7077 after 33 ms (0 ms spent in bootstraps)
+25/07/23 21:38:03 INFO StandaloneSchedulerBackend: Connected to Spark cluster with app ID app-20250723213803-0027
+25/07/23 21:38:03 INFO StandaloneAppClient$ClientEndpoint: Executor added: app-20250723213803-0027/0 on worker-20250723182509-0.0.0.0-41147 (0.0.0.0:41147) with 2 core(s)
+25/07/23 21:38:03 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 42493.
+25/07/23 21:38:03 INFO NettyBlockTransferService: Server created on 226fab28ba6e:42493
+25/07/23 21:38:03 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+25/07/23 21:38:03 INFO StandaloneSchedulerBackend: Granted executor ID app-20250723213803-0027/0 on hostPort 0.0.0.0:41147 with 2 core(s), 2.0 GiB RAM
+25/07/23 21:38:04 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, 226fab28ba6e, 42493, None)
+25/07/23 21:38:04 INFO StandaloneAppClient$ClientEndpoint: Executor updated: app-20250723213803-0027/0 is now RUNNING
+25/07/23 21:38:04 INFO BlockManagerMasterEndpoint: Registering block manager 226fab28ba6e:42493 with 1398.4 MiB RAM, BlockManagerId(driver, 226fab28ba6e, 42493, None)
+25/07/23 21:38:04 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, 226fab28ba6e, 42493, None)
+25/07/23 21:38:04 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, 226fab28ba6e, 42493, None)
+25/07/23 21:38:04 INFO StandaloneSchedulerBackend: SchedulerBackend is ready for scheduling beginning after reached minRegisteredResourcesRatio: 0.0
+25/07/23 21:38:04 INFO SharedState: Setting hive.metastore.warehouse.dir ('null') to the value of spark.sql.warehouse.dir.
+25/07/23 21:38:05 INFO SharedState: Warehouse path is 'file:/opt/spark/spark-warehouse'.
+25/07/23 21:38:08 INFO CatalogUtil: Loading custom FileIO implementation: org.apache.iceberg.aws.s3.S3FileIO
+25/07/23 21:38:09 INFO BaseMetastoreTableOperations: Refreshing table metadata from new version: s3://lakehouse/cross_engine_test/shared_data-1b7a3c19b9674457af2369eb0eba92ee/metadata/00002-f792e918-dd14-4167-818a-fe9c1509e052.metadata.json
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+25/07/23 21:38:09 INFO StandaloneSchedulerBackend$StandaloneDriverEndpoint: Registered executor NettyRpcEndpointRef(spark-client://Executor) (172.19.0.7:51850) with ID 0,  ResourceProfileId 0
+25/07/23 21:38:09 INFO BlockManagerMasterEndpoint: Registering block manager 0.0.0.0:41613 with 1398.4 MiB RAM, BlockManagerId(0, 0.0.0.0, 41613, None)
+25/07/23 21:38:10 INFO NessieUtil: loadTableMetadata for 'cross_engine_test.shared_data' from location 's3://lakehouse/cross_engine_test/shared_data-1b7a3c19b9674457af2369eb0eba92ee/metadata/00002-f792e918-dd14-4167-818a-fe9c1509e052.metadata.json' at 'Branch{name=main, metadata=null, hash=f7bede68005151b36086cc80510f160d90151bfa5243d489326b1bb02024f616}'
+25/07/23 21:38:10 INFO BaseMetastoreCatalog: Table loaded by catalog: iceberg.cross_engine_test.shared_data
+25/07/23 21:38:11 INFO V2ScanRelationPushDown: 
+Pushing operators to iceberg.cross_engine_test.shared_data
+Pushed Filters: metadata IS NOT NULL, metadata = 'created_by_trino'
+Post-Scan Filters: isnotnull(metadata#4),(metadata#4 = created_by_trino)
+         
+25/07/23 21:38:11 INFO V2ScanRelationPushDown: 
+Output: metadata#4
+         
+25/07/23 21:38:11 INFO SnapshotScan: Scanning table iceberg.cross_engine_test.shared_data snapshot 8371821498434759322 created at 2025-07-23T21:37:32.408+00:00 with filter (metadata IS NOT NULL AND metadata = (hash-1dfdc84f))
+25/07/23 21:38:11 INFO BaseDistributedDataScan: Planning file tasks locally for table iceberg.cross_engine_test.shared_data
+25/07/23 21:38:12 INFO SparkPartitioningAwareScan: Reporting UnknownPartitioning with 1 partition(s) for table iceberg.cross_engine_test.shared_data
+25/07/23 21:38:12 INFO MemoryStore: Block broadcast_0 stored as values in memory (estimated size 32.0 KiB, free 1398.4 MiB)
+25/07/23 21:38:12 INFO MemoryStore: Block broadcast_0_piece0 stored as bytes in memory (estimated size 1678.0 B, free 1398.4 MiB)
+25/07/23 21:38:12 INFO BlockManagerInfo: Added broadcast_0_piece0 in memory on 226fab28ba6e:42493 (size: 1678.0 B, free: 1398.4 MiB)
+25/07/23 21:38:12 INFO SparkContext: Created broadcast 0 from broadcast at SparkBatch.java:85
+25/07/23 21:38:12 INFO MemoryStore: Block broadcast_1 stored as values in memory (estimated size 32.0 KiB, free 1398.3 MiB)
+25/07/23 21:38:12 INFO MemoryStore: Block broadcast_1_piece0 stored as bytes in memory (estimated size 1678.0 B, free 1398.3 MiB)
+25/07/23 21:38:12 INFO BlockManagerInfo: Added broadcast_1_piece0 in memory on 226fab28ba6e:42493 (size: 1678.0 B, free: 1398.4 MiB)
+25/07/23 21:38:12 INFO SparkContext: Created broadcast 1 from broadcast at SparkBatch.java:85
+25/07/23 21:38:13 INFO CodeGenerator: Code generated in 263.793849 ms
+25/07/23 21:38:13 INFO DAGScheduler: Registering RDD 3 (count at <unknown>:0) as input to shuffle 0
+25/07/23 21:38:13 INFO DAGScheduler: Got map stage job 0 (count at <unknown>:0) with 1 output partitions
+25/07/23 21:38:13 INFO DAGScheduler: Final stage: ShuffleMapStage 0 (count at <unknown>:0)
+25/07/23 21:38:13 INFO DAGScheduler: Parents of final stage: List()
+25/07/23 21:38:13 INFO DAGScheduler: Missing parents: List()
+25/07/23 21:38:13 INFO DAGScheduler: Submitting ShuffleMapStage 0 (MapPartitionsRDD[3] at count at <unknown>:0), which has no missing parents
+25/07/23 21:38:13 INFO MemoryStore: Block broadcast_2 stored as values in memory (estimated size 18.5 KiB, free 1398.3 MiB)
+25/07/23 21:38:13 INFO MemoryStore: Block broadcast_2_piece0 stored as bytes in memory (estimated size 7.8 KiB, free 1398.3 MiB)
+25/07/23 21:38:13 INFO BlockManagerInfo: Added broadcast_2_piece0 in memory on 226fab28ba6e:42493 (size: 7.8 KiB, free: 1398.4 MiB)
+25/07/23 21:38:13 INFO SparkContext: Created broadcast 2 from broadcast at DAGScheduler.scala:1611
+25/07/23 21:38:13 INFO DAGScheduler: Submitting 1 missing tasks from ShuffleMapStage 0 (MapPartitionsRDD[3] at count at <unknown>:0) (first 15 tasks are for partitions Vector(0))
+25/07/23 21:38:13 INFO TaskSchedulerImpl: Adding task set 0.0 with 1 tasks resource profile 0
+25/07/23 21:38:13 INFO TaskSetManager: Starting task 0.0 in stage 0.0 (TID 0) (0.0.0.0, executor 0, partition 0, PROCESS_LOCAL, 14240 bytes) 
+25/07/23 21:38:14 INFO BlockManagerInfo: Added broadcast_2_piece0 in memory on 0.0.0.0:41613 (size: 7.8 KiB, free: 1398.4 MiB)
+25/07/23 21:38:15 INFO BlockManagerInfo: Added broadcast_1_piece0 in memory on 0.0.0.0:41613 (size: 1678.0 B, free: 1398.4 MiB)
+25/07/23 21:38:17 INFO TaskSetManager: Finished task 0.0 in stage 0.0 (TID 0) in 3941 ms on 0.0.0.0 (executor 0) (1/1)
+25/07/23 21:38:17 INFO TaskSchedulerImpl: Removed TaskSet 0.0, whose tasks have all completed, from pool 
+25/07/23 21:38:17 INFO DAGScheduler: ShuffleMapStage 0 (count at <unknown>:0) finished in 4.130 s
+25/07/23 21:38:17 INFO DAGScheduler: looking for newly runnable stages
+25/07/23 21:38:17 INFO DAGScheduler: running: Set()
+25/07/23 21:38:17 INFO DAGScheduler: waiting: Set()
+25/07/23 21:38:17 INFO DAGScheduler: failed: Set()
+25/07/23 21:38:17 INFO CodeGenerator: Code generated in 25.428083 ms
+25/07/23 21:38:17 INFO SparkContext: Starting job: count at <unknown>:0
+25/07/23 21:38:17 INFO DAGScheduler: Got job 1 (count at <unknown>:0) with 1 output partitions
+25/07/23 21:38:17 INFO DAGScheduler: Final stage: ResultStage 2 (count at <unknown>:0)
+25/07/23 21:38:17 INFO DAGScheduler: Parents of final stage: List(ShuffleMapStage 1)
+25/07/23 21:38:17 INFO DAGScheduler: Missing parents: List()
+25/07/23 21:38:17 INFO DAGScheduler: Submitting ResultStage 2 (MapPartitionsRDD[6] at count at <unknown>:0), which has no missing parents
+25/07/23 21:38:17 INFO MemoryStore: Block broadcast_3 stored as values in memory (estimated size 12.5 KiB, free 1398.3 MiB)
+25/07/23 21:38:17 INFO MemoryStore: Block broadcast_3_piece0 stored as bytes in memory (estimated size 5.9 KiB, free 1398.3 MiB)
+25/07/23 21:38:17 INFO BlockManagerInfo: Added broadcast_3_piece0 in memory on 226fab28ba6e:42493 (size: 5.9 KiB, free: 1398.4 MiB)
+25/07/23 21:38:17 INFO SparkContext: Created broadcast 3 from broadcast at DAGScheduler.scala:1611
+25/07/23 21:38:17 INFO DAGScheduler: Submitting 1 missing tasks from ResultStage 2 (MapPartitionsRDD[6] at count at <unknown>:0) (first 15 tasks are for partitions Vector(0))
+25/07/23 21:38:17 INFO TaskSchedulerImpl: Adding task set 2.0 with 1 tasks resource profile 0
+25/07/23 21:38:17 INFO TaskSetManager: Starting task 0.0 in stage 2.0 (TID 1) (0.0.0.0, executor 0, partition 0, NODE_LOCAL, 9003 bytes) 
+25/07/23 21:38:18 INFO BlockManagerInfo: Removed broadcast_2_piece0 on 226fab28ba6e:42493 in memory (size: 7.8 KiB, free: 1398.4 MiB)
+25/07/23 21:38:18 INFO BlockManagerInfo: Removed broadcast_2_piece0 on 0.0.0.0:41613 in memory (size: 7.8 KiB, free: 1398.4 MiB)
+25/07/23 21:38:18 INFO BlockManagerInfo: Added broadcast_3_piece0 in memory on 0.0.0.0:41613 (size: 5.9 KiB, free: 1398.4 MiB)
+25/07/23 21:38:18 INFO MapOutputTrackerMasterEndpoint: Asked to send map output locations for shuffle 0 to 172.19.0.7:51850
+25/07/23 21:38:18 INFO TaskSetManager: Finished task 0.0 in stage 2.0 (TID 1) in 445 ms on 0.0.0.0 (executor 0) (1/1)
+25/07/23 21:38:18 INFO TaskSchedulerImpl: Removed TaskSet 2.0, whose tasks have all completed, from pool 
+25/07/23 21:38:18 INFO DAGScheduler: ResultStage 2 (count at <unknown>:0) finished in 0.492 s
+25/07/23 21:38:18 INFO DAGScheduler: Job 1 is finished. Cancelling potential speculative or zombie tasks for this job
+25/07/23 21:38:18 INFO TaskSchedulerImpl: Killing all running tasks in stage 2: Stage finished
+25/07/23 21:38:18 INFO DAGScheduler: Job 1 finished: count at <unknown>:0, took 0.525262 s
+✓ Successfully read 3 records created by Trino
+ERROR: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `iceberg`.`cross_engine_test`.`shared_data`: Cannot safely cast `created_date` "STRING" to "DATE".
+Traceback (most recent call last):
+25/07/23 21:38:18 INFO SparkContext: SparkContext is stopping with exitCode 0.
+  File "/tmp/spark_read_trino_data.py", line 37, in <module>
+    spark.sql("""
+  File "/opt/spark/python/lib/pyspark.zip/pyspark/sql/session.py", line 1631, in sql
+    return DataFrame(self._jsparkSession.sql(sqlQuery, litArgs), self)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/spark/python/lib/py4j-0.10.9.7-src.zip/py4j/java_gateway.py", line 1322, in __call__
+    return_value = get_return_value(
+                   ^^^^^^^^^^^^^^^^^
+  File "/opt/spark/python/lib/pyspark.zip/pyspark/errors/exceptions/captured.py", line 185, in deco
+    raise converted from None
+pyspark.errors.exceptions.captured.AnalysisException: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `iceberg`.`cross_engine_test`.`shared_data`: Cannot safely cast `created_date` "STRING" to "DATE".
+25/07/23 21:38:18 INFO SparkUI: Stopped Spark web UI at http://226fab28ba6e:4041
+25/07/23 21:38:18 INFO StandaloneSchedulerBackend: Shutting down all executors
+25/07/23 21:38:18 INFO StandaloneSchedulerBackend$StandaloneDriverEndpoint: Asking each executor to shut down
+25/07/23 21:38:18 INFO MapOutputTrackerMasterEndpoint: MapOutputTrackerMasterEndpoint stopped!
+25/07/23 21:38:18 INFO MemoryStore: MemoryStore cleared
+25/07/23 21:38:18 INFO BlockManager: BlockManager stopped
+25/07/23 21:38:18 INFO BlockManagerMaster: BlockManagerMaster stopped
+25/07/23 21:38:18 INFO OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: OutputCommitCoordinator stopped!
+25/07/23 21:38:18 INFO SparkContext: Successfully stopped SparkContext
+25/07/23 21:38:19 INFO ShutdownHookManager: Shutdown hook called
+25/07/23 21:38:19 INFO ShutdownHookManager: Deleting directory /tmp/spark-e3a560b1-4f5f-4f60-8db3-11af490d2619
+25/07/23 21:38:19 INFO ShutdownHookManager: Deleting directory /tmp/spark-56e4d084-3b70-4a0d-ac66-11430d866e86
+25/07/23 21:38:19 INFO ShutdownHookManager: Deleting directory /tmp/spark-e3a560b1-4f5f-4f60-8db3-11af490d2619/pyspark-45109ecf-50ec-4791-bd16-fd9b61797eed
