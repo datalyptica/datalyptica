@@ -1,8 +1,0 @@
-[0;36m[19:21:09][0m Phase 1: Prerequisites and Environment Validation
-[0;36m[19:21:09][0m Running test: Environment Variables
-[0;32m✅ Environment Variables completed in 0s[0m
-[0;36m[19:21:09][0m Running test: Docker Compose Validation
-[0;32m✅ Docker Compose Validation completed in 4s[0m
-[0;36m[19:21:13][0m Phase 2: Service Health Checks
-[0;36m[19:21:13][0m Running test: PostgreSQL Health
-[0;31m❌ PostgreSQL Health failed after 0s[0m

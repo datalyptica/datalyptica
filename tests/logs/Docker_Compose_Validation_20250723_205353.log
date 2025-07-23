@@ -1,9 +1,0 @@
-[0;35m==== Docker Compose Validation ====[0m
-[0;36m🔄 Checking docker/docker-compose.yml exists...[0m
-[0;36m🔄 Validating docker-compose.yml syntax...[0m
-[0;36m🔄 Checking required services...[0m
-[0;34mℹ️  ✓ Service 'postgresql' found[0m
-[0;34mℹ️  ✓ Service 'minio' found[0m
-[0;34mℹ️  ✓ Service 'nessie' found[0m
-[0;34mℹ️  ✓ Service 'trino' found[0m
-[0;31m❌ Required service 'spark-master' not found in docker-compose.yml (1s)[0m
