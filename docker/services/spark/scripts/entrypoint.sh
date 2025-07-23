@@ -53,6 +53,7 @@ start_master() {
     echo "Starting Spark master..."
     echo "Web UI Port: ${SPARK_WEBUI_PORT:-4040}"
     echo "RPC Port: 7077"
+    echo "Daemon Memory: ${SPARK_DAEMON_MEMORY:-1g}"
     
     # Process configuration templates
     process_config_templates
@@ -61,6 +62,7 @@ start_master() {
     HADOOP_USER_NAME=spark \
     USER=spark \
     exec ${SPARK_HOME}/bin/spark-class \
+        -Xmx${SPARK_DAEMON_MEMORY:-1g} \
         -Dhadoop.security.authentication=simple \
         -Dhadoop.security.authorization=false \
         -Duser.name=spark \
@@ -77,6 +79,7 @@ start_worker() {
     echo "Master: $SPARK_MASTER_URL"
     echo "Cores: ${SPARK_WORKER_CORES:-2}"
     echo "Memory: ${SPARK_WORKER_MEMORY:-2g}"
+    echo "Daemon Memory: ${SPARK_DAEMON_MEMORY:-1g}"
     echo "Web UI Port: 4040"
     
     # Process configuration templates
@@ -93,6 +96,7 @@ start_worker() {
     HADOOP_USER_NAME=spark \
     USER=spark \
     exec ${SPARK_HOME}/bin/spark-class \
+        -Xmx${SPARK_DAEMON_MEMORY:-1g} \
         -Dhadoop.security.authentication=simple \
         -Dhadoop.security.authorization=false \
         -Duser.name=spark \

@@ -275,23 +275,6 @@ services:
       - SPARK_SQL_ADAPTIVE_COALESCE_PARTITIONS_ENABLED=${SPARK_SQL_ADAPTIVE_COALESCE_PARTITIONS_ENABLED}
       - SPARK_SQL_ADAPTIVE_SKEW_JOIN_ENABLED=${SPARK_SQL_ADAPTIVE_SKEW_JOIN_ENABLED}
       
-      # Iceberg Configuration
-      - SPARK_SQL_EXTENSIONS=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
-      - SPARK_SQL_CATALOG_NESSIE=org.apache.iceberg.spark.SparkCatalog
-      - SPARK_SQL_CATALOG_NESSIE_CATALOG_IMPL=org.apache.iceberg.nessie.NessieCatalog
-      - SPARK_SQL_CATALOG_NESSIE_URI=${SPARK_ICEBERG_URI}
-      - SPARK_SQL_CATALOG_NESSIE_REF=${SPARK_ICEBERG_REF}
-      - SPARK_SQL_CATALOG_NESSIE_WAREHOUSE=${SPARK_ICEBERG_WAREHOUSE}
-      - SPARK_SQL_CATALOG_NESSIE_IO_IMPL=${SPARK_ICEBERG_IO_IMPL}
-      - SPARK_SQL_DEFAULT_CATALOG=${SPARK_ICEBERG_CATALOG_NAME}
-      
-      # S3/MinIO Configuration
-      - SPARK_SQL_CATALOG_NESSIE_S3_ENDPOINT=${S3_ENDPOINT}
-      - SPARK_SQL_CATALOG_NESSIE_S3_REGION=${S3_REGION}
-      - SPARK_SQL_CATALOG_NESSIE_S3_PATH_STYLE_ACCESS=${S3_PATH_STYLE_ACCESS}
-      - SPARK_SQL_CATALOG_NESSIE_S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - SPARK_SQL_CATALOG_NESSIE_S3_SECRET_KEY=${S3_SECRET_KEY}
-      
       # Legacy environment variables for compatibility
       - NESSIE_URI=${NESSIE_URI}
       - WAREHOUSE_LOCATION=${WAREHOUSE_LOCATION}
@@ -309,6 +292,9 @@ services:
       - SPARK_WORKER_DIR=${SPARK_WORKER_DIR}
       - SPARK_DAEMON_MEMORY=${SPARK_DAEMON_MEMORY}
       - SPARK_LOG4J_ROOT_LOGGER=${SPARK_LOG4J_ROOT_LOGGER}
+      
+      # Direct Spark Configuration via SPARK_OPTS
+      - SPARK_OPTS=--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions --conf spark.sql.catalog.iceberg=org.apache.iceberg.spark.SparkCatalog --conf spark.sql.catalog.iceberg.catalog-impl=org.apache.iceberg.nessie.NessieCatalog --conf spark.sql.catalog.iceberg.uri=${SPARK_ICEBERG_URI} --conf spark.sql.catalog.iceberg.ref=${SPARK_ICEBERG_REF} --conf spark.sql.catalog.iceberg.warehouse=${SPARK_ICEBERG_WAREHOUSE} --conf spark.sql.catalog.iceberg.io-impl=${SPARK_ICEBERG_IO_IMPL} --conf spark.sql.catalog.iceberg.s3.endpoint=${S3_ENDPOINT} --conf spark.sql.catalog.iceberg.s3.access-key-id=${S3_ACCESS_KEY} --conf spark.sql.catalog.iceberg.s3.secret-access-key=${S3_SECRET_KEY} --conf spark.sql.catalog.iceberg.s3.path-style-access=${S3_PATH_STYLE_ACCESS} --conf spark.sql.defaultCatalog=${SPARK_ICEBERG_CATALOG_NAME}
     networks:
       - ${NETWORK_NAME}
     depends_on:
@@ -343,23 +329,15 @@ services:
       - SPARK_EXECUTOR_MEMORY=${SPARK_EXECUTOR_MEMORY}
       - SPARK_EXECUTOR_CORES=${SPARK_EXECUTOR_CORES}
       
-      # Iceberg Configuration
-      - SPARK_SQL_CATALOG_NESSIE_TYPE=rest
-      - SPARK_SQL_CATALOG_NESSIE_URI=${SPARK_ICEBERG_URI}
-      - SPARK_SQL_CATALOG_NESSIE_WAREHOUSE=${SPARK_ICEBERG_WAREHOUSE}
-      
-      # S3/MinIO Configuration
-      - SPARK_SQL_CATALOG_NESSIE_S3_ENDPOINT=${S3_ENDPOINT}
-      - SPARK_SQL_CATALOG_NESSIE_S3_REGION=${S3_REGION}
-      - SPARK_SQL_CATALOG_NESSIE_S3_PATH_STYLE_ACCESS=${S3_PATH_STYLE_ACCESS}
-      - SPARK_SQL_CATALOG_NESSIE_S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - SPARK_SQL_CATALOG_NESSIE_S3_SECRET_KEY=${S3_SECRET_KEY}
-      
       # Additional Spark Environment Configuration
       - SPARK_HOME=${SPARK_HOME}
       - JAVA_HOME=${JAVA_HOME}
       - SPARK_CONF_DIR=${SPARK_CONF_DIR}
+      - SPARK_DAEMON_MEMORY=${SPARK_DAEMON_MEMORY}
       - SPARK_WORKER_WEBUI_PORT=${SPARK_WORKER_WEBUI_PORT}
+      
+      # Direct Spark Configuration via SPARK_OPTS
+      - SPARK_OPTS=--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions --conf spark.sql.catalog.iceberg=org.apache.iceberg.spark.SparkCatalog --conf spark.sql.catalog.iceberg.catalog-impl=org.apache.iceberg.nessie.NessieCatalog --conf spark.sql.catalog.iceberg.uri=${SPARK_ICEBERG_URI} --conf spark.sql.catalog.iceberg.ref=${SPARK_ICEBERG_REF} --conf spark.sql.catalog.iceberg.warehouse=${SPARK_ICEBERG_WAREHOUSE} --conf spark.sql.catalog.iceberg.io-impl=${SPARK_ICEBERG_IO_IMPL} --conf spark.sql.catalog.iceberg.s3.endpoint=${S3_ENDPOINT} --conf spark.sql.catalog.iceberg.s3.access-key-id=${S3_ACCESS_KEY} --conf spark.sql.catalog.iceberg.s3.secret-access-key=${S3_SECRET_KEY} --conf spark.sql.catalog.iceberg.s3.path-style-access=${S3_PATH_STYLE_ACCESS} --conf spark.sql.defaultCatalog=${SPARK_ICEBERG_CATALOG_NAME}
     networks:
       - ${NETWORK_NAME}
     depends_on:
