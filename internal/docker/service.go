@@ -29,13 +29,13 @@ type ServiceConfig struct {
 
 // OperationResult represents the result of a Docker operation
 type OperationResult struct {
-	Success   bool     `json:"success"`
-	Message   string   `json:"message"`
-	Output    string   `json:"output,omitempty"`
-	Error     string   `json:"error,omitempty"`
-	ExitCode  int      `json:"exit_code"`
-	Duration  string   `json:"duration"`
-	Services  []string `json:"services,omitempty"`
+	Success  bool     `json:"success"`
+	Message  string   `json:"message"`
+	Output   string   `json:"output,omitempty"`
+	Error    string   `json:"error,omitempty"`
+	ExitCode int      `json:"exit_code"`
+	Duration string   `json:"duration"`
+	Services []string `json:"services,omitempty"`
 }
 
 // Operation represents different Docker operations
@@ -63,7 +63,7 @@ func NewService(dockerConfig *config.DockerConfig, log *logger.Logger) *Service 
 // Start starts Docker services using docker-compose
 func (s *Service) Start(ctx context.Context, serviceConfig ServiceConfig) (*OperationResult, error) {
 	startTime := time.Now()
-	
+
 	s.logger.LogInfo("Starting Docker services", map[string]interface{}{
 		"compose_file": serviceConfig.ComposeFile,
 		"project_name": serviceConfig.ProjectName,
@@ -72,7 +72,7 @@ func (s *Service) Start(ctx context.Context, serviceConfig ServiceConfig) (*Oper
 
 	// Build docker-compose command
 	args := []string{"compose"}
-	
+
 	if serviceConfig.ComposeFile != "" {
 		args = append(args, "-f", serviceConfig.ComposeFile)
 	} else if s.config.ComposeFile != "" {
@@ -86,7 +86,7 @@ func (s *Service) Start(ctx context.Context, serviceConfig ServiceConfig) (*Oper
 	}
 
 	args = append(args, "up", "-d")
-	
+
 	// Add specific services if provided
 	if len(serviceConfig.Services) > 0 {
 		args = append(args, serviceConfig.Services...)
@@ -115,7 +115,7 @@ func (s *Service) Start(ctx context.Context, serviceConfig ServiceConfig) (*Oper
 // Stop stops Docker services
 func (s *Service) Stop(ctx context.Context, serviceConfig ServiceConfig) (*OperationResult, error) {
 	startTime := time.Now()
-	
+
 	s.logger.LogInfo("Stopping Docker services", map[string]interface{}{
 		"compose_file": serviceConfig.ComposeFile,
 		"project_name": serviceConfig.ProjectName,
@@ -123,7 +123,7 @@ func (s *Service) Stop(ctx context.Context, serviceConfig ServiceConfig) (*Opera
 	})
 
 	args := []string{"compose"}
-	
+
 	if serviceConfig.ComposeFile != "" {
 		args = append(args, "-f", serviceConfig.ComposeFile)
 	} else if s.config.ComposeFile != "" {
@@ -166,13 +166,13 @@ func (s *Service) Stop(ctx context.Context, serviceConfig ServiceConfig) (*Opera
 // Restart restarts Docker services
 func (s *Service) Restart(ctx context.Context, serviceConfig ServiceConfig) (*OperationResult, error) {
 	startTime := time.Now()
-	
+
 	s.logger.LogInfo("Restarting Docker services", map[string]interface{}{
 		"services": serviceConfig.Services,
 	})
 
 	args := []string{"compose"}
-	
+
 	if serviceConfig.ComposeFile != "" {
 		args = append(args, "-f", serviceConfig.ComposeFile)
 	} else if s.config.ComposeFile != "" {
@@ -186,7 +186,7 @@ func (s *Service) Restart(ctx context.Context, serviceConfig ServiceConfig) (*Op
 	}
 
 	args = append(args, "restart")
-	
+
 	if len(serviceConfig.Services) > 0 {
 		args = append(args, serviceConfig.Services...)
 	}
@@ -201,13 +201,13 @@ func (s *Service) Restart(ctx context.Context, serviceConfig ServiceConfig) (*Op
 // Cleanup removes containers, networks, and volumes
 func (s *Service) Cleanup(ctx context.Context, serviceConfig ServiceConfig) (*OperationResult, error) {
 	startTime := time.Now()
-	
+
 	s.logger.LogInfo("Cleaning up Docker resources", map[string]interface{}{
 		"project_name": serviceConfig.ProjectName,
 	})
 
 	args := []string{"compose"}
-	
+
 	if serviceConfig.ComposeFile != "" {
 		args = append(args, "-f", serviceConfig.ComposeFile)
 	} else if s.config.ComposeFile != "" {
@@ -233,7 +233,7 @@ func (s *Service) Status(ctx context.Context, serviceConfig ServiceConfig) (*Ope
 	startTime := time.Now()
 
 	args := []string{"compose"}
-	
+
 	if serviceConfig.ComposeFile != "" {
 		args = append(args, "-f", serviceConfig.ComposeFile)
 	} else if s.config.ComposeFile != "" {
@@ -263,14 +263,14 @@ func (s *Service) executeCommand(ctx context.Context, command string, args []str
 
 	// Create command
 	cmd := exec.CommandContext(cmdCtx, command, args...)
-	
+
 	// Set working directory if provided
 	if env != nil {
 		if workDir, exists := env["WORK_DIR"]; exists && workDir != "" {
 			cmd.Dir = workDir
 		}
 	}
-	
+
 	// Set environment variables
 	if env != nil {
 		for key, value := range env {
@@ -295,7 +295,7 @@ func (s *Service) executeCommand(ctx context.Context, command string, args []str
 
 	// Execute command
 	output, err := cmd.CombinedOutput()
-	
+
 	result := &OperationResult{
 		Output:   string(output),
 		ExitCode: cmd.ProcessState.ExitCode(),
@@ -305,7 +305,7 @@ func (s *Service) executeCommand(ctx context.Context, command string, args []str
 		result.Success = false
 		result.Error = err.Error()
 		result.Message = "Command execution failed"
-		
+
 		// Check if it was a timeout
 		if cmdCtx.Err() == context.DeadlineExceeded {
 			result.Error = "Command execution timed out"
@@ -348,4 +348,4 @@ func (s *Service) ValidateDockerInstallation(ctx context.Context) (*OperationRes
 		Message: "Docker and Docker Compose are available",
 		Output:  fmt.Sprintf("Docker: %s\nDocker Compose: %s", dockerResult.Output, composeResult.Output),
 	}, nil
-} 
+}
