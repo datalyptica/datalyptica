@@ -1,5 +1,85 @@
 services:
 
+  # Spark-master Service
+  spark-master:
+    image: ghcr.io/shugur-network/shudl/spark-master:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-spark-master
+    environment:
+      - SPARK_WEBUI_PORT=${SPARK_UI_PORT}
+      - SPARK_MASTER_URL=${SPARK_MASTER_URL}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - NESSIE_URI=${NESSIE_URI}
+      - WAREHOUSE_LOCATION=${WAREHOUSE_LOCATION}
+      - SPARK_MODE=master
+    volumes:
+      []
+    networks:
+      - ${NETWORK_NAME}
+    depends_on:
+      minio:
+        condition: service_healthy
+      nessie:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040"]
+      interval: ${HEALTHCHECK_INTERVAL}
+      timeout: ${HEALTHCHECK_TIMEOUT}
+      retries: ${HEALTHCHECK_RETRIES}
+      start_period: ${HEALTHCHECK_START_PERIOD}
+    restart: unless-stopped
+
+  # Spark-worker Service
+  spark-worker:
+    image: ghcr.io/shugur-network/shudl/spark-worker:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-spark-worker
+    environment:
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=${SPARK_MASTER_URL}
+      - SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY}
+      - SPARK_WORKER_CORES=${SPARK_WORKER_CORES}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+    volumes:
+      []
+    networks:
+      - ${NETWORK_NAME}
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040"]
+      interval: ${HEALTHCHECK_INTERVAL}
+      timeout: ${HEALTHCHECK_TIMEOUT}
+      retries: ${HEALTHCHECK_RETRIES}
+      start_period: ${HEALTHCHECK_START_PERIOD}
+    restart: unless-stopped
+
+  # Minio Service
+  minio:
+    image: ghcr.io/shugur-network/shudl/minio:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-minio
+    environment:
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_VOLUMES=/data
+      - MINIO_OPTS=--console-address :9001
+      - MINIO_REGION=${MINIO_REGION}
+      - MINIO_DEFAULT_BUCKETS=${MINIO_BUCKET_NAME}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+    volumes:
+      - minio_data:/data
+    networks:
+      - ${NETWORK_NAME}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: ${HEALTHCHECK_INTERVAL}
+      timeout: ${HEALTHCHECK_TIMEOUT}
+      retries: ${HEALTHCHECK_RETRIES}
+      start_period: ${HEALTHCHECK_START_PERIOD}
+    restart: unless-stopped
+
   # Postgresql Service
   postgresql:
     image: ghcr.io/shugur-network/shudl/postgresql:latest
@@ -30,17 +110,21 @@ services:
     image: ghcr.io/shugur-network/shudl/nessie:latest
     container_name: ${COMPOSE_PROJECT_NAME}-nessie
     environment:
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - NESSIE_VERSION_STORE_TYPE=${NESSIE_VERSION_STORE_TYPE}
-      - QUARKUS_DATASOURCE_POSTGRESQL_JDBC_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
+      - QUARKUS_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - QUARKUS_HTTP_HOST=${NESSIE_HOST}
       - QUARKUS_DATASOURCE_POSTGRESQL_USERNAME=${POSTGRES_USER}
       - QUARKUS_DATASOURCE_POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
+      - QUARKUS_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_ENDPOINT=${S3_ENDPOINT}
       - QUARKUS_HTTP_PORT=${NESSIE_PORT}
-      - QUARKUS_HTTP_HOST=${NESSIE_HOST}
+      - NESSIE_VERSION_STORE_TYPE=${NESSIE_VERSION_STORE_TYPE}
+      - QUARKUS_DATASOURCE_POSTGRESQL_JDBC_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
     volumes:
-      # No persistent volumes
+      []
     networks:
       - ${NETWORK_NAME}
     depends_on:
@@ -56,23 +140,30 @@ services:
       start_period: ${HEALTHCHECK_START_PERIOD}
     restart: unless-stopped
 
-  # Minio Service
-  minio:
-    image: ghcr.io/shugur-network/shudl/minio:latest
-    container_name: ${COMPOSE_PROJECT_NAME}-minio
+  # Trino Service
+  trino:
+    image: ghcr.io/shugur-network/shudl/trino:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-trino
     environment:
-      - MINIO_REGION=${MINIO_REGION}
-      - MINIO_DEFAULT_BUCKETS=${MINIO_BUCKET_NAME}
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-      - MINIO_VOLUMES=/data
-      - MINIO_OPTS=--console-address :9001
+      - TRINO_DISCOVERY_URI=${TRINO_DISCOVERY_URI}
+      - TRINO_QUERY_MAX_MEMORY=${TRINO_QUERY_MAX_MEMORY}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - TRINO_COORDINATOR=${TRINO_COORDINATOR}
+      - TRINO_NODE_SCHEDULER_INCLUDE_COORDINATOR=${TRINO_INCLUDE_COORDINATOR}
+      - TRINO_HTTP_SERVER_PORT=${TRINO_PORT}
     volumes:
-      - minio_data:/data
+      []
     networks:
       - ${NETWORK_NAME}
+    depends_on:
+      minio:
+        condition: service_healthy
+      nessie:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
       interval: ${HEALTHCHECK_INTERVAL}
       timeout: ${HEALTHCHECK_TIMEOUT}
       retries: ${HEALTHCHECK_RETRIES}
@@ -86,6 +177,6 @@ volumes:
     driver: local
 
 networks:
-  testnetwork:
+  shunetwork:
     name: ${NETWORK_NAME}
     driver: bridge

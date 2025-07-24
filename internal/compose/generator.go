@@ -225,6 +225,11 @@ func (g *Generator) getServiceEnvironmentVariables(name string, service *Service
 		envVars["QUARKUS_DATASOURCE_POSTGRESQL_JDBC_URL"] = "jdbc:postgresql://postgresql:5432/${POSTGRES_DB}"
 		envVars["QUARKUS_DATASOURCE_POSTGRESQL_USERNAME"] = "${POSTGRES_USER}"
 		envVars["QUARKUS_DATASOURCE_POSTGRESQL_PASSWORD"] = "${POSTGRES_PASSWORD}"
+		// Legacy environment variables for compatibility
+		envVars["QUARKUS_DATASOURCE_JDBC_URL"] = "jdbc:postgresql://postgresql:5432/${POSTGRES_DB}"
+		envVars["QUARKUS_DATASOURCE_USERNAME"] = "${POSTGRES_USER}"
+		envVars["QUARKUS_DATASOURCE_PASSWORD"] = "${POSTGRES_PASSWORD}"
+		envVars["POSTGRES_DB"] = "${POSTGRES_DB}"
 		envVars["S3_ACCESS_KEY"] = "${S3_ACCESS_KEY}"
 		envVars["S3_SECRET_KEY"] = "${S3_SECRET_KEY}"
 		envVars["S3_ENDPOINT"] = "${S3_ENDPOINT}"
@@ -285,7 +290,7 @@ func (g *Generator) writeServiceVolumeBinds(buf *bytes.Buffer, name string, serv
 	case "postgresql":
 		buf.WriteString("      - postgresql_data:/var/lib/postgresql/data\n")
 	default:
-		buf.WriteString("      # No persistent volumes\n")
+		buf.WriteString("      []\n")
 	}
 }
 
