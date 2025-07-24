@@ -5,6 +5,11 @@ A Go-based Docker installer API that provides endpoints to manage Docker service
 ## Features
 
 - ✅ **RESTful API** - Clean REST endpoints for all Docker operations
+- ✅ **Dynamic Compose Generation** - Generate docker-compose.yml files based on user preferences
+- ✅ **Service Selection** - Choose which services to deploy (MinIO, PostgreSQL, Nessie, Trino, Spark)
+- ✅ **Preset Configurations** - Development, Production, and Minimal templates
+- ✅ **Configuration Validation** - Automatic dependency resolution and validation
+- ✅ **Environment Management** - Auto-generated .env files with proper configurations
 - ✅ **Swagger Documentation** - Auto-generated API documentation
 - ✅ **Structured Logging** - JSON and console logging with zerolog
 - ✅ **Configuration Management** - YAML, environment variables, and defaults
@@ -79,7 +84,40 @@ Once the server is running, visit:
 - `POST /api/v1/docker/cleanup` - Cleanup Docker resources
 - `GET /api/v1/docker/status` - Get services status
 
+#### Compose Generation
+- `GET /api/v1/compose/services` - List available services
+- `GET /api/v1/compose/defaults` - Get preset configurations
+- `POST /api/v1/compose/generate` - Generate docker-compose files
+- `POST /api/v1/compose/validate` - Validate configuration
+- `POST /api/v1/compose/preview` - Preview generated files
+
 ### Example API Calls
+
+#### Generate Compose Files
+```bash
+curl -X POST http://localhost:8080/api/v1/compose/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "project_name": "my-lakehouse",
+    "environment": "development",
+    "services": {
+      "minio": {"name": "minio", "enabled": true},
+      "postgresql": {"name": "postgresql", "enabled": true},
+      "nessie": {"name": "nessie", "enabled": true},
+      "trino": {"name": "trino", "enabled": true}
+    }
+  }'
+```
+
+#### Get Available Services
+```bash
+curl http://localhost:8080/api/v1/compose/services
+```
+
+#### Get Preset Configurations
+```bash
+curl http://localhost:8080/api/v1/compose/defaults
+```
 
 #### Start Services
 ```bash
