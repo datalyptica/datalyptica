@@ -5,15 +5,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/viper"
 	"github.com/shudl/shudl/internal/logger"
+	"github.com/spf13/viper"
 )
 
 // Config holds all configuration for the application
 type Config struct {
-	Server ServerConfig `mapstructure:"server"`
+	Server ServerConfig  `mapstructure:"server"`
 	Logger logger.Config `mapstructure:"logger"`
-	Docker DockerConfig `mapstructure:"docker"`
+	Docker DockerConfig  `mapstructure:"docker"`
 }
 
 // ServerConfig holds server-related configuration
@@ -113,10 +113,12 @@ func validate(config *Config) error {
 	// Check if compose file exists if specified
 	if config.Docker.ComposeFile != "" {
 		if _, err := os.Stat(config.Docker.ComposeFile); os.IsNotExist(err) {
-			// Only warn if the compose file is explicitly set but doesn't exist
-			if viper.IsSet("docker.compose_file") {
+			// Only error if the compose file is explicitly set but doesn't exist
+			if viper.IsSet("docker.compose_file") && config.Docker.ComposeFile != "docker-compose.yml" {
 				return fmt.Errorf("docker compose file not found: %s", config.Docker.ComposeFile)
 			}
+			// For default docker-compose.yml, just warn but don't fail
+			// This allows the installer to work in generator mode without requiring existing compose files
 		}
 	}
 
@@ -146,4 +148,4 @@ func GetStringMap(key string) map[string]interface{} {
 // Set sets a configuration value
 func Set(key string, value interface{}) {
 	viper.Set(key, value)
-} 
+}

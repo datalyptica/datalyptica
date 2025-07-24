@@ -23,6 +23,8 @@ type ServiceConfig struct {
 	ProjectName string            `json:"project_name"`
 	Environment map[string]string `json:"environment"`
 	Services    []string          `json:"services"`
+	EnvFile     string            `json:"env_file,omitempty"`
+	WorkDir     string            `json:"work_dir,omitempty"`
 }
 
 // OperationResult represents the result of a Docker operation
@@ -262,10 +264,19 @@ func (s *Service) executeCommand(ctx context.Context, command string, args []str
 	// Create command
 	cmd := exec.CommandContext(cmdCtx, command, args...)
 	
+	// Set working directory if provided
+	if env != nil {
+		if workDir, exists := env["WORK_DIR"]; exists && workDir != "" {
+			cmd.Dir = workDir
+		}
+	}
+	
 	// Set environment variables
 	if env != nil {
 		for key, value := range env {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+			if key != "WORK_DIR" { // Skip special keys
+				cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+			}
 		}
 	}
 

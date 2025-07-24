@@ -13,14 +13,15 @@ import (
 
 // Router holds the gin router and dependencies
 type Router struct {
-	engine  *gin.Engine
-	handler *Handler
-	config  *config.ServerConfig
-	logger  *logger.Logger
+	engine         *gin.Engine
+	handler        *Handler
+	composeHandler *ComposeHandler
+	config         *config.ServerConfig
+	logger         *logger.Logger
 }
 
 // NewRouter creates a new API router
-func NewRouter(handler *Handler, serverConfig *config.ServerConfig, log *logger.Logger) *Router {
+func NewRouter(handler *Handler, composeHandler *ComposeHandler, serverConfig *config.ServerConfig, log *logger.Logger) *Router {
 	// Set gin mode based on environment
 	if serverConfig.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -31,10 +32,11 @@ func NewRouter(handler *Handler, serverConfig *config.ServerConfig, log *logger.
 	engine := gin.New()
 	
 	return &Router{
-		engine:  engine,
-		handler: handler,
-		config:  serverConfig,
-		logger:  log.WithComponent("api-router"),
+		engine:         engine,
+		handler:        handler,
+		composeHandler: composeHandler,
+		config:         serverConfig,
+		logger:         log.WithComponent("api-router"),
 	}
 }
 
@@ -92,6 +94,16 @@ func (r *Router) addRoutes() {
 			docker.POST("/restart", r.handler.RestartServices)
 			docker.POST("/cleanup", r.handler.CleanupServices)
 			docker.GET("/status", r.handler.GetServicesStatus)
+		}
+		
+		// Compose generation routes
+		compose := v1.Group("/compose")
+		{
+			compose.GET("/defaults", r.composeHandler.GetDefaultConfigurations)
+			compose.GET("/services", r.composeHandler.GetAvailableServices)
+			compose.POST("/generate", r.composeHandler.GenerateCompose)
+			compose.POST("/validate", r.composeHandler.ValidateConfiguration)
+			compose.POST("/preview", r.composeHandler.PreviewGeneration)
 		}
 	}
 }

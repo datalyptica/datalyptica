@@ -1,0 +1,23 @@
+{
+  "project_name": "shudl-test",
+  "network_name": "testnetwork",
+  "environment": "development",
+  "services": {
+    "minio": {
+      "name": "minio",
+      "enabled": true
+    },
+    "postgresql": {
+      "name": "postgresql", 
+      "enabled": true
+    },
+    "nessie": {
+      "name": "nessie",
+      "enabled": true
+    },
+    "trino": {
+      "name": "trino",
+      "enabled": false
+    }
+  }
+}

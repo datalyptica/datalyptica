@@ -76,8 +76,11 @@ func main() {
 	// Initialize API handler
 	apiHandler := api.NewHandler(dockerService, log)
 
+	// Initialize compose handler
+	composeHandler := api.NewComposeHandler("./generated", log)
+
 	// Initialize router
-	router := api.NewRouter(apiHandler, &cfg.Server, log)
+	router := api.NewRouter(apiHandler, composeHandler, &cfg.Server, log)
 	router.Setup()
 
 	// Create HTTP server
