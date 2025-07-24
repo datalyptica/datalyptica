@@ -222,14 +222,14 @@ func (g *Generator) getServiceEnvironmentVariables(name string, service *Service
 		envVars["QUARKUS_HTTP_PORT"] = "${NESSIE_PORT}"
 		envVars["QUARKUS_HTTP_HOST"] = "${NESSIE_HOST}"
 		envVars["NESSIE_VERSION_STORE_TYPE"] = "${NESSIE_VERSION_STORE_TYPE}"
+		envVars["NESSIE_VERSION_STORE_PERSIST_JDBC_DATASOURCE"] = "${NESSIE_DATASOURCE_NAME}"
 		envVars["QUARKUS_DATASOURCE_POSTGRESQL_JDBC_URL"] = "jdbc:postgresql://postgresql:5432/${POSTGRES_DB}"
 		envVars["QUARKUS_DATASOURCE_POSTGRESQL_USERNAME"] = "${POSTGRES_USER}"
 		envVars["QUARKUS_DATASOURCE_POSTGRESQL_PASSWORD"] = "${POSTGRES_PASSWORD}"
 		// Legacy environment variables for compatibility
 		envVars["QUARKUS_DATASOURCE_JDBC_URL"] = "jdbc:postgresql://postgresql:5432/${POSTGRES_DB}"
-		envVars["QUARKUS_DATASOURCE_USERNAME"] = "${POSTGRES_USER}"
-		envVars["QUARKUS_DATASOURCE_PASSWORD"] = "${POSTGRES_PASSWORD}"
-		envVars["POSTGRES_DB"] = "${POSTGRES_DB}"
+		envVars["QUARKUS_DATASOURCE_USERNAME"] = "${QUARKUS_DATASOURCE_USERNAME}"
+		envVars["QUARKUS_DATASOURCE_PASSWORD"] = "${QUARKUS_DATASOURCE_PASSWORD}"
 		envVars["S3_ACCESS_KEY"] = "${S3_ACCESS_KEY}"
 		envVars["S3_SECRET_KEY"] = "${S3_SECRET_KEY}"
 		envVars["S3_ENDPOINT"] = "${S3_ENDPOINT}"
@@ -333,7 +333,7 @@ func (g *Generator) writeServiceHealthCheck(buf *bytes.Buffer, name string, serv
 	case "postgresql":
 		buf.WriteString("      test: [\"CMD-SHELL\", \"pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}\"]\n")
 	case "nessie":
-		buf.WriteString("      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:19120/api/v2/config\"]\n")
+		buf.WriteString("      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:19120/api/v1/info\"]\n")
 	case "trino":
 		buf.WriteString("      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:8080/v1/info\"]\n")
 	case "spark-master", "spark-worker":
@@ -421,6 +421,10 @@ func (g *Generator) getServiceEnvFileVariables(name string, service *ServiceConf
 		envVars["NESSIE_PORT"] = "19120"
 		envVars["NESSIE_HOST"] = "0.0.0.0"
 		envVars["NESSIE_VERSION_STORE_TYPE"] = "JDBC2"
+		envVars["NESSIE_DATASOURCE_NAME"] = "postgresql"
+		// Required legacy variables that Nessie startup script expects
+		envVars["QUARKUS_DATASOURCE_USERNAME"] = envVars["POSTGRES_USER"]
+		envVars["QUARKUS_DATASOURCE_PASSWORD"] = envVars["POSTGRES_PASSWORD"]
 
 	case "trino":
 		envVars["TRINO_PORT"] = "8080"

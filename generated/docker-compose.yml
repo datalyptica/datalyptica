@@ -1,62 +1,5 @@
 services:
 
-  # Spark-master Service
-  spark-master:
-    image: ghcr.io/shugur-network/shudl/spark-master:latest
-    container_name: ${COMPOSE_PROJECT_NAME}-spark-master
-    environment:
-      - SPARK_WEBUI_PORT=${SPARK_UI_PORT}
-      - SPARK_MASTER_URL=${SPARK_MASTER_URL}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - NESSIE_URI=${NESSIE_URI}
-      - WAREHOUSE_LOCATION=${WAREHOUSE_LOCATION}
-      - SPARK_MODE=master
-    volumes:
-      []
-    networks:
-      - ${NETWORK_NAME}
-    depends_on:
-      minio:
-        condition: service_healthy
-      nessie:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4040"]
-      interval: ${HEALTHCHECK_INTERVAL}
-      timeout: ${HEALTHCHECK_TIMEOUT}
-      retries: ${HEALTHCHECK_RETRIES}
-      start_period: ${HEALTHCHECK_START_PERIOD}
-    restart: unless-stopped
-
-  # Spark-worker Service
-  spark-worker:
-    image: ghcr.io/shugur-network/shudl/spark-worker:latest
-    container_name: ${COMPOSE_PROJECT_NAME}-spark-worker
-    environment:
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=${SPARK_MASTER_URL}
-      - SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY}
-      - SPARK_WORKER_CORES=${SPARK_WORKER_CORES}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
-    volumes:
-      []
-    networks:
-      - ${NETWORK_NAME}
-    depends_on:
-      spark-master:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4040"]
-      interval: ${HEALTHCHECK_INTERVAL}
-      timeout: ${HEALTHCHECK_TIMEOUT}
-      retries: ${HEALTHCHECK_RETRIES}
-      start_period: ${HEALTHCHECK_START_PERIOD}
-    restart: unless-stopped
-
   # Minio Service
   minio:
     image: ghcr.io/shugur-network/shudl/minio:latest
@@ -85,14 +28,14 @@ services:
     image: ghcr.io/shugur-network/shudl/postgresql:latest
     container_name: ${COMPOSE_PROJECT_NAME}-postgresql
     environment:
-      - SHUDL_USER=${SHUDL_USER}
-      - SHUDL_PASSWORD=${SHUDL_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
       - PGDATA=/var/lib/postgresql/data/pgdata
       - SHUDL_DB=${SHUDL_DB}
+      - SHUDL_USER=${SHUDL_USER}
+      - SHUDL_PASSWORD=${SHUDL_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - postgresql_data:/var/lib/postgresql/data
     networks:
@@ -110,19 +53,19 @@ services:
     image: ghcr.io/shugur-network/shudl/nessie:latest
     container_name: ${COMPOSE_PROJECT_NAME}-nessie
     environment:
-      - QUARKUS_DATASOURCE_USERNAME=${POSTGRES_USER}
-      - S3_SECRET_KEY=${S3_SECRET_KEY}
-      - QUARKUS_HTTP_HOST=${NESSIE_HOST}
-      - QUARKUS_DATASOURCE_POSTGRESQL_USERNAME=${POSTGRES_USER}
-      - QUARKUS_DATASOURCE_POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
       - QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
-      - QUARKUS_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - QUARKUS_DATASOURCE_USERNAME=${QUARKUS_DATASOURCE_USERNAME}
+      - QUARKUS_DATASOURCE_PASSWORD=${QUARKUS_DATASOURCE_PASSWORD}
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_ENDPOINT=${S3_ENDPOINT}
       - QUARKUS_HTTP_PORT=${NESSIE_PORT}
-      - NESSIE_VERSION_STORE_TYPE=${NESSIE_VERSION_STORE_TYPE}
+      - NESSIE_VERSION_STORE_PERSIST_JDBC_DATASOURCE=${NESSIE_DATASOURCE_NAME}
       - QUARKUS_DATASOURCE_POSTGRESQL_JDBC_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
+      - QUARKUS_DATASOURCE_POSTGRESQL_USERNAME=${POSTGRES_USER}
+      - QUARKUS_DATASOURCE_POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      - QUARKUS_HTTP_HOST=${NESSIE_HOST}
+      - NESSIE_VERSION_STORE_TYPE=${NESSIE_VERSION_STORE_TYPE}
     volumes:
       []
     networks:
@@ -133,7 +76,7 @@ services:
       minio:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:19120/api/v2/config"]
+      test: ["CMD", "curl", "-f", "http://localhost:19120/api/v1/info"]
       interval: ${HEALTHCHECK_INTERVAL}
       timeout: ${HEALTHCHECK_TIMEOUT}
       retries: ${HEALTHCHECK_RETRIES}
@@ -145,14 +88,14 @@ services:
     image: ghcr.io/shugur-network/shudl/trino:latest
     container_name: ${COMPOSE_PROJECT_NAME}-trino
     environment:
-      - TRINO_DISCOVERY_URI=${TRINO_DISCOVERY_URI}
-      - TRINO_QUERY_MAX_MEMORY=${TRINO_QUERY_MAX_MEMORY}
-      - S3_ENDPOINT=${S3_ENDPOINT}
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - TRINO_COORDINATOR=${TRINO_COORDINATOR}
       - TRINO_NODE_SCHEDULER_INCLUDE_COORDINATOR=${TRINO_INCLUDE_COORDINATOR}
       - TRINO_HTTP_SERVER_PORT=${TRINO_PORT}
+      - TRINO_DISCOVERY_URI=${TRINO_DISCOVERY_URI}
+      - TRINO_QUERY_MAX_MEMORY=${TRINO_QUERY_MAX_MEMORY}
+      - S3_ENDPOINT=${S3_ENDPOINT}
     volumes:
       []
     networks:
@@ -164,6 +107,63 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
+      interval: ${HEALTHCHECK_INTERVAL}
+      timeout: ${HEALTHCHECK_TIMEOUT}
+      retries: ${HEALTHCHECK_RETRIES}
+      start_period: ${HEALTHCHECK_START_PERIOD}
+    restart: unless-stopped
+
+  # Spark-master Service
+  spark-master:
+    image: ghcr.io/shugur-network/shudl/spark-master:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-spark-master
+    environment:
+      - WAREHOUSE_LOCATION=${WAREHOUSE_LOCATION}
+      - SPARK_MODE=master
+      - SPARK_WEBUI_PORT=${SPARK_UI_PORT}
+      - SPARK_MASTER_URL=${SPARK_MASTER_URL}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - NESSIE_URI=${NESSIE_URI}
+    volumes:
+      []
+    networks:
+      - ${NETWORK_NAME}
+    depends_on:
+      minio:
+        condition: service_healthy
+      nessie:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040"]
+      interval: ${HEALTHCHECK_INTERVAL}
+      timeout: ${HEALTHCHECK_TIMEOUT}
+      retries: ${HEALTHCHECK_RETRIES}
+      start_period: ${HEALTHCHECK_START_PERIOD}
+    restart: unless-stopped
+
+  # Spark-worker Service
+  spark-worker:
+    image: ghcr.io/shugur-network/shudl/spark-worker:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-spark-worker
+    environment:
+      - SPARK_WORKER_CORES=${SPARK_WORKER_CORES}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=${SPARK_MASTER_URL}
+      - SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY}
+    volumes:
+      []
+    networks:
+      - ${NETWORK_NAME}
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040"]
       interval: ${HEALTHCHECK_INTERVAL}
       timeout: ${HEALTHCHECK_TIMEOUT}
       retries: ${HEALTHCHECK_RETRIES}
