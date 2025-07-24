@@ -115,6 +115,22 @@ execute_trino_query() {
     local query="$1"
     local timeout="${2:-60}"
     
+    # Ensure Trino is ready before executing query
+    local max_ready_attempts=3
+    local ready_attempt=1
+    
+    while [[ $ready_attempt -le $max_ready_attempts ]]; do
+        if timeout 10 docker exec shudl-trino /opt/trino/bin/trino --server http://localhost:8080 --execute "SELECT 1;" >/dev/null 2>&1; then
+            break
+        fi
+        if [[ $ready_attempt -eq $max_ready_attempts ]]; then
+            return 1
+        fi
+        sleep 1
+        ready_attempt=$((ready_attempt + 1))
+    done
+    
+    # Execute the actual query with proper error handling
     timeout "$timeout" docker exec shudl-trino /opt/trino/bin/trino --server http://localhost:8080 --execute "$query" 2>/dev/null
 }
 

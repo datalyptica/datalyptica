@@ -1,0 +1,19 @@
+[0;36m[09:52:42][0m Phase 1: Prerequisites and Environment Validation
+[0;36m[09:52:42][0m Running test: Environment Variables
+[0;32m✅ Environment Variables completed in 0s[0m
+[0;36m[09:52:42][0m Running test: Docker Compose Validation
+[0;32m✅ Docker Compose Validation completed in 4s[0m
+[0;36m[09:52:46][0m Phase 2: Service Health Checks
+[0;36m[09:52:46][0m Running test: PostgreSQL Health
+[0;32m✅ PostgreSQL Health completed in 1s[0m
+[0;36m[09:52:47][0m Running test: MinIO Health
+[0;32m✅ MinIO Health completed in 1s[0m
+[0;36m[09:52:48][0m Running test: Nessie Health
+[0;32m✅ Nessie Health completed in 1s[0m
+[0;36m[09:52:49][0m Running test: Trino Health
+[0;32m✅ Trino Health completed in 12s[0m
+[0;36m[09:53:01][0m Running test: Spark Health
+[0;32m✅ Spark Health completed in 16s[0m
+[0;36m[09:53:17][0m Phase 3: Integration Tests
+[0;36m[09:53:17][0m Running test: Spark-Iceberg Integration
+[0;31m❌ Spark-Iceberg Integration failed after 18s[0m

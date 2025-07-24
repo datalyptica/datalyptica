@@ -54,14 +54,53 @@ if ! execute_trino_query "SELECT 1;" 30; then
 fi
 
 test_step "Checking available catalogs..."
-if ! execute_trino_query "SHOW CATALOGS;" 30 | grep -q "iceberg"; then
-    test_error "Iceberg catalog is not available"
+# Retry mechanism for catalog availability check (timing issues during full test suite)
+max_attempts=5
+attempt=1
+catalog_available=false
+
+while [[ $attempt -le $max_attempts ]]; do
+    if [[ $attempt -gt 1 ]]; then
+        test_info "Retrying catalog check (attempt $attempt/$max_attempts)..."
+        sleep 2
+    fi
+    
+    catalog_result=$(execute_trino_query "SHOW CATALOGS;" 30 2>/dev/null || echo "")
+    if echo "$catalog_result" | grep -q "iceberg"; then
+        catalog_available=true
+        break
+    fi
+    
+    attempt=$((attempt + 1))
+done
+
+if [[ "$catalog_available" != "true" ]]; then
+    test_error "Iceberg catalog is not available after $max_attempts attempts"
     exit 1
 fi
 
 test_step "Testing Iceberg catalog connectivity..."
-if ! execute_trino_query "SHOW SCHEMAS IN iceberg;" 30; then
-    test_error "Cannot access Iceberg catalog schemas"
+# Retry mechanism for Iceberg catalog connectivity (timing issues during full test suite)
+max_attempts=3
+attempt=1
+iceberg_available=false
+
+while [[ $attempt -le $max_attempts ]]; do
+    if [[ $attempt -gt 1 ]]; then
+        test_info "Retrying Iceberg connectivity check (attempt $attempt/$max_attempts)..."
+        sleep 2
+    fi
+    
+    if execute_trino_query "SHOW SCHEMAS IN iceberg;" 30 >/dev/null 2>&1; then
+        iceberg_available=true
+        break
+    fi
+    
+    attempt=$((attempt + 1))
+done
+
+if [[ "$iceberg_available" != "true" ]]; then
+    test_error "Cannot access Iceberg catalog schemas after $max_attempts attempts"
     exit 1
 fi
 

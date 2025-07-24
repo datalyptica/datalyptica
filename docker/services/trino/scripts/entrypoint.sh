@@ -109,11 +109,11 @@ generate_iceberg_catalog() {
     cat > /opt/trino/etc/catalog/iceberg.properties << EOF
 connector.name=iceberg
 iceberg.catalog.type=${TRINO_CATALOG_ICEBERG_CATALOG_TYPE:-nessie}
-iceberg.nessie-catalog.uri=${TRINO_CATALOG_ICEBERG_REST_CATALOG_URI:-http://nessie:19120/api/v2}
+iceberg.nessie-catalog.uri=${TRINO_CATALOG_ICEBERG_REST_CATALOG_URI:-http://shudl-nessie:19120/api/v2}
 iceberg.nessie-catalog.default-warehouse-dir=${TRINO_CATALOG_ICEBERG_REST_CATALOG_WAREHOUSE:-s3://lakehouse/}
 iceberg.nessie-catalog.ref=${TRINO_ICEBERG_REF:-main}
 fs.native-s3.enabled=${FS_NATIVE_S3_ENABLED:-true}
-s3.endpoint=${TRINO_CATALOG_ICEBERG_S3_ENDPOINT:-http://minio:9000}
+s3.endpoint=${TRINO_CATALOG_ICEBERG_S3_ENDPOINT:-http://shudl-minio:9000}
 s3.region=${TRINO_CATALOG_ICEBERG_S3_REGION:-us-east-1}
 s3.aws-access-key=${TRINO_CATALOG_ICEBERG_S3_ACCESS_KEY:-admin}
 s3.aws-secret-key=${TRINO_CATALOG_ICEBERG_S3_SECRET_KEY:-password123}
@@ -149,8 +149,8 @@ wait_for_dependencies() {
     
     max_attempts=30
     attempt=1
-    nessie_host="nessie"
-    nessie_port="19120"
+    nessie_host="${NESSIE_HOST:-nessie}"
+    nessie_port="${NESSIE_PORT:-19120}"
     
     while [ $attempt -le $max_attempts ]; do
         # Use wget instead of nc for compatibility
@@ -173,8 +173,8 @@ start_trino() {
     echo "Starting Trino server..."
     echo "Coordinator: ${TRINO_COORDINATOR:-true}"
     echo "Discovery URI: ${TRINO_DISCOVERY_URI:-http://trino:8080}"
-    echo "Nessie URI: ${NESSIE_URI:-http://nessie:19120/iceberg/main/}"
-    echo "S3 Endpoint: ${S3_ENDPOINT:-http://minio:9000}"
+    echo "Nessie URI: ${NESSIE_URI:-http://shudl-nessie:19120/iceberg/main/}"
+    echo "S3 Endpoint: ${S3_ENDPOINT:-http://shudl-minio:9000}"
     
     cd /opt/trino
     

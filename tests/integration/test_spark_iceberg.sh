@@ -24,29 +24,20 @@ cat > /tmp/spark_iceberg_test.py << 'EOF'
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType
 import random
+import os
 
 try:
-    # Initialize Spark with Iceberg support
+    # Set AWS region environment variable for the driver
+    os.environ['AWS_REGION'] = 'us-east-1'
+    os.environ['AWS_ACCESS_KEY_ID'] = 'admin'
+    os.environ['AWS_SECRET_ACCESS_KEY'] = 'password123'
+    
+    # Initialize Spark with minimal configuration (most configs are pre-set in cluster)
     spark = SparkSession.builder \
         .appName("Spark_Iceberg_Integration_Test") \
         .master("spark://shudl-spark-master:7077") \
-        .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \
-        .config("spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog") \
-        .config("spark.sql.catalog.iceberg.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
-        .config("spark.sql.catalog.iceberg.uri", "http://nessie:19120/api/v2") \
-        .config("spark.sql.catalog.iceberg.ref", "main") \
-        .config("spark.sql.catalog.iceberg.warehouse", "s3://lakehouse/") \
-        .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
-        .config("spark.hadoop.fs.s3a.access.key", "admin") \
-        .config("spark.hadoop.fs.s3a.secret.key", "password123") \
-        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
-        .config("spark.hadoop.fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider") \
-        .config("spark.sql.catalog.iceberg.io-impl", "org.apache.iceberg.aws.s3.S3FileIO") \
-        .config("spark.sql.catalog.iceberg.s3.endpoint", "http://minio:9000") \
-        .config("spark.sql.catalog.iceberg.s3.path-style-access", "true") \
-        .config("spark.sql.catalog.iceberg.s3.access-key-id", "admin") \
-        .config("spark.sql.catalog.iceberg.s3.secret-access-key", "password123") \
+        .config("spark.driver.extraJavaOptions", "-Daws.region=us-east-1") \
+        .config("spark.executor.extraJavaOptions", "-Daws.region=us-east-1") \
         .getOrCreate()
     
     print("✓ Spark session with Iceberg support created successfully")
