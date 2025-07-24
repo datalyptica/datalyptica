@@ -147,7 +147,12 @@ networks:
 func (g *Generator) writeServiceDefinition(buf *bytes.Buffer, name string, service *ServiceConfig, config *ComposeConfiguration) {
 	image := service.Image
 	if image == "" {
-		image = fmt.Sprintf("ghcr.io/shugur-network/shudl/%s:latest", name)
+		// Special case for Spark services - both use the same image
+		if name == "spark-master" || name == "spark-worker" {
+			image = "ghcr.io/shugur-network/shudl/spark:latest"
+		} else {
+			image = fmt.Sprintf("ghcr.io/shugur-network/shudl/%s:latest", name)
+		}
 	}
 
 	buf.WriteString(fmt.Sprintf(`
@@ -219,13 +224,25 @@ func (g *Generator) getServiceEnvironmentVariables(name string, service *Service
 		envVars["SHUDL_PASSWORD"] = "${SHUDL_PASSWORD}"
 
 	case "nessie":
+		// Server Configuration
 		envVars["QUARKUS_HTTP_PORT"] = "${NESSIE_PORT}"
 		envVars["QUARKUS_HTTP_HOST"] = "${NESSIE_HOST}"
+		// CORS Configuration  
+		envVars["QUARKUS_HTTP_CORS"] = "${NESSIE_CORS_ENABLED}"
+		envVars["QUARKUS_HTTP_CORS_ORIGINS"] = "${NESSIE_CORS_ORIGINS}"
+		envVars["QUARKUS_HTTP_CORS_METHODS"] = "${NESSIE_CORS_METHODS}"
+		envVars["QUARKUS_HTTP_CORS_HEADERS"] = "${NESSIE_CORS_HEADERS}"
+		envVars["QUARKUS_HTTP_CORS_EXPOSED_HEADERS"] = "${NESSIE_CORS_EXPOSED_HEADERS}"
+		envVars["QUARKUS_HTTP_CORS_ACCESS_CONTROL_MAX_AGE"] = "${NESSIE_CORS_MAX_AGE}"
+		// Database Configuration
 		envVars["NESSIE_VERSION_STORE_TYPE"] = "${NESSIE_VERSION_STORE_TYPE}"
 		envVars["NESSIE_VERSION_STORE_PERSIST_JDBC_DATASOURCE"] = "${NESSIE_DATASOURCE_NAME}"
 		envVars["QUARKUS_DATASOURCE_POSTGRESQL_JDBC_URL"] = "jdbc:postgresql://postgresql:5432/${POSTGRES_DB}"
 		envVars["QUARKUS_DATASOURCE_POSTGRESQL_USERNAME"] = "${POSTGRES_USER}"
 		envVars["QUARKUS_DATASOURCE_POSTGRESQL_PASSWORD"] = "${POSTGRES_PASSWORD}"
+		envVars["QUARKUS_DATASOURCE_POSTGRESQL_JDBC_INITIAL_SIZE"] = "${NESSIE_DB_INITIAL_SIZE}"
+		envVars["QUARKUS_DATASOURCE_POSTGRESQL_JDBC_MIN_SIZE"] = "${NESSIE_DB_MIN_SIZE}"
+		envVars["QUARKUS_DATASOURCE_POSTGRESQL_JDBC_MAX_SIZE"] = "${NESSIE_DB_MAX_SIZE}"
 		// Legacy environment variables for compatibility
 		envVars["QUARKUS_DATASOURCE_JDBC_URL"] = "jdbc:postgresql://postgresql:5432/${POSTGRES_DB}"
 		envVars["QUARKUS_DATASOURCE_USERNAME"] = "${QUARKUS_DATASOURCE_USERNAME}"
@@ -245,9 +262,30 @@ func (g *Generator) getServiceEnvironmentVariables(name string, service *Service
 		envVars["S3_SECRET_KEY"] = "${S3_SECRET_KEY}"
 
 	case "spark-master":
+		// Spark Core Configuration
 		envVars["SPARK_MODE"] = "master"
 		envVars["SPARK_WEBUI_PORT"] = "${SPARK_UI_PORT}"
+		envVars["SPARK_RPC_AUTHENTICATION_ENABLED"] = "false"
+		envVars["SPARK_RPC_ENCRYPTION_ENABLED"] = "false"
+		envVars["SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED"] = "false"
+		envVars["SPARK_SSL_ENABLED"] = "false"
 		envVars["SPARK_MASTER_URL"] = "${SPARK_MASTER_URL}"
+		envVars["SPARK_DRIVER_MEMORY"] = "${SPARK_DRIVER_MEMORY}"
+		envVars["SPARK_DRIVER_MAX_RESULT_SIZE"] = "${SPARK_DRIVER_MAX_RESULT_SIZE}"
+		envVars["SPARK_EXECUTOR_MEMORY"] = "${SPARK_EXECUTOR_MEMORY}"
+		envVars["SPARK_EXECUTOR_CORES"] = "${SPARK_EXECUTOR_CORES}"
+		envVars["SPARK_EXECUTOR_INSTANCES"] = "${SPARK_EXECUTOR_INSTANCES}"
+		// Spark Iceberg Configuration
+		envVars["SPARK_ICEBERG_CATALOG_NAME"] = "${SPARK_ICEBERG_CATALOG_NAME}"
+		envVars["SPARK_ICEBERG_CATALOG_TYPE"] = "${SPARK_ICEBERG_CATALOG_TYPE}"
+		envVars["SPARK_ICEBERG_CATALOG_URI"] = "${NESSIE_URI}"
+		envVars["SPARK_ICEBERG_CATALOG_WAREHOUSE"] = "${WAREHOUSE_LOCATION}"
+		envVars["SPARK_ICEBERG_CATALOG_IO_IMPL"] = "${SPARK_ICEBERG_CATALOG_IO_IMPL}"
+		envVars["SPARK_ICEBERG_CATALOG_S3_ENDPOINT"] = "${S3_ENDPOINT}"
+		envVars["SPARK_ICEBERG_CATALOG_S3_ACCESS_KEY_ID"] = "${S3_ACCESS_KEY}"
+		envVars["SPARK_ICEBERG_CATALOG_S3_SECRET_ACCESS_KEY"] = "${S3_SECRET_KEY}"
+		envVars["SPARK_ICEBERG_CATALOG_S3_PATH_STYLE_ACCESS"] = "${S3_PATH_STYLE_ACCESS}"
+		// Integration Variables
 		envVars["S3_ENDPOINT"] = "${S3_ENDPOINT}"
 		envVars["S3_ACCESS_KEY"] = "${S3_ACCESS_KEY}"
 		envVars["S3_SECRET_KEY"] = "${S3_SECRET_KEY}"
@@ -255,10 +293,28 @@ func (g *Generator) getServiceEnvironmentVariables(name string, service *Service
 		envVars["WAREHOUSE_LOCATION"] = "${WAREHOUSE_LOCATION}"
 
 	case "spark-worker":
+		// Spark Core Configuration
 		envVars["SPARK_MODE"] = "worker"
+		envVars["SPARK_RPC_AUTHENTICATION_ENABLED"] = "false"
+		envVars["SPARK_RPC_ENCRYPTION_ENABLED"] = "false"
+		envVars["SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED"] = "false"
+		envVars["SPARK_SSL_ENABLED"] = "false"
 		envVars["SPARK_MASTER_URL"] = "${SPARK_MASTER_URL}"
 		envVars["SPARK_WORKER_MEMORY"] = "${SPARK_WORKER_MEMORY}"
 		envVars["SPARK_WORKER_CORES"] = "${SPARK_WORKER_CORES}"
+		envVars["SPARK_EXECUTOR_MEMORY"] = "${SPARK_EXECUTOR_MEMORY}"
+		envVars["SPARK_EXECUTOR_CORES"] = "${SPARK_EXECUTOR_CORES}"
+		// Spark Iceberg Configuration (for Nessie integration)
+		envVars["SPARK_ICEBERG_CATALOG_NAME"] = "${SPARK_ICEBERG_CATALOG_NAME}"
+		envVars["SPARK_ICEBERG_CATALOG_TYPE"] = "${SPARK_ICEBERG_CATALOG_TYPE}"
+		envVars["SPARK_ICEBERG_CATALOG_URI"] = "${NESSIE_URI}"
+		envVars["SPARK_ICEBERG_CATALOG_WAREHOUSE"] = "${WAREHOUSE_LOCATION}"
+		envVars["SPARK_ICEBERG_CATALOG_IO_IMPL"] = "${SPARK_ICEBERG_CATALOG_IO_IMPL}"
+		envVars["SPARK_ICEBERG_CATALOG_S3_ENDPOINT"] = "${S3_ENDPOINT}"
+		envVars["SPARK_ICEBERG_CATALOG_S3_ACCESS_KEY_ID"] = "${S3_ACCESS_KEY}"
+		envVars["SPARK_ICEBERG_CATALOG_S3_SECRET_ACCESS_KEY"] = "${S3_SECRET_KEY}"
+		envVars["SPARK_ICEBERG_CATALOG_S3_PATH_STYLE_ACCESS"] = "${S3_PATH_STYLE_ACCESS}"
+		// Integration Variables
 		envVars["S3_ENDPOINT"] = "${S3_ENDPOINT}"
 		envVars["S3_ACCESS_KEY"] = "${S3_ACCESS_KEY}"
 		envVars["S3_SECRET_KEY"] = "${S3_SECRET_KEY}"
@@ -422,6 +478,17 @@ func (g *Generator) getServiceEnvFileVariables(name string, service *ServiceConf
 		envVars["NESSIE_HOST"] = "0.0.0.0"
 		envVars["NESSIE_VERSION_STORE_TYPE"] = "JDBC2"
 		envVars["NESSIE_DATASOURCE_NAME"] = "postgresql"
+		// CORS Configuration (matching original)
+		envVars["NESSIE_CORS_ENABLED"] = "true"
+		envVars["NESSIE_CORS_ORIGINS"] = "*"
+		envVars["NESSIE_CORS_METHODS"] = "GET,POST,PUT,DELETE,OPTIONS,HEAD"
+		envVars["NESSIE_CORS_HEADERS"] = "*"
+		envVars["NESSIE_CORS_EXPOSED_HEADERS"] = "*"
+		envVars["NESSIE_CORS_MAX_AGE"] = "3600"
+		// Database Configuration  
+		envVars["NESSIE_DB_INITIAL_SIZE"] = "5"
+		envVars["NESSIE_DB_MIN_SIZE"] = "5"
+		envVars["NESSIE_DB_MAX_SIZE"] = "20"
 		// Required legacy variables that Nessie startup script expects
 		envVars["QUARKUS_DATASOURCE_USERNAME"] = envVars["POSTGRES_USER"]
 		envVars["QUARKUS_DATASOURCE_PASSWORD"] = envVars["POSTGRES_PASSWORD"]
@@ -441,6 +508,12 @@ func (g *Generator) getServiceEnvFileVariables(name string, service *ServiceConf
 	case "spark-worker":
 		envVars["SPARK_WORKER_MEMORY"] = g.getMemoryConfig("spark-worker", config.Environment)
 		envVars["SPARK_WORKER_CORES"] = g.getCoresConfig("spark-worker", config.Environment)
+		envVars["SPARK_EXECUTOR_MEMORY"] = g.getMemoryConfig("spark-executor", config.Environment)
+		envVars["SPARK_EXECUTOR_CORES"] = g.getCoresConfig("spark-executor", config.Environment)
+		// Iceberg Configuration 
+		envVars["SPARK_ICEBERG_CATALOG_NAME"] = "nessie"
+		envVars["SPARK_ICEBERG_CATALOG_TYPE"] = "nessie"
+		envVars["SPARK_ICEBERG_CATALOG_IO_IMPL"] = "org.apache.iceberg.aws.s3.S3FileIO"
 	}
 
 	// S3/MinIO shared configuration
