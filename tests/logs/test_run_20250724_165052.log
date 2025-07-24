@@ -1,0 +1,12 @@
+[0;36m[16:50:52][0m Phase 1: Prerequisites and Environment Validation
+[0;34mℹ️  Skipping Environment Variables (category: config)[0m
+[0;34mℹ️  Skipping Docker Compose Validation (category: config)[0m
+[0;36m[16:50:52][0m Phase 2: Service Health Checks
+[0;34mℹ️  Skipping PostgreSQL Health (category: health)[0m
+[0;34mℹ️  Skipping MinIO Health (category: health)[0m
+[0;34mℹ️  Skipping Nessie Health (category: health)[0m
+[0;34mℹ️  Skipping Trino Health (category: health)[0m
+[0;34mℹ️  Skipping Spark Health (category: health)[0m
+[0;36m[16:50:52][0m Phase 3: Integration Tests
+[0;36m[16:50:52][0m Running test: Spark-Iceberg Integration
+[0;31m❌ Spark-Iceberg Integration failed after 19s[0m

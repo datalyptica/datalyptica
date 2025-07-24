@@ -17,6 +17,12 @@ set -a
 source docker/.env
 set +a
 
+test_step "Cleaning up any existing test data..."
+
+# Cleanup any existing test data before starting
+execute_trino_query "DROP TABLE IF EXISTS iceberg.cross_engine_test.shared_data" 60 || true
+execute_trino_query "DROP SCHEMA IF EXISTS iceberg.cross_engine_test" 60 || true
+
 test_step "Creating test data with Trino..."
 
 # Create namespace and table with Trino
@@ -94,9 +100,9 @@ try:
     # Add data with Spark
     spark.sql("""
         INSERT INTO iceberg.cross_engine_test.shared_data VALUES
-        (4, 'spark_record_1', 150.25, '2024-01-04', 'created_by_spark'),
-        (5, 'spark_record_2', 300.50, '2024-01-05', 'created_by_spark'),
-        (6, 'spark_record_3', 450.75, '2024-01-06', 'created_by_spark')
+        (4, 'spark_record_1', 150.25, DATE '2024-01-04', 'created_by_spark'),
+        (5, 'spark_record_2', 300.50, DATE '2024-01-05', 'created_by_spark'),
+        (6, 'spark_record_3', 450.75, DATE '2024-01-06', 'created_by_spark')
     """)
     
     print("✓ Added data with Spark")
@@ -164,7 +170,7 @@ spark_data_query="SELECT metadata, COUNT(*) as count, ROUND(SUM(amount), 2) as t
                   WHERE metadata = 'created_by_spark' 
                   GROUP BY metadata"
 
-if execute_trino_query "$spark_data_query" 60 | grep -q "created_by_spark.*3.*900"; then
+if execute_trino_query "$spark_data_query" 60 | grep -q "created_by_spark.*3.*901.50"; then
     test_info "✓ Trino successfully read Spark data"
 else
     test_error "Trino failed to read Spark data correctly"
