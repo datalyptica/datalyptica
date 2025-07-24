@@ -1,0 +1,337 @@
+[90m22:52:03[0m [32mINF[0m [1mStarting ShuDL Docker Installer[0m [36menvironment=[0mdevelopment [36mport=[0m8089 [36mversion=[0m1.0.0
+[90m22:52:03[0m [32mINF[0m [1mValidating Docker installation[0m
+[90m22:52:03[0m [32mINF[0m [1mValidating Docker installation[0m [36mcomponent=[0mdocker-service
+[90m22:52:03[0m [32mINF[0m [1mDocker validation successful[0m [36moutput=[0m"Docker: Docker version 28.3.2, build 578ccf6\n\nDocker Compose: Docker Compose version v2.38.2\n"
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /static/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (5 handlers)
+[GIN-debug] HEAD   /static/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (5 handlers)
+[GIN-debug] GET    /                         --> github.com/shudl/shudl/internal/api.(*WebHandler).ServeInstaller-fm (5 handlers)
+[GIN-debug] GET    /installer                --> github.com/shudl/shudl/internal/api.(*WebHandler).ServeInstaller-fm (5 handlers)
+[GIN-debug] GET    /health                   --> github.com/shudl/shudl/internal/api.(*Handler).HealthCheck-fm (5 handlers)
+[GIN-debug] GET    /swagger/*any             --> github.com/swaggo/gin-swagger.CustomWrapHandler.func1 (5 handlers)
+[GIN-debug] GET    /api/v1/system/validate   --> github.com/shudl/shudl/internal/api.(*Handler).ValidateDockerInstallation-fm (5 handlers)
+[GIN-debug] POST   /api/v1/docker/start      --> github.com/shudl/shudl/internal/api.(*Handler).StartServices-fm (5 handlers)
+[GIN-debug] POST   /api/v1/docker/stop       --> github.com/shudl/shudl/internal/api.(*Handler).StopServices-fm (5 handlers)
+[GIN-debug] POST   /api/v1/docker/restart    --> github.com/shudl/shudl/internal/api.(*Handler).RestartServices-fm (5 handlers)
+[GIN-debug] POST   /api/v1/docker/cleanup    --> github.com/shudl/shudl/internal/api.(*Handler).CleanupServices-fm (5 handlers)
+[GIN-debug] GET    /api/v1/docker/status     --> github.com/shudl/shudl/internal/api.(*Handler).GetServicesStatus-fm (5 handlers)
+[GIN-debug] GET    /api/v1/compose/services  --> github.com/shudl/shudl/internal/api.(*ComposeHandler).GetAvailableServices-fm (5 handlers)
+[GIN-debug] GET    /api/v1/compose/defaults  --> github.com/shudl/shudl/internal/api.(*ComposeHandler).GetDefaultConfigurations-fm (5 handlers)
+[GIN-debug] POST   /api/v1/compose/generate  --> github.com/shudl/shudl/internal/api.(*ComposeHandler).GenerateCompose-fm (5 handlers)
+[GIN-debug] POST   /api/v1/compose/validate  --> github.com/shudl/shudl/internal/api.(*ComposeHandler).ValidateConfiguration-fm (5 handlers)
+[GIN-debug] POST   /api/v1/compose/preview   --> github.com/shudl/shudl/internal/api.(*ComposeHandler).PreviewGeneration-fm (5 handlers)
+[GIN-debug] GET    /api/v1/installer/config-schema --> github.com/shudl/shudl/internal/api.(*WebHandler).GetConfigSchema-fm (5 handlers)
+[GIN-debug] POST   /api/v1/installer/validate-config --> github.com/shudl/shudl/internal/api.(*WebHandler).ValidateConfig-fm (5 handlers)
+[90m22:52:03[0m [32mINF[0m [1mStarting HTTP server[0m [36maddress=[0m:8089 [36minstaller=[0mhttp://localhost:8089/ [36mswagger_ui=[0mhttp://localhost:8089/swagger/
+[90m22:52:08[0m [32mINF[0m [1mServing installer page[0m [36mip=[0m127.0.0.1 [36muser_agent=[0mcurl/8.5.0
+
+
+[31m2025/07/24 22:52:08 [Recovery] 2025/07/24 - 22:52:08 panic recovered:
+GET / HTTP/1.1
+Host: localhost:8089
+Accept: */*
+User-Agent: curl/8.5.0
+
+
+runtime error: invalid memory address or nil pointer dereference
+/usr/local/go/src/runtime/panic.go:262 (0x8714f)
+	panicmem: panic(memoryError)
+/usr/local/go/src/runtime/signal_unix.go:925 (0x8711c)
+	sigpanic: panicmem()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:971 (0x780a88)
+	(*Context).HTML: instance := c.engine.HTMLRender.Instance(name, obj)
+/home/ubuntu/shudl/internal/api/web_handlers.go:74 (0x88a9f3)
+	(*WebHandler).ServeInstaller: c.HTML(http.StatusOK, "installer/index.html", data)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x77c24b)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/shudl/internal/api/router.go:160 (0x88cdab)
+	(*Router).addMiddleware.(*Router).requestIDMiddleware.func2: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x7883d7)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/recovery.go:102 (0x7883bc)
+	CustomRecoveryWithWriter.func1: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x77c24b)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/shudl/internal/api/router.go:127 (0x889597)
+	(*Router).addMiddleware.(*Router).loggerMiddleware.func1: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x787303)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/gin.go:644 (0x786e8c)
+	(*Engine).handleHTTPRequest: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/gin.go:600 (0x786acf)
+	(*Engine).ServeHTTP: engine.handleHTTPRequest(c)
+/usr/local/go/src/net/http/server.go:3301 (0x2b7f0b)
+	serverHandler.ServeHTTP: handler.ServeHTTP(rw, req)
+/usr/local/go/src/net/http/server.go:2102 (0x2a96eb)
+	(*conn).serve: serverHandler{c.server}.ServeHTTP(w, w.req)
+/usr/local/go/src/runtime/asm_arm64.s:1223 (0x8cc23)
+	goexit: MOVD	R0, R0	// NOP
+[0m
+[90m22:52:08[0m [32mINF[0m [1mHTTP request completed[0m [36mclient_ip=[0m127.0.0.1 [36mlatency=[0m [36mmethod=[0mGET [36mpath=[0m/ [36mstatus_code=[0m500 [36muser_agent=[0mcurl/8.5.0
+[90m22:52:11[0m [32mINF[0m [1mServing installer page[0m [36mip=[0m127.0.0.1 [36muser_agent=[0m"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+
+
+[31m2025/07/24 22:52:11 [Recovery] 2025/07/24 - 22:52:11 panic recovered:
+GET / HTTP/1.1
+Host: localhost:8089
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-GB,en-US;q=0.9,en;q=0.8
+Connection: keep-alive
+Cookie: grafana_session=fed184445d2764f46a2ddab7186cad15; grafana_session_expiry=1751236267; ajs_anonymous_id=33163579-d7ab-4bd1-a19e-70ac6a14f4ca
+Priority: u=0, i
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: none
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15
+
+
+runtime error: invalid memory address or nil pointer dereference
+/usr/local/go/src/runtime/panic.go:262 (0x8714f)
+	panicmem: panic(memoryError)
+/usr/local/go/src/runtime/signal_unix.go:925 (0x8711c)
+	sigpanic: panicmem()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:971 (0x780a88)
+	(*Context).HTML: instance := c.engine.HTMLRender.Instance(name, obj)
+/home/ubuntu/shudl/internal/api/web_handlers.go:74 (0x88a9f3)
+	(*WebHandler).ServeInstaller: c.HTML(http.StatusOK, "installer/index.html", data)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x77c24b)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/shudl/internal/api/router.go:160 (0x88cdab)
+	(*Router).addMiddleware.(*Router).requestIDMiddleware.func2: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x7883d7)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/recovery.go:102 (0x7883bc)
+	CustomRecoveryWithWriter.func1: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x77c24b)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/shudl/internal/api/router.go:127 (0x889597)
+	(*Router).addMiddleware.(*Router).loggerMiddleware.func1: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x787303)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/gin.go:644 (0x786e8c)
+	(*Engine).handleHTTPRequest: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/gin.go:600 (0x786acf)
+	(*Engine).ServeHTTP: engine.handleHTTPRequest(c)
+/usr/local/go/src/net/http/server.go:3301 (0x2b7f0b)
+	serverHandler.ServeHTTP: handler.ServeHTTP(rw, req)
+/usr/local/go/src/net/http/server.go:2102 (0x2a96eb)
+	(*conn).serve: serverHandler{c.server}.ServeHTTP(w, w.req)
+/usr/local/go/src/runtime/asm_arm64.s:1223 (0x8cc23)
+	goexit: MOVD	R0, R0	// NOP
+[0m
+[90m22:52:11[0m [32mINF[0m [1mHTTP request completed[0m [36mclient_ip=[0m127.0.0.1 [36mlatency=[0m [36mmethod=[0mGET [36mpath=[0m/ [36mstatus_code=[0m500 [36muser_agent=[0m"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+[90m22:52:11[0m [32mINF[0m [1mHTTP request completed[0m [36mclient_ip=[0m127.0.0.1 [36mlatency=[0m [36mmethod=[0mGET [36mpath=[0m/favicon.ico [36mstatus_code=[0m404 [36muser_agent=[0m"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+[90m22:52:20[0m [32mINF[0m [1mServing installer page[0m [36mip=[0m127.0.0.1 [36muser_agent=[0mcurl/8.5.0
+
+
+[31m2025/07/24 22:52:20 [Recovery] 2025/07/24 - 22:52:20 panic recovered:
+GET / HTTP/1.1
+Host: localhost:8089
+Accept: */*
+User-Agent: curl/8.5.0
+
+
+runtime error: invalid memory address or nil pointer dereference
+/usr/local/go/src/runtime/panic.go:262 (0x8714f)
+	panicmem: panic(memoryError)
+/usr/local/go/src/runtime/signal_unix.go:925 (0x8711c)
+	sigpanic: panicmem()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:971 (0x780a88)
+	(*Context).HTML: instance := c.engine.HTMLRender.Instance(name, obj)
+/home/ubuntu/shudl/internal/api/web_handlers.go:74 (0x88a9f3)
+	(*WebHandler).ServeInstaller: c.HTML(http.StatusOK, "installer/index.html", data)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x77c24b)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/shudl/internal/api/router.go:160 (0x88cdab)
+	(*Router).addMiddleware.(*Router).requestIDMiddleware.func2: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x7883d7)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/recovery.go:102 (0x7883bc)
+	CustomRecoveryWithWriter.func1: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x77c24b)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/shudl/internal/api/router.go:127 (0x889597)
+	(*Router).addMiddleware.(*Router).loggerMiddleware.func1: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x787303)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/gin.go:644 (0x786e8c)
+	(*Engine).handleHTTPRequest: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/gin.go:600 (0x786acf)
+	(*Engine).ServeHTTP: engine.handleHTTPRequest(c)
+/usr/local/go/src/net/http/server.go:3301 (0x2b7f0b)
+	serverHandler.ServeHTTP: handler.ServeHTTP(rw, req)
+/usr/local/go/src/net/http/server.go:2102 (0x2a96eb)
+	(*conn).serve: serverHandler{c.server}.ServeHTTP(w, w.req)
+/usr/local/go/src/runtime/asm_arm64.s:1223 (0x8cc23)
+	goexit: MOVD	R0, R0	// NOP
+[0m
+[90m22:52:20[0m [32mINF[0m [1mHTTP request completed[0m [36mclient_ip=[0m127.0.0.1 [36mlatency=[0m [36mmethod=[0mGET [36mpath=[0m/ [36mstatus_code=[0m500 [36muser_agent=[0mcurl/8.5.0
+[90m22:52:24[0m [32mINF[0m [1mServing installer page[0m [36mip=[0m127.0.0.1 [36muser_agent=[0m"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+
+
+[31m2025/07/24 22:52:24 [Recovery] 2025/07/24 - 22:52:24 panic recovered:
+GET / HTTP/1.1
+Host: localhost:8089
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-GB,en-US;q=0.9,en;q=0.8
+Connection: keep-alive
+Cookie: grafana_session=fed184445d2764f46a2ddab7186cad15; grafana_session_expiry=1751236267; ajs_anonymous_id=33163579-d7ab-4bd1-a19e-70ac6a14f4ca
+Priority: u=0, i
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: none
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15
+
+
+runtime error: invalid memory address or nil pointer dereference
+/usr/local/go/src/runtime/panic.go:262 (0x8714f)
+	panicmem: panic(memoryError)
+/usr/local/go/src/runtime/signal_unix.go:925 (0x8711c)
+	sigpanic: panicmem()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:971 (0x780a88)
+	(*Context).HTML: instance := c.engine.HTMLRender.Instance(name, obj)
+/home/ubuntu/shudl/internal/api/web_handlers.go:74 (0x88a9f3)
+	(*WebHandler).ServeInstaller: c.HTML(http.StatusOK, "installer/index.html", data)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x77c24b)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/shudl/internal/api/router.go:160 (0x88cdab)
+	(*Router).addMiddleware.(*Router).requestIDMiddleware.func2: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x7883d7)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/recovery.go:102 (0x7883bc)
+	CustomRecoveryWithWriter.func1: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x77c24b)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/shudl/internal/api/router.go:127 (0x889597)
+	(*Router).addMiddleware.(*Router).loggerMiddleware.func1: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x787303)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/gin.go:644 (0x786e8c)
+	(*Engine).handleHTTPRequest: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/gin.go:600 (0x786acf)
+	(*Engine).ServeHTTP: engine.handleHTTPRequest(c)
+/usr/local/go/src/net/http/server.go:3301 (0x2b7f0b)
+	serverHandler.ServeHTTP: handler.ServeHTTP(rw, req)
+/usr/local/go/src/net/http/server.go:2102 (0x2a96eb)
+	(*conn).serve: serverHandler{c.server}.ServeHTTP(w, w.req)
+/usr/local/go/src/runtime/asm_arm64.s:1223 (0x8cc23)
+	goexit: MOVD	R0, R0	// NOP
+[0m
+[90m22:52:24[0m [32mINF[0m [1mHTTP request completed[0m [36mclient_ip=[0m127.0.0.1 [36mlatency=[0m [36mmethod=[0mGET [36mpath=[0m/ [36mstatus_code=[0m500 [36muser_agent=[0m"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+[90m22:52:27[0m [32mINF[0m [1mServing installer page[0m [36mip=[0m127.0.0.1 [36muser_agent=[0m"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+
+
+[31m2025/07/24 22:52:27 [Recovery] 2025/07/24 - 22:52:27 panic recovered:
+GET / HTTP/1.1
+Host: localhost:8089
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-GB,en-US;q=0.9,en;q=0.8
+Connection: keep-alive
+Cookie: grafana_session=fed184445d2764f46a2ddab7186cad15; grafana_session_expiry=1751236267; ajs_anonymous_id=33163579-d7ab-4bd1-a19e-70ac6a14f4ca
+Priority: u=0, i
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: none
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15
+
+
+runtime error: invalid memory address or nil pointer dereference
+/usr/local/go/src/runtime/panic.go:262 (0x8714f)
+	panicmem: panic(memoryError)
+/usr/local/go/src/runtime/signal_unix.go:925 (0x8711c)
+	sigpanic: panicmem()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:971 (0x780a88)
+	(*Context).HTML: instance := c.engine.HTMLRender.Instance(name, obj)
+/home/ubuntu/shudl/internal/api/web_handlers.go:74 (0x88a9f3)
+	(*WebHandler).ServeInstaller: c.HTML(http.StatusOK, "installer/index.html", data)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x77c24b)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/shudl/internal/api/router.go:160 (0x88cdab)
+	(*Router).addMiddleware.(*Router).requestIDMiddleware.func2: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x7883d7)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/recovery.go:102 (0x7883bc)
+	CustomRecoveryWithWriter.func1: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x77c24b)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/shudl/internal/api/router.go:127 (0x889597)
+	(*Router).addMiddleware.(*Router).loggerMiddleware.func1: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x787303)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/gin.go:644 (0x786e8c)
+	(*Engine).handleHTTPRequest: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/gin.go:600 (0x786acf)
+	(*Engine).ServeHTTP: engine.handleHTTPRequest(c)
+/usr/local/go/src/net/http/server.go:3301 (0x2b7f0b)
+	serverHandler.ServeHTTP: handler.ServeHTTP(rw, req)
+/usr/local/go/src/net/http/server.go:2102 (0x2a96eb)
+	(*conn).serve: serverHandler{c.server}.ServeHTTP(w, w.req)
+/usr/local/go/src/runtime/asm_arm64.s:1223 (0x8cc23)
+	goexit: MOVD	R0, R0	// NOP
+[0m
+[90m22:52:27[0m [32mINF[0m [1mHTTP request completed[0m [36mclient_ip=[0m127.0.0.1 [36mlatency=[0m [36mmethod=[0mGET [36mpath=[0m/ [36mstatus_code=[0m500 [36muser_agent=[0m"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+[90m22:52:29[0m [32mINF[0m [1mServing installer page[0m [36mip=[0m127.0.0.1 [36muser_agent=[0m"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+
+
+[31m2025/07/24 22:52:29 [Recovery] 2025/07/24 - 22:52:29 panic recovered:
+GET / HTTP/1.1
+Host: localhost:8089
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-GB,en-US;q=0.9,en;q=0.8
+Connection: keep-alive
+Cookie: grafana_session=fed184445d2764f46a2ddab7186cad15; grafana_session_expiry=1751236267; ajs_anonymous_id=33163579-d7ab-4bd1-a19e-70ac6a14f4ca
+Priority: u=0, i
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: none
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15
+
+
+runtime error: invalid memory address or nil pointer dereference
+/usr/local/go/src/runtime/panic.go:262 (0x8714f)
+	panicmem: panic(memoryError)
+/usr/local/go/src/runtime/signal_unix.go:925 (0x8711c)
+	sigpanic: panicmem()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:971 (0x780a88)
+	(*Context).HTML: instance := c.engine.HTMLRender.Instance(name, obj)
+/home/ubuntu/shudl/internal/api/web_handlers.go:74 (0x88a9f3)
+	(*WebHandler).ServeInstaller: c.HTML(http.StatusOK, "installer/index.html", data)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x77c24b)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/shudl/internal/api/router.go:160 (0x88cdab)
+	(*Router).addMiddleware.(*Router).requestIDMiddleware.func2: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x7883d7)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/recovery.go:102 (0x7883bc)
+	CustomRecoveryWithWriter.func1: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x77c24b)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/shudl/internal/api/router.go:127 (0x889597)
+	(*Router).addMiddleware.(*Router).loggerMiddleware.func1: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/context.go:185 (0x787303)
+	(*Context).Next: c.handlers[c.index](c)
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/gin.go:644 (0x786e8c)
+	(*Engine).handleHTTPRequest: c.Next()
+/home/ubuntu/go/pkg/mod/github.com/gin-gonic/gin@v1.10.1/gin.go:600 (0x786acf)
+	(*Engine).ServeHTTP: engine.handleHTTPRequest(c)
+/usr/local/go/src/net/http/server.go:3301 (0x2b7f0b)
+	serverHandler.ServeHTTP: handler.ServeHTTP(rw, req)
+/usr/local/go/src/net/http/server.go:2102 (0x2a96eb)
+	(*conn).serve: serverHandler{c.server}.ServeHTTP(w, w.req)
+/usr/local/go/src/runtime/asm_arm64.s:1223 (0x8cc23)
+	goexit: MOVD	R0, R0	// NOP
+[0m
+[90m22:52:29[0m [32mINF[0m [1mHTTP request completed[0m [36mclient_ip=[0m127.0.0.1 [36mlatency=[0m [36mmethod=[0mGET [36mpath=[0m/ [36mstatus_code=[0m500 [36muser_agent=[0m"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
+[90m22:53:04[0m [32mINF[0m [1mShutting down server...[0m
+[90m22:53:04[0m [32mINF[0m [1mServer gracefully stopped[0m

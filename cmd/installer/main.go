@@ -1,19 +1,8 @@
-// @title Shudl Docker Installer API
-// @version 1.0
-// @description A Docker installer API that provides endpoints to manage Docker services through a web interface
-// @termsOfService http://swagger.io/terms/
-
-// @contact.name API Support
-// @contact.url http://www.swagger.io/support
-// @contact.email support@swagger.io
-
-// @license.name MIT
-// @license.url https://opensource.org/licenses/MIT
-
-// @host localhost:8080
+// @title ShuDL Docker Installer API
+// @version 1.0.0
+// @description REST API for managing ShuDL Docker services with intelligent configuration generation
+// @host localhost:8084
 // @BasePath /api/v1
-// @schemes http https
-
 package main
 
 import (
@@ -41,51 +30,52 @@ func main() {
 
 	// Initialize logger
 	log := logger.New(cfg.Logger)
-	log.LogInfo("Starting Shudl Docker Installer", map[string]interface{}{
+	log.LogInfo("Starting ShuDL Docker Installer", map[string]interface{}{
 		"version":     "1.0.0",
-		"environment": cfg.Server.Environment,
+		"environment": cfg.Logger.Environment,
 		"port":        cfg.Server.Port,
 	})
 
-	// Initialize Docker service
+	// Initialize docker service
 	dockerService := docker.NewService(&cfg.Docker, log)
 
 	// Validate Docker installation
+	log.LogInfo("Validating Docker installation", nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	validationResult, err := dockerService.ValidateDockerInstallation(ctx)
 	if err != nil {
-		log.LogError(err, "Failed to validate Docker installation", nil)
+		log.LogError(err, "Docker validation failed", map[string]interface{}{
+			"error": err.Error(),
+		})
 		os.Exit(1)
 	}
 
 	if !validationResult.Success {
 		log.LogError(nil, "Docker validation failed", map[string]interface{}{
-			"error":   validationResult.Error,
-			"message": validationResult.Message,
+			"output": validationResult.Output,
+			"error":  validationResult.Error,
 		})
-		log.LogInfo("Please ensure Docker and Docker Compose are installed and accessible", nil)
 		os.Exit(1)
 	}
 
-	log.LogInfo("Docker installation validated successfully", map[string]interface{}{
+	log.LogInfo("Docker validation successful", map[string]interface{}{
 		"output": validationResult.Output,
 	})
 
-	// Initialize API handler
+	// Initialize handlers
 	apiHandler := api.NewHandler(dockerService, log)
-
-	// Initialize compose handler
 	composeHandler := api.NewComposeHandler("./generated", log)
+	webHandler := api.NewWebHandler(log)
 
-	// Initialize router
-	router := api.NewRouter(apiHandler, composeHandler, &cfg.Server, log)
+	// Initialize router with all handlers
+	router := api.NewRouter(apiHandler, composeHandler, webHandler, &cfg.Server, log)
 	router.Setup()
 
 	// Create HTTP server
 	server := &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port),
+		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
 		Handler:      router.GetEngine(),
 		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
@@ -94,20 +84,18 @@ func main() {
 	// Start server in a goroutine
 	go func() {
 		log.LogInfo("Starting HTTP server", map[string]interface{}{
-			"address": server.Addr,
+			"address":    server.Addr,
+			"swagger_ui": fmt.Sprintf("http://localhost:%d/swagger/", cfg.Server.Port),
+			"installer":  fmt.Sprintf("http://localhost:%d/", cfg.Server.Port),
 		})
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.LogError(err, "Failed to start HTTP server", nil)
+			log.LogError(err, "Server failed to start", map[string]interface{}{
+				"error": err.Error(),
+			})
 			os.Exit(1)
 		}
 	}()
-
-	log.LogInfo("Server started successfully", map[string]interface{}{
-		"address":    server.Addr,
-		"swagger":    fmt.Sprintf("http://%s:%d/swagger/index.html", cfg.Server.Host, cfg.Server.Port),
-		"health":     fmt.Sprintf("http://%s:%d/health", cfg.Server.Host, cfg.Server.Port),
-	})
 
 	// Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
@@ -116,15 +104,16 @@ func main() {
 
 	log.LogInfo("Shutting down server...", nil)
 
-	// Create context with timeout for shutdown
+	// Give outstanding requests 30 seconds to complete
 	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Shutdown server
 	if err := server.Shutdown(ctx); err != nil {
-		log.LogError(err, "Server forced to shutdown", nil)
+		log.LogError(err, "Server forced to shutdown", map[string]interface{}{
+			"error": err.Error(),
+		})
 		os.Exit(1)
 	}
 
-	log.LogInfo("Server shutdown complete", nil)
+	log.LogInfo("Server gracefully stopped", nil)
 } 

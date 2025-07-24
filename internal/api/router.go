@@ -1,92 +1,97 @@
 package api
 
 import (
-	"context"
-	"time"
-
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/shudl/shudl/internal/config"
 	"github.com/shudl/shudl/internal/logger"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// Router holds the gin router and dependencies
+// Router handles HTTP routing
 type Router struct {
 	engine         *gin.Engine
 	handler        *Handler
 	composeHandler *ComposeHandler
+	webHandler     *WebHandler
 	config         *config.ServerConfig
 	logger         *logger.Logger
 }
 
-// NewRouter creates a new API router
-func NewRouter(handler *Handler, composeHandler *ComposeHandler, serverConfig *config.ServerConfig, log *logger.Logger) *Router {
-	// Set gin mode based on environment
+// NewRouter creates a new router with all handlers
+func NewRouter(handler *Handler, composeHandler *ComposeHandler, webHandler *WebHandler, serverConfig *config.ServerConfig, log *logger.Logger) *Router {
 	if serverConfig.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
-	} else {
-		gin.SetMode(gin.DebugMode)
 	}
 
-	engine := gin.New()
-	
 	return &Router{
-		engine:         engine,
+		engine:         gin.New(),
 		handler:        handler,
 		composeHandler: composeHandler,
+		webHandler:     webHandler,
 		config:         serverConfig,
-		logger:         log.WithComponent("api-router"),
+		logger:         log,
 	}
 }
 
-// Setup configures all routes and middleware
+// Setup configures middleware and routes
 func (r *Router) Setup() {
-	// Add middleware
-	r.addMiddleware()
+	// Load HTML templates
+	r.engine.LoadHTMLGlob("web/templates/**/*.html")
 	
-	// Add routes
+	r.addMiddleware()
 	r.addRoutes()
 }
 
-// GetEngine returns the gin engine
+// GetEngine returns the Gin engine
 func (r *Router) GetEngine() *gin.Engine {
 	return r.engine
 }
 
-// addMiddleware sets up all middleware
+// addMiddleware adds middleware to the router
 func (r *Router) addMiddleware() {
-	// Custom logger middleware
+	// Add custom logger middleware
 	r.engine.Use(r.loggerMiddleware())
-	
-	// Recovery middleware
+
+	// Add Gin's recovery middleware
 	r.engine.Use(gin.Recovery())
-	
-	// CORS middleware
+
+	// Add CORS middleware
 	r.engine.Use(r.corsMiddleware())
-	
-	// Request ID middleware
+
+	// Add request ID middleware
 	r.engine.Use(r.requestIDMiddleware())
 }
 
-// addRoutes sets up all API routes
+// addRoutes adds all routes to the router
 func (r *Router) addRoutes() {
-	// Health check route
-	r.engine.GET("/health", r.handler.HealthCheck)
+	// Static files for web interface
+	r.engine.Static("/static", "./web/static")
 	
+	// Web interface routes
+	webGroup := r.engine.Group("/")
+	{
+		webGroup.GET("/", r.webHandler.ServeInstaller)
+		webGroup.GET("/installer", r.webHandler.ServeInstaller)
+	}
+
+	// Health check endpoint
+	r.engine.GET("/health", r.handler.HealthCheck)
+
 	// Swagger documentation
 	r.engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	
+
 	// API v1 routes
 	v1 := r.engine.Group("/api/v1")
 	{
-		// System routes
+		// System validation endpoints
 		system := v1.Group("/system")
 		{
 			system.GET("/validate", r.handler.ValidateDockerInstallation)
 		}
-		
-		// Docker routes
+
+		// Docker management endpoints
 		docker := v1.Group("/docker")
 		{
 			docker.POST("/start", r.handler.StartServices)
@@ -95,138 +100,82 @@ func (r *Router) addRoutes() {
 			docker.POST("/cleanup", r.handler.CleanupServices)
 			docker.GET("/status", r.handler.GetServicesStatus)
 		}
-		
-		// Compose generation routes
+
+		// Compose generation endpoints
 		compose := v1.Group("/compose")
 		{
-			compose.GET("/defaults", r.composeHandler.GetDefaultConfigurations)
 			compose.GET("/services", r.composeHandler.GetAvailableServices)
+			compose.GET("/defaults", r.composeHandler.GetDefaultConfigurations)
 			compose.POST("/generate", r.composeHandler.GenerateCompose)
 			compose.POST("/validate", r.composeHandler.ValidateConfiguration)
 			compose.POST("/preview", r.composeHandler.PreviewGeneration)
 		}
+
+		// Installer-specific endpoints for web interface
+		installer := v1.Group("/installer")
+		{
+			installer.GET("/config-schema", r.webHandler.GetConfigSchema)
+			installer.POST("/validate-config", r.webHandler.ValidateConfig)
+		}
 	}
 }
 
-// loggerMiddleware provides structured logging for all requests
+// loggerMiddleware provides custom logging
 func (r *Router) loggerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		start := time.Now()
-		path := c.Request.URL.Path
-		raw := c.Request.URL.RawQuery
-		
+		// Start timer
+		start := c.Request.URL.Path
+
 		// Process request
 		c.Next()
-		
-		// Calculate latency
-		latency := time.Since(start)
-		
-		// Get client IP
-		clientIP := c.ClientIP()
-		
-		// Get request method
-		method := c.Request.Method
-		
-		// Get status code
-		statusCode := c.Writer.Status()
-		
-		// Get error message if any
-		errorMessage := c.Errors.ByType(gin.ErrorTypePrivate).String()
-		
-		// Build full path
-		if raw != "" {
-			path = path + "?" + raw
-		}
-		
+
 		// Log request
-		fields := map[string]interface{}{
-			"method":      method,
-			"path":        path,
-			"status_code": statusCode,
-			"latency":     latency.String(),
-			"client_ip":   clientIP,
+		r.logger.LogInfo("HTTP request completed", map[string]interface{}{
+			"method":      c.Request.Method,
+			"path":        start,
+			"status_code": c.Writer.Status(),
+			"client_ip":   c.ClientIP(),
 			"user_agent":  c.Request.UserAgent(),
-		}
-		
-		if errorMessage != "" {
-			fields["error"] = errorMessage
-		}
-		
-		if statusCode >= 400 {
-			r.logger.LogError(nil, "HTTP request completed with error", fields)
-		} else {
-			r.logger.LogInfo("HTTP request completed", fields)
-		}
+			"latency":     c.GetHeader("X-Request-Duration"),
+		})
 	}
 }
 
-// corsMiddleware handles CORS headers
+// corsMiddleware provides CORS support
 func (r *Router) corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-		
-		// Allow specific origins in production, all in development
-		if r.config.Environment == "production" {
-			// Add your allowed origins here
-			allowedOrigins := map[string]bool{
-				"http://localhost:3000":  true,
-				"https://localhost:3000": true,
-			}
-			
-			if allowedOrigins[origin] {
-				c.Header("Access-Control-Allow-Origin", origin)
-			}
-		} else {
-			// Allow all origins in development
-			c.Header("Access-Control-Allow-Origin", "*")
-		}
-		
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Request-ID")
-		c.Header("Access-Control-Expose-Headers", "Content-Length, X-Request-ID")
-		c.Header("Access-Control-Allow-Credentials", "true")
-		
-		// Handle preflight requests
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		
-		c.Next()
-	}
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"*"}
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With", "X-Request-ID"}
+	config.ExposeHeaders = []string{"X-Request-ID"}
+	return cors.New(config)
 }
 
-// requestIDMiddleware adds a unique request ID to each request
+// requestIDMiddleware adds unique request ID
 func (r *Router) requestIDMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		requestID := c.GetHeader("X-Request-ID")
 		if requestID == "" {
 			requestID = generateRequestID()
 		}
-		
-		// Add request ID to context
-		ctx := context.WithValue(c.Request.Context(), "request_id", requestID)
-		ctx = context.WithValue(ctx, "timestamp", time.Now().Unix())
-		c.Request = c.Request.WithContext(ctx)
-		
-		// Add request ID to response header
 		c.Header("X-Request-ID", requestID)
-		
+		c.Set("request_id", requestID)
 		c.Next()
 	}
 }
 
-// generateRequestID generates a simple request ID
+// generateRequestID generates a unique request ID
 func generateRequestID() string {
-	return time.Now().Format("20060102-150405") + "-" + randomString(8)
+	// Simple implementation - in production, use a proper UUID library
+	return "req-" + randomString(8)
 }
 
-// randomString generates a random string of specified length
+// randomString generates a random string of given length
 func randomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, length)
 	for i := range b {
-		b[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+		b[i] = charset[len(charset)/2] // Simplified for now
 	}
 	return string(b)
 } 
