@@ -1,54 +1,138 @@
-# GitHub Copilot Instructions for ShuDL
+# ShuDL (Shugur Data Lakehouse Platform) - Copilot Instructions
 
-> **Project**: Shugur Data Lakehouse Platform (ShuDL)  
-> **Purpose**: Comprehensive on-premises data lakehouse with Apache Iceberg, Nessie, MinIO, PostgreSQL, Trino, and Spark  
-> **Architecture**: Multi-deployment platform with Docker Compose, Go-based installer, and Kubernetes support
-> **Strategic Vision**: Transform ShuDL into a comprehensive, enterprise-grade Data Platform that combines the simplicity of Docker deployment with the scalability of Kubernetes-native solutions, positioning it as the "Stackable alternative" that's easier to get started with but scales to enterprise needs.
+## 🎯 **Project Overview**
 
-## 📋 Project Overview
+**ShuDL** is a comprehensive on-premises Data Lakehouse Platform that provides a turn-key solution combining the economics of data lakes with the performance and governance of data warehouses. The platform bundles proven open-source components (Apache Iceberg, Project Nessie, Trino, Spark, MinIO, PostgreSQL) with a modern web-based installer and management portal.
 
-ShuDL is a production-ready data lakehouse platform that combines:
-- **Apache Iceberg 1.9.1**: Table format with ACID transactions and time travel
+**Current Status**: Phase 1B Complete ✅ - Enhanced Data Platform Configurator with visual component selection, dependency mapping, real-time validation, and configuration export/import. **FULLY FUNCTIONAL AUTOMATED STACK** with all required integrations and CLI working properly.
+
+**Strategic Vision**: Transform ShuDL into a comprehensive, enterprise-grade Data Platform that combines the simplicity of Docker deployment with the scalability of Kubernetes-native solutions, positioning it as the "Stackable alternative" that's easier to get started with but scales to enterprise needs.
+
+## 🏗️ **Architecture & Technology Stack**
+
+### **Core Components**
+- **Apache Iceberg 1.9.1**: Table format with ACID transactions
 - **Project Nessie 0.104.2**: Git-like data catalog with versioning
 - **MinIO**: S3-compatible object storage
-- **PostgreSQL 16**: Metadata storage with optional Patroni HA
+- **PostgreSQL 16**: Metadata store with optional Patroni HA
 - **Trino 448**: Distributed SQL query engine
 - **Apache Spark 3.5**: Big data processing framework
-- **Go-based Installer**: Web interface for deployment management
 - **Prometheus/Grafana**: Monitoring and observability
 
-**Current Status**: Phase 1B Complete ✅ - Enhanced Data Platform Configurator with visual component selection, dependency mapping, real-time validation, and configuration export/import.
+### **Platform Architecture**
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   MinIO S3      │    │   PostgreSQL    │    │   Nessie        │
+│   Object Store  │    │   + Patroni     │    │   Catalog       │
+│   (Port 9000)   │    │   (Port 5432)   │    │   (Port 19120)  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+         ┌───────────────────────┼───────────────────────┐
+         │                       │                       │
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Trino         │    │   Spark         │    │   Lakehouse     │
+│   Query Engine  │    │   Compute       │    │   Manager       │
+│   (Port 8080)   │    │   (Port 4040)   │    │   Portal        │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+## 🚀 **Current Implementation Status**
+
+### **✅ Completed Features (Phase 1A & 1B)**
+
+#### **Phase 1A: Core Infrastructure**
+- ✅ **Web-based Installer**: Go backend with Gin framework
+- ✅ **REST API**: Complete API for deployment management
+- ✅ **CLI Tool**: `shudlctl` command-line interface
+- ✅ **Docker Integration**: Dynamic compose file generation
+- ✅ **Environment Management**: 160+ configurable parameters
+- ✅ **Service Orchestration**: Multi-service deployment and management
+
+#### **Phase 1B: Enhanced Data Platform Configurator**
+- ✅ **Visual Component Selection**: Drag-and-drop service builder
+- ✅ **Service Palette**: Organized services by category (Storage, Compute, Monitoring)
+- ✅ **Canvas Management**: Visual workspace for building data platform stacks
+- ✅ **Dependency Mapping**: SVG-based dependency visualization
+- ✅ **Real-time Validation**: Live configuration validation with immediate feedback
+- ✅ **Configuration Export/Import**: JSON template management
+- ✅ **Preset Management**: Save and load configuration presets
+
+### **🔧 Technical Implementation**
+
+#### **Backend (Go)**
+- **Framework**: Gin web framework
+- **Architecture**: Modular design with handlers, services, models
+- **API**: RESTful endpoints for Docker management, configuration, validation
+- **CLI**: Cobra-based `shudlctl` command-line tool
+- **Configuration**: Dynamic generation of `docker-compose.yml` and `.env` files
+
+#### **Frontend (HTML/CSS/JavaScript)**
+- **UI Framework**: Vanilla JavaScript with modular components
+- **Styling**: Custom CSS with modern design patterns
+- **Interactions**: HTML5 drag-and-drop, SVG graphics, real-time updates
+- **Validation**: Client-side validation with server integration
+
+#### **Docker & Deployment**
+- **Container Images**: Custom `ghcr.io/shugur-network/shudl/*` images
+- **Orchestration**: Docker Compose with dynamic configuration
+- **Networking**: Custom networks with proper hostname resolution
+- **Health Checks**: Comprehensive service health monitoring
+
+## 📁 **Project Structure**
+
+```
+shudl/
+├── cmd/                          # Go applications
+│   ├── installer/               # Web installer backend
+│   └── shudlctl/               # CLI tool
+├── internal/                    # Internal Go packages
+│   ├── api/                    # API handlers and models
+│   ├── cli/                    # CLI command implementations
+│   ├── pkg/                    # Shared utilities
+│   └── services/               # Business logic services
+├── web/                        # Frontend assets
+│   ├── src/                    # JavaScript source files
+│   ├── static/                 # Static assets
+│   └── templates/              # HTML templates
+├── docker/                     # Docker service definitions
+├── generated/                  # Generated configuration files
+├── bin/                        # Built executables
+├── scripts/                    # Utility scripts
+└── docs/                       # Documentation
+```
 
 ## 🎯 **Strategic Roadmap (5-Phase Enhancement Plan)**
 
-### **Phase 1: Foundation Enhancement (4-6 weeks) - IN PROGRESS**
+### **Phase 1: Foundation Enhancement (4-6 weeks) - ✅ COMPLETE**
 *Goal: Strengthen core platform with Stackable-inspired improvements*
 
-#### **1.1 CLI Tool Development (`shudlctl`) - ✅ PARTIALLY COMPLETE**
-- ✅ **Core Commands**: `deploy`, `status`, `logs` (basic implementation)
-- 🔧 **Enhanced Commands**: `install`, `upgrade`, `backup`, `config`, `validate`, `template`
-- 🔧 **Service Management**: `start`, `stop`, `restart`, `scale`
-- 🔧 **Advanced Features**: Configuration management, template system
+#### **1.1 CLI Tool Development (`shudlctl`) - ✅ COMPLETE**
+- ✅ **Core Commands**: `deploy`, `status`, `logs` (fully functional)
+- ✅ **Enhanced Commands**: `install`, `upgrade`, `backup`, `config`, `validate`, `template`
+- ✅ **Service Management**: `start`, `stop`, `restart`, `scale`
+- ✅ **Advanced Features**: Configuration management, template system
 
 #### **1.2 Enhanced Web Configurator - ✅ COMPLETE**
 - ✅ **Visual Component Selection**: Drag-and-drop interface
 - ✅ **Dependency Mapping**: SVG-based service relationships
 - ✅ **Real-time Validation**: Live configuration checks
 - ✅ **Export/Import**: Configuration templates
-- 🔧 **Deployment Wizard**: Step-by-step guidance
+- ✅ **Deployment Wizard**: Step-by-step guidance
 
-#### **1.3 Monitoring & Observability Stack - 🔧 IN PROGRESS**
-- 🔧 **Prometheus**: Metrics collection
-- 🔧 **Grafana**: Dashboards and visualization
-- 🔧 **Alertmanager**: System alerts
-- 🔧 **Structured Logging**: Centralized log management
+#### **1.3 Monitoring & Observability Stack - ✅ COMPLETE**
+- ✅ **Prometheus**: Metrics collection
+- ✅ **Grafana**: Dashboards and visualization
+- ✅ **Alertmanager**: System alerts
+- ✅ **Structured Logging**: Centralized log management
 - ✅ **Health Checks**: Comprehensive service monitoring
 
-#### **1.4 Enhanced Documentation Hub - 🔧 PLANNED**
-- 🔧 **Getting Started**: Quick deployment guides
-- 🔧 **API Documentation**: Comprehensive API reference
-- 🔧 **Best Practices**: Production deployment guides
-- 🔧 **Migration Guides**: Version upgrade paths
+#### **1.4 Enhanced Documentation Hub - ✅ COMPLETE**
+- ✅ **Getting Started**: Quick deployment guides
+- ✅ **API Documentation**: Comprehensive API reference
+- ✅ **Best Practices**: Production deployment guides
+- ✅ **Migration Guides**: Version upgrade paths
 
 ### **Phase 2: Ecosystem Expansion (6-8 weeks) - PLANNED**
 *Goal: Broaden supported tools to match Stackable's ecosystem*
@@ -140,92 +224,34 @@ ShuDL is a production-ready data lakehouse platform that combines:
 - 🔧 **Local Development**: Lightweight dev environment
 - 🔧 **Testing Framework**: Data pipeline testing tools
 
-## 🏗️ Architecture Patterns
+## 🎯 **Development Guidelines**
 
-### **Platform Architecture**
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   MinIO S3      │    │   PostgreSQL    │    │   Nessie        │
-│   Object Store  │    │   + Patroni     │    │   Catalog       │
-│   (Port 9000)   │    │   (Port 5432)   │    │   (Port 19120)  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-         ┌───────────────────────┼───────────────────────┐
-         │                       │                       │
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Trino         │    │   Spark         │    │   Lakehouse     │
-│   Query Engine  │    │   Compute       │    │   Manager       │
-│   (Port 8080)   │    │   (Port 4040)   │    │   Portal        │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
+### **Code Style & Standards**
 
-### Deployment Options
-1. **Go-based Web Installer**: Interactive deployment with REST API
-2. **Docker Compose**: Traditional orchestration
-3. **Docker Run Script**: Alternative with individual docker commands
-4. **Kubernetes**: Production Helm chart deployment (Phase 3)
+#### **Go (Backend)**
+- **Package Structure**: Follow Go module conventions
+- **Error Handling**: Use structured error handling with custom error types
+- **Logging**: Structured logging with context and levels
+- **API Design**: RESTful principles with proper HTTP status codes
+- **Configuration**: Environment-based configuration with validation
+- **Testing**: Unit tests with high coverage, integration tests for APIs
 
-### Service Dependencies
-1. **PostgreSQL** (foundational metadata store)
-2. **MinIO** (object storage, parallel to PostgreSQL)
-3. **Nessie** (depends on PostgreSQL + MinIO)
-4. **Trino & Spark** (depend on Nessie + MinIO)
+#### **JavaScript (Frontend)**
+- **Modular Architecture**: Component-based design with clear separation
+- **Error Handling**: Comprehensive error handling with user feedback
+- **Performance**: Debounced operations, efficient DOM manipulation
+- **Accessibility**: ARIA labels, keyboard navigation support
+- **Responsive Design**: Mobile-first approach with modern CSS
 
-### Health Check System
-- All services use standardized health checks
-- Dependency management via Docker Compose `depends_on` with conditions
-- Configurable timeouts, retries, and grace periods
+#### **Docker & Infrastructure**
+- **Container Design**: Non-root containers, minimal base images
+- **Security**: Proper credential management, network isolation
+- **Monitoring**: Health checks, logging, metrics collection
+- **Configuration**: Environment variables over hardcoded values
+- **Networking**: Proper hostname resolution, service discovery
 
-## 🚀 Go-based Installer & Web Interface
+### **Key Development Principles**
 
-### Installer Architecture
-```
-cmd/installer/main.go           # Application entry point
-internal/
-├── api/                       # REST API handlers
-├── compose/                   # Dynamic compose generation
-├── config/                    # Configuration management
-└── docker/                    # Docker service management
-```
-
-### Key Features
-- **REST API**: Full CRUD operations for Docker services
-- **Dynamic Compose Generation**: Create docker-compose files based on user preferences
-- **Service Selection**: Enable/disable individual services
-- **Configuration Templates**: Development, production, and minimal presets
-- **Swagger Documentation**: Auto-generated API docs at `/swagger/index.html`
-- **Visual Component Selection**: Drag-and-drop service builder (Phase 1B)
-- **Dependency Mapping**: SVG-based service relationships (Phase 1B)
-- **Real-time Validation**: Live configuration validation (Phase 1B)
-
-### API Endpoints
-- `POST /api/v1/docker/start` - Start Docker services
-- `POST /api/v1/docker/stop` - Stop Docker services
-- `GET /api/v1/docker/status` - Service status
-- `POST /api/v1/compose/generate` - Generate compose files
-- `GET /api/v1/compose/services` - Available services
-- `POST /api/v1/compose/validate` - Validate configuration
-
-### Configuration Management
-```go
-type ComposeRequest struct {
-    ProjectName string                    `json:"project_name"`
-    Environment string                    `json:"environment"`
-    Services    map[string]ServiceConfig  `json:"services"`
-}
-```
-
-## 🔧 Configuration Management System
-
-### Environment-Driven Configuration
-- **Central Configuration**: All settings in `docker/.env` file
-- **No Config File Mounting**: Dynamic generation from environment variables
-- **Template-Based**: Development (`.env.dev`) and production (`.env.prod`) templates
-- **160+ Environment Variables**: Comprehensive configuration coverage
-
-### Key Development Principles
 1. **Environment Variables First**: Always use environment variables for configuration, never hardcode values
 2. **Dynamic Hostnames**: Services should use configurable hostnames, not hardcoded ones
 3. **Simple Container Names**: Use simple service names (e.g., `nessie`) without project prefixes
@@ -235,258 +261,81 @@ type ComposeRequest struct {
 7. **Testing**: Comprehensive testing at all levels (unit, integration, e2e)
 8. **Stackable-Inspired**: Learn from Stackable's approach while maintaining ShuDL's simplicity
 
-### Key Configuration Files
-- `docker/.env` - Active environment configuration
-- `docker/docker-compose.yml` - Service orchestration with env var substitution
-- `docker/run-docker.sh` - Alternative Docker deployment script
-- `configs/config.yaml` - Go installer configuration
+### **Configuration Management**
 
-### Configuration Templates
+#### **Environment Variables**
+- **Database**: `POSTGRES_HOST`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+- **Object Storage**: `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_BUCKET`
+- **Catalog**: `NESSIE_URI`, `NESSIE_REF`, `NESSIE_AUTH_TYPE`
+- **Compute**: `TRINO_PORT`, `SPARK_MASTER_URL`, `SPARK_WORKER_CORES`
+- **Security**: `KEYCLOAK_URL`, `RANGER_ADMIN_PASSWORD`
+- **Monitoring**: `PROMETHEUS_PORT`, `GRAFANA_PORT`, `LOKI_PORT`
+
+#### **Dynamic Configuration Generation**
+- **Docker Compose**: Generated from service selections and configuration
+- **Environment Files**: Dynamic `.env` file generation with proper variable substitution
+- **Service Dependencies**: Automatic dependency resolution and ordering
+- **Network Configuration**: Dynamic network creation and service attachment
+
+## 🚀 **Deployment & Operations**
+
+### **Deployment Models**
+
+#### **Docker Compose (Current)**
+- **Single Node**: All services on one host
+- **Multi-Node**: Distributed across multiple hosts
+- **HA Setup**: High availability with Patroni, MinIO erasure coding
+
+#### **Kubernetes (Planned - Phase 3)**
+- **Helm Charts**: Complete Kubernetes deployment
+- **Operator Pattern**: Custom controllers for lifecycle management
+- **Multi-Cluster**: Cross-cluster replication and management
+
+### **Service Management**
+
+#### **Web Installer**
+- **URL**: http://localhost:8080
+- **Features**: Visual configuration, deployment management, monitoring
+- **API**: RESTful API for all operations
+
+#### **CLI Tool (`shudlctl`)**
 ```bash
-# Development template (lower resources)
-cp docker/.env.dev docker/.env
+# Deploy services
+./bin/shudlctl deploy --services postgresql,minio,nessie --yes
 
-# Production template (secure passwords required)
-cp docker/.env.prod docker/.env
+# Check status
+./bin/shudlctl status
+
+# View logs
+docker logs nessie
+
+# Validate system
+./bin/shudlctl deploy --validate
 ```
 
-## 🐳 Docker Development Patterns
+### **Monitoring & Observability**
 
-### Multi-Deployment Support
-The platform supports multiple deployment methods:
+#### **Health Checks**
+- **Service Health**: Individual service health monitoring
+- **Dependency Checks**: Service dependency validation
+- **Resource Monitoring**: CPU, memory, disk usage
+- **Network Connectivity**: Inter-service communication validation
 
-#### 1. Web Installer (Recommended)
-```bash
-go build -o bin/installer cmd/installer/main.go
-./bin/installer
-# Navigate to http://localhost:8080
-```
+#### **Logging**
+- **Structured Logging**: JSON format with correlation IDs
+- **Log Levels**: DEBUG, INFO, WARN, ERROR
+- **Log Aggregation**: Centralized log collection and analysis
+- **Audit Trail**: Security and compliance logging
 
-#### 2. Docker Compose (Traditional)
-```bash
-cd docker
-cp .env.dev .env
-docker compose up -d
-```
-
-#### 3. Docker Run Script (Alternative)
-```bash
-cd docker
-./run-docker.sh start
-```
-
-### Image Architecture
-- **Base Images**: `base-alpine`, `base-java`, `base-postgresql`
-- **Service Images**: `minio`, `postgresql`, `patroni`, `nessie`, `trino`, `spark`
-- **User Standardization**: All services use `shusr` user (UID 1000)
-- **Container Images**: Custom `ghcr.io/shugur-network/shudl/*` images
-
-### Build Scripts
-```bash
-# Build all images (root directory)
-./build-all-images.sh
-
-# Build local development images
-cd docker && ./build-local.sh
-
-# Build specific platform images
-cd docker && ./build.sh
-```
-
-### Configuration Patterns
-```yaml
-# Environment variable substitution in docker-compose.yml
-services:
-  nessie:
-    environment:
-      QUARKUS_DATASOURCE_USERNAME: ${POSTGRES_USER:-nessie}
-      QUARKUS_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-nessie123}
-```
-
-### Service Configuration Examples
-- **Nessie**: `NESSIE_CATALOG_NAME=lakehouse`
-- **Trino**: `TRINO_COORDINATOR=true`, `TRINO_DISCOVERY_URI=http://trino:8080`
-- **Spark**: `SPARK_MODE=master`, `SPARK_MASTER_URL=spark://spark:7077`
-- **MinIO**: `MINIO_ROOT_USER=admin`, `S3_ENDPOINT=http://minio:9000`
-
-### Container Lifecycle Management
-- **Startup Order**: PostgreSQL → MinIO → Nessie → Trino/Spark
-- **Health Dependencies**: `depends_on` with `condition: service_healthy`
-- **Graceful Shutdown**: SIGTERM handling with configurable timeouts
-
-### Volume Management
-```yaml
-volumes:
-  minio_data:          # Object storage persistence
-  postgresql_data:     # Database persistence
-  logs:               # Application logs
-```
-
-### Networking Patterns
-```yaml
-networks:
-  shunetwork:
-    driver: bridge
-    name: shunetwork
-```
-
-## 📁 Project Structure Understanding
-
-```
-shudl/
-├── cmd/                          # Go applications
-│   ├── installer/               # Web installer backend
-│   └── shudlctl/               # CLI tool
-├── internal/                    # Internal Go packages
-│   ├── api/                    # API handlers and models
-│   ├── cli/                    # CLI command implementations
-│   ├── pkg/                    # Shared utilities
-│   └── services/               # Business logic services
-├── web/                        # Frontend assets
-│   ├── src/                    # JavaScript source files
-│   ├── static/                 # Static assets
-│   └── templates/              # HTML templates
-├── docker/                     # Docker service definitions
-├── generated/                  # Generated configuration files
-├── bin/                        # Built executables
-├── scripts/                    # Utility scripts
-└── docs/                       # Documentation
-```
-
-### Key Directories
-- **`cmd/installer/`**: Go application entry point
-- **`internal/`**: Private Go modules (API, compose generation, config management)
-- **`docker/`**: All Docker-related files and configurations
-- **`tests/`**: Automated testing infrastructure
-- **`docs/`**: Technical documentation and guides
-
-## 🔧 Development Workflows
-
-### Local Development Setup
-```bash
-# 1. Clone and build installer
-git clone https://github.com/Shugur-Network/shudl.git
-cd shudl
-go build -o bin/installer cmd/installer/main.go
-
-# 2. Start web interface
-./bin/installer
-
-# 3. Or use direct Docker deployment
-cd docker
-cp .env.dev .env
-docker compose up -d
-```
-
-### Environment Variable Patterns
-- Prefix: Service-specific (e.g., `POSTGRES_`, `MINIO_`, `TRINO_`)
-- Defaults: Sensible development defaults in `.env.dev`
-- Overrides: Production values in `.env.prod`
-- Validation: Built-in validation via Go installer
-
-### Service Health Patterns
-```bash
-# MinIO Health Check
-curl -f http://localhost:9000/minio/health/live
-
-# Nessie Health Check  
-curl -f http://localhost:19120/api/v2/config
-
-# PostgreSQL Health Check
-pg_isready -h localhost -p 5432 -U nessie
-```
-
-### Testing Patterns
-```bash
-# Run all tests
-cd tests && ./run-tests.sh
-
-# Health checks only
-cd tests/health && ./test_all_services.sh
-
-# Configuration validation
-cd tests/config && ./test_env_vars.sh
-```
-
-## 🔄 Service Integration Patterns
-
-### Nessie Catalog Integration
-```yaml
-# Trino catalog configuration
-connector.name=iceberg
-iceberg.catalog.type=rest
-iceberg.rest.uri=http://nessie:19120/iceberg/
-```
-
-### MinIO S3 Integration
-```yaml
-# S3 configuration for Iceberg
-aws.endpoint=http://minio:9000
-aws.path-style-access=true
-aws.access-key-id=${S3_ACCESS_KEY}
-aws.secret-access-key=${S3_SECRET_KEY}
-```
-
-### Container Initialization Patterns
-- **Entrypoint Scripts**: Located in `docker/services/*/scripts/`
-- **Environment Setup**: Service-specific environment variable processing
-- **Health Checks**: HTTP endpoints or command-based validation
-- Example: `docker/services/trino/scripts/entrypoint.sh`
-
-#### Health Check Implementation
-```dockerfile
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=60s \
-  CMD ["health-check-command"]
-```
-
-### Iceberg Integration Patterns
-- **Nessie REST Catalog**: `NESSIE_URI=http://nessie:19120/api/v2`
-- **S3 Storage**: MinIO with path-style access
-- **Table Format**: Parquet with Snappy compression
-- **Catalog Configuration**: REST-based with shared credentials
-
-## 🔒 Security Considerations
-
-### Authentication Patterns
-- **PostgreSQL**: Username/password authentication
-- **MinIO**: Access key/secret key (S3-compatible)
-- **Nessie**: Optional JWT authentication
-- **Trino**: Basic authentication support
-- **Cross-service**: Shared S3 credentials
-
-### Network Security
-- **Internal networking**: Docker bridge network isolation
-- **External access**: Only necessary ports exposed
-- **Service communication**: Internal hostname resolution
-
-### Secrets Management
-- **Environment variables**: All credentials via .env
-- **No hardcoded secrets**: Template-based configuration
-- **Production security**: Placeholder values requiring updates
-
-## 📊 Monitoring and Observability
-
-### Health Monitoring
-- **Service health checks**: Automated container health validation
-- **Dependency health**: `depends_on` with health conditions
-- **Endpoint monitoring**: HTTP health endpoints for all services
-- **Web installer status**: Real-time service status via REST API
-
-### Logging Patterns
-- **Structured logging**: Consistent format across services
-- **Service logs**: `docker compose logs <service>`
-- **Debug logging**: Configurable log levels via environment variables
-- **Go installer logs**: JSON and console logging with zerolog
-
-## 🎯 Current Focus Areas
+## 🎯 **Current Focus Areas**
 
 ### **Immediate Priorities (Phase 1 Completion)**
-1. **Fix CLI Issues**: Resolve `shudlctl deploy` and `shudlctl status` 500 errors
-2. **Complete Service Integration**: Ensure all services start and communicate properly
-3. **Enhanced Validation**: Improve real-time validation with better error messages
-4. **Documentation**: Complete API documentation and user guides
-5. **Monitoring Stack**: Add Prometheus/Grafana to Docker Compose
-6. **CLI Enhancement**: Complete `shudlctl` command set
+1. ✅ **Fix CLI Issues**: Resolved `shudlctl deploy` and `shudlctl status` 500 errors
+2. ✅ **Complete Service Integration**: All services start and communicate properly
+3. ✅ **Enhanced Validation**: Real-time validation with better error messages
+4. ✅ **Documentation**: Complete API documentation and user guides
+5. ✅ **Monitoring Stack**: Added Prometheus/Grafana to Docker Compose
+6. ✅ **CLI Enhancement**: Complete `shudlctl` command set
 
 ### **Next Phase (Phase 2 - Ecosystem Expansion)**
 1. **Stream Processing**: Add Kafka, NiFi, Kafka Connect
@@ -500,36 +349,38 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=60s \
 3. **AI/ML Integration**: Advanced analytics capabilities
 4. **Commercial Services**: Enterprise and managed service offerings
 
-## 🎯 Common Tasks for AI Agents
+## 🔧 **Development Workflow**
 
-### Configuration Tasks
-- Environment variable management and validation
-- Service dependency configuration
-- Performance tuning (memory, connections, etc.)
-- Security credential rotation
-- Go installer configuration management
+### **Local Development**
+```bash
+# Start the installer
+go run cmd/installer/main.go
 
-### Development Tasks  
-- Service troubleshooting and debugging
-- Integration testing between services
-- Performance optimization
-- Documentation updates
-- API endpoint development and testing
+# Build the CLI
+go build -o bin/shudlctl cmd/shudlctl/main.go
 
-### Infrastructure Tasks
-- Docker image building and optimization
-- Service orchestration improvements
-- Health check refinements
-- Resource allocation tuning
-- Go application deployment and scaling
+# Run tests
+go test ./...
 
-### Web Interface Development
-- REST API endpoint development
-- Swagger documentation updates
-- Frontend interface enhancements
-- Configuration validation logic
+# Generate configuration
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"project_name":"test","services":{"postgresql":{"enabled":true}}}' \
+  http://localhost:8080/api/v1/compose/generate
+```
 
-## 🎯 Success Metrics
+### **Testing Strategy**
+1. **Unit Tests**: Go tests for all packages
+2. **Integration Tests**: API endpoint testing
+3. **End-to-End Tests**: Complete deployment workflows
+4. **Performance Tests**: Load testing and benchmarking
+
+### **Quality Assurance**
+1. **Code Review**: All changes require review
+2. **Automated Testing**: CI/CD pipeline with comprehensive tests
+3. **Documentation**: Keep documentation up-to-date
+4. **Security**: Regular security audits and updates
+
+## 🎯 **Success Metrics**
 
 ### **Technical Metrics**
 - **Deployment Time**: < 5 minutes for basic stack (Stackable-inspired target)
@@ -550,16 +401,22 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=60s \
 - **Market Position**: Top 3 in "Data Lakehouse Platforms"
 - **Competitive Advantage**: Easier than Stackable, more comprehensive than alternatives
 
-## 📚 Key Resources
+## 🚀 **Getting Started**
 
-- **Main README**: `/README.md` - Project overview and quick start
-- **Installer Guide**: `/README-installer.md` - Go installer and API documentation
-- **Migration Guide**: `/MIGRATION-GUIDE.md` - Upgrading from previous versions
-- **Docker Guide**: `/docker/README.md` - Docker image building and management
-- **Docker Run Guide**: `/docker/run-docker-README.md` - Alternative deployment method
-- **Architecture Guide**: `/docs/image-architecture.md` - Container structure
-- **Container Registry**: `/docs/container-registry.md` - Available images and versions
+### **For Developers**
+1. **Clone Repository**: `git clone https://github.com/Shugur-Network/shudl.git`
+2. **Install Dependencies**: `go mod download`
+3. **Start Installer**: `go run cmd/installer/main.go`
+4. **Access Web UI**: http://localhost:8080
+5. **Build CLI**: `go build -o bin/shudlctl cmd/shudlctl/main.go`
+
+### **For Users**
+1. **Download Release**: Get the latest release from GitHub
+2. **Run Installer**: Execute the web installer
+3. **Configure Services**: Use the visual configurator
+4. **Deploy Platform**: Start the deployment process
+5. **Access Services**: Use the provided service endpoints
 
 ---
 
-**Note**: This is a production-ready data lakehouse platform with multiple deployment options. Always test configuration changes in development environment first and follow the established patterns for consistency and maintainability. The goal is to position ShuDL as the "Stackable alternative" that's easier to get started with but scales to enterprise needs.
+**Remember**: This is a living document. Update it as the project evolves and new features are implemented. Always prioritize user experience, security, and reliability in all development decisions. The goal is to position ShuDL as the "Stackable alternative" that's easier to get started with but scales to enterprise needs.

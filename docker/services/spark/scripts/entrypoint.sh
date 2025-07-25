@@ -70,7 +70,7 @@ start_worker() {
     echo "Cores: ${SPARK_WORKER_CORES:-2}"
     echo "Memory: ${SPARK_WORKER_MEMORY:-2g}"
     echo "Daemon Memory: ${SPARK_DAEMON_MEMORY:-1g}"
-    echo "Web UI Port: 4040"
+    echo "Web UI Port: ${SPARK_WORKER_UI_PORT:-4040}"
     
     # Process configuration templates
     process_config_templates
@@ -95,7 +95,7 @@ start_worker() {
         --host 0.0.0.0 \
         --cores ${SPARK_WORKER_CORES:-2} \
         --memory ${SPARK_WORKER_MEMORY:-2g} \
-        --webui-port 4040 \
+        --webui-port ${SPARK_WORKER_UI_PORT:-4040} \
         ${SPARK_MASTER_URL}
 }
 

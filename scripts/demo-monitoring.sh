@@ -23,16 +23,15 @@ echo
 
 # Build tools
 echo -e "${YELLOW}📦 Building ShuDL tools...${NC}"
-go build -o bin/shudlctl ./cmd/shudlctl
-go build -o bin/installer ./cmd/installer
+go build -o bin/shudl cmd/shudl/main.go
 echo -e "${GREEN}✅ Tools built successfully${NC}"
 echo
 
 # Demo 1: Enhanced Service List
 echo -e "${BLUE}═══ Demo 1: Enhanced Service Catalog ═══${NC}"
-echo -e "${PURPLE}Command: ./bin/shudlctl deploy --help${NC}"
+echo -e "${PURPLE}Command: ./bin/shudl ctl deploy --help${NC}"
 echo
-./bin/shudlctl deploy --help | head -20
+./bin/shudl ctl deploy --help | head -20
 echo
 
 # Demo 2: Configuration Files Overview
@@ -72,9 +71,9 @@ cat << 'EOF'
   • grafana     - Visualization dashboards
 
 🎯 Deployment Examples:
-  shudlctl deploy                              # Deploy all services
-  shudlctl deploy --services prometheus,grafana  # Monitoring only
-  shudlctl deploy --services postgresql,minio,nessie,prometheus,grafana  # Core + Monitoring
+  shudl inst deploy                              # Deploy all services
+  shudl ctl deploy --services prometheus,grafana  # Monitoring only
+  shudl ctl deploy --services postgresql,minio,nessie,prometheus,grafana  # Core + Monitoring
 EOF
 echo
 
@@ -109,19 +108,19 @@ cat << 'EOF'
   • Grafana Dashboard : http://localhost:3000
 
 🔧 Management:
-  • ShuDL Installer   : http://localhost:8080
-  • CLI Tool          : ./bin/shudlctl
+  • ShuDL CLI         : ./bin/shudl ctl
+  • ShuDL Installer   : ./bin/shudl inst
 EOF
 echo
 
 # Demo 7: CLI Integration
 echo -e "${BLUE}═══ Demo 7: CLI Integration Test ═══${NC}"
-echo -e "${PURPLE}Testing shudlctl version:${NC}"
-./bin/shudlctl version
+echo -e "${PURPLE}Testing shudl version:${NC}"
+./bin/shudl ctl version
 echo
 
-echo -e "${PURPLE}Testing service status (no server expected):${NC}"
-./bin/shudlctl status --server http://localhost:9999 2>&1 || true
+echo -e "${PURPLE}Testing service status:${NC}"
+./bin/shudl ctl status
 echo
 
 # Demo 8: Deployment Workflow

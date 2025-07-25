@@ -50,6 +50,11 @@ func Load() (*Config, error) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
+	// Handle specific environment variables
+	if port := os.Getenv("SHUDL_SERVER_PORT"); port != "" {
+		viper.Set("server.port", port)
+	}
+
 	// Read config file if it exists
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {

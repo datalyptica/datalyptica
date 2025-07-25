@@ -307,6 +307,8 @@ func (g *Generator) getServiceEnvironmentVariables(name string, service *Service
 		envVars["SPARK_WORKER_CORES"] = "${SPARK_WORKER_CORES}"
 		envVars["SPARK_EXECUTOR_MEMORY"] = "${SPARK_EXECUTOR_MEMORY}"
 		envVars["SPARK_EXECUTOR_CORES"] = "${SPARK_EXECUTOR_CORES}"
+		// Spark Worker UI Port
+		envVars["SPARK_WORKER_UI_PORT"] = "${SPARK_WORKER_UI_PORT}"
 		// Spark Iceberg Configuration (for Nessie integration)
 		envVars["SPARK_ICEBERG_CATALOG_NAME"] = "${SPARK_ICEBERG_CATALOG_NAME}"
 		envVars["SPARK_ICEBERG_CATALOG_TYPE"] = "${SPARK_ICEBERG_CATALOG_TYPE}"
@@ -392,10 +394,12 @@ func (g *Generator) writeServiceHealthCheck(buf *bytes.Buffer, name string, serv
 	case "postgresql":
 		buf.WriteString("      test: [\"CMD-SHELL\", \"pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}\"]\n")
 	case "nessie":
-		buf.WriteString("      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:19120/api/v1/info\"]\n")
+		buf.WriteString("      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:19120/api/v2/config\"]\n")
 	case "trino":
 		buf.WriteString("      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:8080/v1/info\"]\n")
-	case "spark-master", "spark-worker":
+	case "spark-master":
+		buf.WriteString("      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:4040\"]\n")
+	case "spark-worker":
 		buf.WriteString("      test: [\"CMD\", \"curl\", \"-f\", \"http://localhost:4040\"]\n")
 	default:
 		buf.WriteString("      test: [\"CMD\", \"echo\", \"healthy\"]\n")
@@ -499,6 +503,8 @@ func (g *Generator) getServiceEnvFileVariables(name string, service *ServiceConf
 		// Required legacy variables that Nessie startup script expects
 		envVars["QUARKUS_DATASOURCE_USERNAME"] = "nessie"
 		envVars["QUARKUS_DATASOURCE_PASSWORD"] = g.getPassword("postgres", config.Environment)
+		// Ensure PostgreSQL password is consistent
+		envVars["POSTGRES_PASSWORD"] = g.getPassword("postgres", config.Environment)
 
 	case "trino":
 		envVars["TRINO_PORT"] = "8080"
@@ -511,16 +517,56 @@ func (g *Generator) getServiceEnvFileVariables(name string, service *ServiceConf
 		envVars["SPARK_UI_PORT"] = "4040"
 		envVars["SPARK_MASTER_PORT"] = "7077"
 		envVars["SPARK_MASTER_URL"] = "spark://spark-master:7077"
+		// Spark Core Configuration
+		envVars["SPARK_DRIVER_MEMORY"] = "2g"
+		envVars["SPARK_DRIVER_MAX_RESULT_SIZE"] = "1g"
+		envVars["SPARK_EXECUTOR_MEMORY"] = g.getMemoryConfig("spark-executor", config.Environment)
+		envVars["SPARK_EXECUTOR_CORES"] = g.getCoresConfig("spark-executor", config.Environment)
+		envVars["SPARK_EXECUTOR_INSTANCES"] = "2"
+		envVars["SPARK_DYNAMIC_ALLOCATION_ENABLED"] = "false"
+		envVars["SPARK_SERIALIZER"] = "org.apache.spark.serializer.KryoSerializer"
+		// Spark Security Configuration
+		envVars["SPARK_RPC_AUTHENTICATION_ENABLED"] = "false"
+		envVars["SPARK_RPC_ENCRYPTION_ENABLED"] = "false"
+		envVars["SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED"] = "false"
+		envVars["SPARK_SSL_ENABLED"] = "false"
+		// Iceberg Configuration
+		envVars["SPARK_ICEBERG_CATALOG_NAME"] = "nessie"
+		envVars["SPARK_ICEBERG_REF"] = "main"
+		envVars["SPARK_ICEBERG_URI"] = "http://nessie:19120/iceberg/main/"
+		envVars["SPARK_ICEBERG_WAREHOUSE"] = "s3://lakehouse/"
+		envVars["SPARK_ICEBERG_IO_IMPL"] = "org.apache.iceberg.aws.s3.S3FileIO"
+		// AWS Configuration for Iceberg S3FileIO
+		envVars["AWS_REGION"] = "us-east-1"
+		envVars["AWS_ACCESS_KEY_ID"] = "admin"
+		envVars["AWS_SECRET_ACCESS_KEY"] = g.getPassword("minio", config.Environment)
+		// Spark Configuration Directory
+		envVars["SPARK_CONF_DIR"] = "/tmp/spark/conf"
 
 	case "spark-worker":
 		envVars["SPARK_WORKER_MEMORY"] = g.getMemoryConfig("spark-worker", config.Environment)
 		envVars["SPARK_WORKER_CORES"] = g.getCoresConfig("spark-worker", config.Environment)
 		envVars["SPARK_EXECUTOR_MEMORY"] = g.getMemoryConfig("spark-executor", config.Environment)
 		envVars["SPARK_EXECUTOR_CORES"] = g.getCoresConfig("spark-executor", config.Environment)
+		envVars["SPARK_WORKER_UI_PORT"] = "4041"
+		envVars["SPARK_MASTER_URL"] = "spark://spark-master:7077"
+		// Spark Security Configuration
+		envVars["SPARK_RPC_AUTHENTICATION_ENABLED"] = "false"
+		envVars["SPARK_RPC_ENCRYPTION_ENABLED"] = "false"
+		envVars["SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED"] = "false"
+		envVars["SPARK_SSL_ENABLED"] = "false"
 		// Iceberg Configuration
 		envVars["SPARK_ICEBERG_CATALOG_NAME"] = "nessie"
-		envVars["SPARK_ICEBERG_CATALOG_TYPE"] = "nessie"
-		envVars["SPARK_ICEBERG_CATALOG_IO_IMPL"] = "org.apache.iceberg.aws.s3.S3FileIO"
+		envVars["SPARK_ICEBERG_REF"] = "main"
+		envVars["SPARK_ICEBERG_URI"] = "http://nessie:19120/iceberg/main/"
+		envVars["SPARK_ICEBERG_WAREHOUSE"] = "s3://lakehouse/"
+		envVars["SPARK_ICEBERG_IO_IMPL"] = "org.apache.iceberg.aws.s3.S3FileIO"
+		// AWS Configuration for Iceberg S3FileIO
+		envVars["AWS_REGION"] = "us-east-1"
+		envVars["AWS_ACCESS_KEY_ID"] = "admin"
+		envVars["AWS_SECRET_ACCESS_KEY"] = g.getPassword("minio", config.Environment)
+		// Spark Configuration Directory
+		envVars["SPARK_CONF_DIR"] = "/tmp/spark/conf"
 
 	case "prometheus":
 		envVars["PROMETHEUS_PORT"] = "9090"
@@ -542,12 +588,12 @@ func (g *Generator) getServiceEnvFileVariables(name string, service *ServiceConf
 
 	// S3/MinIO shared configuration
 	if name == "minio" || name == "nessie" || name == "trino" || name == "spark-master" || name == "spark-worker" {
-		envVars["S3_ENDPOINT"] = fmt.Sprintf("http://%s-minio:9000", config.ProjectName)
+		envVars["S3_ENDPOINT"] = "http://minio:9000"
 		envVars["S3_ACCESS_KEY"] = "admin"
 		envVars["S3_SECRET_KEY"] = g.getPassword("minio", config.Environment)
 		envVars["S3_REGION"] = "us-east-1"
 		envVars["S3_PATH_STYLE_ACCESS"] = "true"
-		envVars["NESSIE_URI"] = fmt.Sprintf("http://nessie:19120/iceberg/main/")
+		envVars["NESSIE_URI"] = "http://nessie:19120/iceberg/main/"
 		envVars["WAREHOUSE_LOCATION"] = "s3://lakehouse/"
 	}
 
@@ -640,7 +686,7 @@ func (g *Generator) createDevelopmentConfig() *ComposeConfiguration {
 			"spark-worker": {
 				Name:    "spark-worker",
 				Enabled: false,
-				Ports:   map[string]string{"4040": "4041"},
+				Ports:   map[string]string{"4040": "SPARK_WORKER_UI_PORT"},
 			},
 		},
 	}
@@ -713,11 +759,29 @@ func (g *Generator) GenerateFiles(projectName, networkName, environment string, 
 	// Convert services to proper format
 	convertedServices := make(map[string]*ServiceConfig)
 	for name := range services {
-		// Simple conversion - in a real implementation, you'd properly parse the service config
-		convertedServices[name] = &ServiceConfig{
+		// Create service config with default ports
+		serviceConfig := &ServiceConfig{
 			Name:    name,
 			Enabled: true,
 		}
+
+		// Add default ports for each service
+		switch name {
+		case "nessie":
+			serviceConfig.Ports = map[string]string{"19120": "NESSIE_PORT"}
+		case "minio":
+			serviceConfig.Ports = map[string]string{"9000": "MINIO_API_PORT", "9001": "MINIO_CONSOLE_PORT"}
+		case "postgresql":
+			serviceConfig.Ports = map[string]string{"5432": "POSTGRES_PORT"}
+		case "trino":
+			serviceConfig.Ports = map[string]string{"8080": "TRINO_PORT"}
+		case "spark-master":
+			serviceConfig.Ports = map[string]string{"4040": "SPARK_UI_PORT"}
+		case "spark-worker":
+			serviceConfig.Ports = map[string]string{"4040": "SPARK_WORKER_UI_PORT"}
+		}
+
+		convertedServices[name] = serviceConfig
 	}
 
 	config := &ComposeConfiguration{

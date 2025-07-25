@@ -1,1 +1,0 @@
-validating /home/ubuntu/shudl/generated/docker-compose.yml: services.prometheus.environment must be a mapping

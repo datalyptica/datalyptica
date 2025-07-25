@@ -22,47 +22,47 @@ echo -e "${CYAN}╚════════════════════�
 echo
 
 # Build the CLI if needed
-if [ ! -f "bin/shudlctl" ]; then
-    echo -e "${YELLOW}📦 Building shudlctl CLI tool...${NC}"
-    go build -o bin/shudlctl ./cmd/shudlctl
+if [ ! -f "bin/shudl" ]; then
+    echo -e "${YELLOW}📦 Building shudl CLI tool...${NC}"
+    go build -o bin/shudl cmd/shudl/main.go
     echo -e "${GREEN}✅ CLI tool built successfully${NC}"
     echo
 fi
 
 # Demo 1: Help and Commands
 echo -e "${BLUE}═══ Demo 1: Available Commands ═══${NC}"
-echo -e "${PURPLE}Command: ./bin/shudlctl --help${NC}"
+echo -e "${PURPLE}Command: ./bin/shudl ctl --help${NC}"
 echo
-./bin/shudlctl --help
+./bin/shudl ctl --help
 echo
 
 # Demo 2: Version Information
 echo -e "${BLUE}═══ Demo 2: Version Information ═══${NC}"
-echo -e "${PURPLE}Command: ./bin/shudlctl version${NC}"
+echo -e "${PURPLE}Command: ./bin/shudl ctl version${NC}"
 echo
-./bin/shudlctl version
+./bin/shudl ctl version
 echo
 
 # Demo 3: Command Help
 echo -e "${BLUE}═══ Demo 3: Command-Specific Help ═══${NC}"
-echo -e "${PURPLE}Command: ./bin/shudlctl deploy --help${NC}"
+echo -e "${PURPLE}Command: ./bin/shudl ctl deploy --help${NC}"
 echo
-./bin/shudlctl deploy --help
+./bin/shudl ctl deploy --help
 echo
 
 # Demo 4: Status Command (will show connection behavior)
 echo -e "${BLUE}═══ Demo 4: Status Command (No Server) ═══${NC}"
-echo -e "${PURPLE}Command: ./bin/shudlctl status --server http://localhost:9999${NC}"
-echo -e "${YELLOW}Expected: Connection error (demonstrates error handling)${NC}"
+echo -e "${PURPLE}Command: ./bin/shudl ctl status${NC}"
+echo -e "${YELLOW}Expected: Shows service status directly${NC}"
 echo
-./bin/shudlctl status --server http://localhost:9999 2>&1 || true
+./bin/shudl ctl status
 echo
 
 # Demo 5: Deploy Command Help
 echo -e "${BLUE}═══ Demo 5: Deploy Command Options ═══${NC}"
-echo -e "${PURPLE}Command: ./bin/shudlctl deploy --help${NC}"
+echo -e "${PURPLE}Command: ./bin/shudl ctl deploy --help${NC}"
 echo
-./bin/shudlctl deploy --help
+./bin/shudl ctl deploy --help
 echo
 
 # Demo 6: Configuration Options
@@ -73,9 +73,9 @@ echo -e "  2. Environment variables (SHUDL_*)"
 echo -e "  3. Config file (~/.shudlctl.yaml)"
 echo -e "  4. Default values"
 echo
-echo -e "${PURPLE}Example: SHUDL_SERVER=http://localhost:8090 ./bin/shudlctl version${NC}"
+echo -e "${PURPLE}Example: ./bin/shudl ctl version${NC}"
 echo
-SHUDL_SERVER=http://localhost:8090 ./bin/shudlctl version
+./bin/shudl ctl version
 echo
 
 # Demo 7: CLI Features Summary
@@ -85,7 +85,7 @@ echo -e "${GREEN}✅ Colored output and user-friendly messages${NC}"
 echo -e "${GREEN}✅ Comprehensive help and documentation${NC}"
 echo -e "${GREEN}✅ Flexible configuration management${NC}"
 echo -e "${GREEN}✅ Error handling and status reporting${NC}"
-echo -e "${GREEN}✅ REST API integration with ShuDL server${NC}"
+echo -e "${GREEN}✅ Direct Docker service management${NC}"
 echo -e "${GREEN}✅ Table formatting for service status${NC}"
 echo -e "${GREEN}✅ Interactive deployment confirmations${NC}"
 echo
@@ -94,39 +94,35 @@ echo
 echo -e "${BLUE}═══ Demo 8: Command Reference ═══${NC}"
 cat << 'EOF'
 📋 Core Commands:
-  • shudlctl version              - Show version information
-  • shudlctl status               - Check service status
-  • shudlctl deploy               - Deploy services
-  • shudlctl deploy --services X  - Deploy specific services
-  • shudlctl status --watch       - Watch status updates
-  • shudlctl deploy --yes         - Skip confirmation
+  • shudl ctl version              - Show version information
+  • shudl ctl status               - Check service status
+  • shudl ctl deploy               - Deploy services
+  • shudl ctl deploy --services X  - Deploy specific services
+  • shudl ctl backup               - Backup configuration
+  • shudl ctl cleanup              - Clean up environment
 
 🔧 Configuration:
-  • --server URL                  - Set ShuDL server URL
   • --config FILE                 - Use config file
   • --verbose                     - Enable verbose output
 
 🌟 Environment Variables:
-  • SHUDL_SERVER                  - Server URL
   • SHUDL_VERBOSE                 - Enable verbose output
 EOF
 echo
 
-# Demo 9: Integration with ShuDL Server
-echo -e "${BLUE}═══ Demo 9: Server Integration ═══${NC}"
-echo -e "${YELLOW}💡 To test with running ShuDL server:${NC}"
+# Demo 9: Direct Docker Integration
+echo -e "${BLUE}═══ Demo 9: Direct Docker Integration ═══${NC}"
+echo -e "${YELLOW}💡 To test with Docker services:${NC}"
 echo
 cat << 'EOF'
-# Start ShuDL server on port 8080
-./bin/installer &
+# Deploy services
+./bin/shudl inst deploy
 
 # Test CLI commands
-./bin/shudlctl status                    # Check all services
-./bin/shudlctl deploy                    # Deploy services
-./bin/shudlctl status --watch            # Monitor deployment
-
-# Use custom server
-./bin/shudlctl status --server http://localhost:8081
+./bin/shudl ctl status                    # Check all services
+./bin/shudl ctl deploy                    # Deploy services
+./bin/shudl ctl backup                    # Backup configuration
+./bin/shudl ctl cleanup                   # Clean up environment
 EOF
 echo
 

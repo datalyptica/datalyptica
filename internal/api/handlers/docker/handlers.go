@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -79,6 +80,8 @@ func (h *Handler) StartServices(c *gin.Context) {
 	if result.Success {
 		utils.SuccessResponse(c, "Services started successfully", response)
 	} else {
+		// Create an error from the result if it's not successful
+		err := fmt.Errorf("service start failed: %s", result.Error)
 		utils.ErrorResponse(c, err)
 	}
 }
@@ -138,13 +141,21 @@ func (h *Handler) StopServices(c *gin.Context) {
 // @Tags docker
 // @Produce json
 // @Param project query string false "Project name"
+// @Param compose_file query string false "Compose file path"
 // @Success 200 {object} utils.APIResponse{data=models.ServiceStatusResponse}
 // @Failure 500 {object} utils.APIResponse
 // @Router /api/v1/docker/status [get]
 func (h *Handler) GetStatus(c *gin.Context) {
 	projectName := c.Query("project")
+	composeFile := c.Query("compose_file")
 
-	status, err := h.dockerService.GetStatus(c.Request.Context(), projectName)
+	// Create service config with compose file
+	serviceConfig := docker.ServiceConfig{
+		ComposeFile: composeFile,
+		ProjectName: projectName,
+	}
+
+	status, err := h.dockerService.GetStatus(c.Request.Context(), serviceConfig)
 	if err != nil {
 		h.logger.LogError(err, "Failed to get service status", map[string]interface{}{
 			"project": projectName,

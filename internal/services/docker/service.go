@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -36,9 +37,9 @@ type OperationResult struct {
 	ExitCode int                    `json:"exit_code"`
 	Duration string                 `json:"duration"`
 	Services []string               `json:"services,omitempty"`
-	Valid    bool                   `json:"valid"`    // For validation operations
-	Errors   []string               `json:"errors"`   // For validation errors
-	Details  map[string]interface{} `json:"details"`  // Additional details
+	Valid    bool                   `json:"valid"`   // For validation operations
+	Errors   []string               `json:"errors"`  // For validation errors
+	Details  map[string]interface{} `json:"details"` // Additional details
 }
 
 // ServiceStatus represents the status of a single service
@@ -117,7 +118,28 @@ func (s *Service) Start(ctx context.Context, serviceConfig ServiceConfig) (*Oper
 		args = append(args, serviceConfig.Services...)
 	}
 
-	result := s.executeCommand(ctx, "docker", args, serviceConfig.Environment)
+	// Set working directory to project root
+	env := serviceConfig.Environment
+	if env == nil {
+		env = make(map[string]string)
+	}
+	env["WORK_DIR"] = "/home/ubuntu/shudl"
+
+	s.logger.LogDebug("Executing start command", map[string]interface{}{
+		"command":  "docker",
+		"args":     strings.Join(args, " "),
+		"work_dir": env["WORK_DIR"],
+	})
+
+	result := s.executeCommand(ctx, "docker", args, env)
+
+	s.logger.LogDebug("Start command result", map[string]interface{}{
+		"success":   result.Success,
+		"exit_code": result.ExitCode,
+		"error":     result.Error,
+		"output":    result.Output,
+	})
+
 	result.Duration = time.Since(startTime).String()
 	result.Services = serviceConfig.Services
 
@@ -388,48 +410,113 @@ func (s *Service) ValidateDockerInstallation(ctx context.Context) (*OperationRes
 }
 
 // GetStatus gets the status of Docker services
-func (s *Service) GetStatus(ctx context.Context, projectName string) (*StatusResult, error) {
+func (s *Service) GetStatus(ctx context.Context, serviceConfig ServiceConfig) (*StatusResult, error) {
 	s.logger.LogInfo("Getting service status", map[string]interface{}{
-		"project_name": projectName,
+		"project_name": serviceConfig.ProjectName,
+		"compose_file": serviceConfig.ComposeFile,
 	})
 
 	// Build docker-compose command to get status
 	args := []string{"compose"}
-	
-	if s.config.ComposeFile != "" {
-		args = append(args, "-f", s.config.ComposeFile)
+
+	if serviceConfig.ComposeFile != "" {
+		args = append(args, "-f", serviceConfig.ComposeFile)
 	}
-	
-	if projectName != "" {
-		args = append(args, "-p", projectName)
+
+	if serviceConfig.ProjectName != "" {
+		args = append(args, "-p", serviceConfig.ProjectName)
 	}
-	
+
 	args = append(args, "ps", "--format", "json")
 
+	// Set working directory to project root
+	env := map[string]string{
+		"WORK_DIR": "/home/ubuntu/shudl",
+	}
+
+	s.logger.LogDebug("Executing status command", map[string]interface{}{
+		"command":  "docker",
+		"args":     strings.Join(args, " "),
+		"work_dir": env["WORK_DIR"],
+	})
+
 	// Execute command
-	result := s.executeCommand(ctx, "docker", args, nil)
+	result := s.executeCommand(ctx, "docker", args, env)
+
+	s.logger.LogDebug("Command result", map[string]interface{}{
+		"success":   result.Success,
+		"exit_code": result.ExitCode,
+		"error":     result.Error,
+		"output":    result.Output,
+	})
+
 	if !result.Success {
 		return nil, fmt.Errorf("failed to get service status: %s", result.Error)
 	}
 
-	// Parse output and create status result
+	// Parse JSON output and create status result
 	services := []ServiceStatus{}
-	if result.Output != "" {
-		// For now, create a simple status based on output
-		// In a real implementation, you would parse the JSON output
+	lines := strings.Split(strings.TrimSpace(result.Output), "\n")
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		// Parse each JSON line
+		var containerInfo map[string]interface{}
+		if err := json.Unmarshal([]byte(line), &containerInfo); err != nil {
+			s.logger.LogError(fmt.Errorf("failed to parse container info: %w", err), "Skipping invalid JSON line", map[string]interface{}{
+				"line": line,
+			})
+			continue
+		}
+
+		// Extract service information
+		serviceName, _ := containerInfo["Service"].(string)
+		state, _ := containerInfo["State"].(string)
+		health, _ := containerInfo["Health"].(string)
+		status, _ := containerInfo["Status"].(string)
+
+		// Determine health status
+		healthStatus := "unknown"
+		if health != "" {
+			healthStatus = health
+		} else if strings.Contains(status, "healthy") {
+			healthStatus = "healthy"
+		} else if strings.Contains(status, "unhealthy") {
+			healthStatus = "unhealthy"
+		}
+
 		services = append(services, ServiceStatus{
-			Name:   "example-service",
-			Status: "running",
-			Health: "healthy",
-			Uptime: "5 minutes",
+			Name:   serviceName,
+			Status: state,
+			Health: healthStatus,
+			Uptime: status,
 		})
+	}
+
+	// Calculate summary
+	running := 0
+	stopped := 0
+	unhealthy := 0
+
+	for _, service := range services {
+		if service.Status == "running" {
+			running++
+		} else {
+			stopped++
+		}
+		if service.Health == "unhealthy" {
+			unhealthy++
+		}
 	}
 
 	summary := DeploymentSummary{
 		Total:     len(services),
-		Running:   len(services), // Simplified for now
-		Stopped:   0,
-		Unhealthy: 0,
+		Running:   running,
+		Stopped:   stopped,
+		Unhealthy: unhealthy,
 	}
 
 	statusResult := &StatusResult{
@@ -440,6 +527,7 @@ func (s *Service) GetStatus(ctx context.Context, projectName string) (*StatusRes
 	s.logger.LogInfo("Service status retrieved", map[string]interface{}{
 		"services_count": len(services),
 		"running":        summary.Running,
+		"unhealthy":      summary.Unhealthy,
 	})
 
 	return statusResult, nil
@@ -455,21 +543,21 @@ func (s *Service) GetLogs(ctx context.Context, projectName, serviceName string, 
 
 	// Build docker-compose command
 	args := []string{"compose"}
-	
+
 	if s.config.ComposeFile != "" {
 		args = append(args, "-f", s.config.ComposeFile)
 	}
-	
+
 	if projectName != "" {
 		args = append(args, "-p", projectName)
 	}
-	
+
 	args = append(args, "logs")
-	
+
 	if tail > 0 {
 		args = append(args, "--tail", fmt.Sprintf("%d", tail))
 	}
-	
+
 	if serviceName != "" {
 		args = append(args, serviceName)
 	}
