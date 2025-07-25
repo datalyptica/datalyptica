@@ -1,65 +1,137 @@
 /**
- * ShuDL Installer JavaScript
- * Intelligent, dynamic configuration system with real-time validation
+ * ShuDL Installer - Compiled JavaScript
+ * Built from modular ES6 source files
+ * Generated: Fri Jul 25 13:58:31 UTC 2025
  */
 
-class ShuDLInstaller {
-    constructor() {
-        this.currentStep = 1;
-        this.totalSteps = 5;
-        this.configSchema = null;
-        this.currentConfig = {};
-        this.validationErrors = {};
-        this.deploymentProgress = 0;
-        this.deploymentLogs = [];
-        this.serviceStatus = {};
-        
-        this.init();
+/* === API Module === */
+/**
+ * API Communication Module
+ * Handles all HTTP requests to the ShuDL installer API
+ */
+
+class APIClient {
+    constructor(baseURL = '/api/v1') {
+        this.baseURL = baseURL;
     }
 
-    async init() {
-        this.bindEvents();
-        await this.checkSystemRequirements();
-        await this.loadConfigSchema();
-        this.updateUI();
-    }
-
-    bindEvents() {
-        // Step navigation
-        document.getElementById('start-installation')?.addEventListener('click', () => this.nextStep());
-        document.getElementById('next-to-preview')?.addEventListener('click', () => this.nextStep());
-        document.getElementById('back-to-config')?.addEventListener('click', () => this.previousStep());
-        document.getElementById('start-deployment')?.addEventListener('click', () => this.startDeployment());
+    /**
+     * Make HTTP request with error handling
+     */
+    async request(endpoint, options = {}) {
+        const url = `${this.baseURL}${endpoint}`;
         
-        // Configuration events
-        document.getElementById('validate-config')?.addEventListener('click', () => this.validateConfiguration());
-        
-        // Dashboard events
-        document.getElementById('restart-services')?.addEventListener('click', () => this.restartServices());
-        document.getElementById('stop-services')?.addEventListener('click', () => this.stopServices());
-        document.getElementById('view-logs')?.addEventListener('click', () => this.viewLogs());
-
-        // Preview tab switching
-        document.querySelectorAll('.tab-button').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const tabName = e.target.dataset.tab;
-                if (tabName) {
-                    this.switchPreviewTab(tabName);
-                }
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                },
+                ...options
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error(`API request failed: ${url}`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * System validation endpoints
+     */
+    async validateSystem() {
+        return this.request('/docker/validate');
+    }
+
+    /**
+     * Configuration endpoints
+     */
+    async getConfigSchema() {
+        return this.request('/web/config');
+    }
+
+    async validateConfiguration(config) {
+        return this.request('/compose/validate', {
+            method: 'POST',
+            body: JSON.stringify(config)
         });
     }
 
-    async checkSystemRequirements() {
-        const checks = [
+    async generateFiles(config) {
+        return this.request('/compose/generate', {
+            method: 'POST',
+            body: JSON.stringify(config)
+        });
+    }
+
+    /**
+     * Deployment endpoints
+     */
+    async startServices(config) {
+        return this.request('/docker/start', {
+            method: 'POST',
+            body: JSON.stringify(config)
+        });
+    }
+
+    async stopServices(projectName) {
+        return this.request('/docker/stop', {
+            method: 'POST',
+            body: JSON.stringify({ project_name: projectName })
+        });
+    }
+
+    async restartServices(projectName) {
+        return this.request('/docker/restart', {
+            method: 'POST',
+            body: JSON.stringify({ project_name: projectName })
+        });
+    }
+
+    async getServiceStatus(projectName) {
+        return this.request(`/docker/status?project=${projectName}`);
+    }
+
+    async getServiceLogs(projectName, serviceName, tail = 100) {
+        return this.request(`/docker/logs?project=${projectName}&service=${serviceName}&tail=${tail}`);
+    }
+
+    async getDeploymentProgress(projectName) {
+        return this.request(`/web/progress?project=${projectName}`);
+    }
+}
+
+// Export singleton instance
+const apiClient = new APIClient(); 
+/* === Validation Module === */
+/**
+ * System Validation Module
+ * Handles system requirement checks and validation
+ */
+
+
+
+class SystemValidator {
+    constructor() {
+        this.checks = [
             { id: 'docker-status', name: 'Docker', check: () => this.checkDocker() },
             { id: 'compose-status', name: 'Docker Compose', check: () => this.checkDockerCompose() },
             { id: 'memory-status', name: 'Memory', check: () => this.checkMemory() }
         ];
+    }
 
+    /**
+     * Run all system requirement checks
+     */
+    async runAllChecks() {
         let allPassed = true;
 
-        for (const check of checks) {
+        for (const check of this.checks) {
             try {
                 const result = await check.check();
                 this.updateStatusItem(check.id, result.success, result.message, result.details);
@@ -70,28 +142,22 @@ class ShuDLInstaller {
             }
         }
 
-        // Enable start button if all checks pass
-        const startButton = document.getElementById('start-installation');
-        if (startButton) {
-            startButton.disabled = !allPassed;
-            if (allPassed) {
-                startButton.innerHTML = '<i class="fas fa-play"></i> Start Installation';
-            } else {
-                startButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> System Requirements Not Met';
-            }
-        }
+        this.updateStartButton(allPassed);
+        return allPassed;
     }
 
+    /**
+     * Check Docker availability
+     */
     async checkDocker() {
         try {
-            const response = await fetch('/api/v1/system/validate');
-            const data = await response.json();
+            const data = await apiClient.validateSystem();
             
             if (data.success && data.data) {
                 return {
                     success: true,
                     message: 'Docker available',
-                    details: `Version: ${data.data.docker_version || 'Unknown'}`
+                    details: `Version: ${data.data.details?.docker_version || 'Unknown'}`
                 };
             } else {
                 return {
@@ -109,16 +175,18 @@ class ShuDLInstaller {
         }
     }
 
+    /**
+     * Check Docker Compose availability
+     */
     async checkDockerCompose() {
         try {
-            const response = await fetch('/api/v1/system/validate');
-            const data = await response.json();
+            const data = await apiClient.validateSystem();
             
             if (data.success && data.data) {
                 return {
                     success: true,
                     message: 'Docker Compose available',
-                    details: `Version: ${data.data.compose_version || 'Unknown'}`
+                    details: `Version: ${data.data.details?.compose_version || 'Unknown'}`
                 };
             } else {
                 return {
@@ -136,8 +204,10 @@ class ShuDLInstaller {
         }
     }
 
+    /**
+     * Check system memory
+     */
     async checkMemory() {
-        // Simulate memory check - in real implementation, this would check system memory
         return new Promise(resolve => {
             setTimeout(() => {
                 const totalMemoryGB = 8; // Simulate 8GB
@@ -153,688 +223,120 @@ class ShuDLInstaller {
                     resolve({
                         success: false,
                         message: 'Insufficient memory',
-                        details: `${totalMemoryGB}GB available (${requiredMemoryGB}GB required)`
+                        details: `${totalMemoryGB}GB available, ${requiredMemoryGB}GB required`
                     });
                 }
             }, 1000);
         });
     }
 
+    /**
+     * Update status item in UI
+     */
     updateStatusItem(id, success, message, details) {
         const item = document.getElementById(id);
         if (!item) return;
 
         const icon = item.querySelector('.status-icon');
-        const title = item.querySelector('.status-title');
-        const subtitle = item.querySelector('.status-subtitle');
+        const messageEl = item.querySelector('.status-message');
+        const detailsEl = item.querySelector('.status-details');
 
-        // Update icon
-        icon.className = `status-icon ${success ? 'success' : 'error'}`;
-        icon.innerHTML = success ? '<i class="fas fa-check"></i>' : '<i class="fas fa-times"></i>';
+        if (icon) {
+            icon.className = `status-icon ${success ? 'success' : 'error'}`;
+            icon.innerHTML = success ? '<i class="fas fa-check"></i>' : '<i class="fas fa-times"></i>';
+        }
 
-        // Update text
-        if (title) title.textContent = title.textContent; // Keep original title
-        if (subtitle) subtitle.textContent = details || message;
-
-        // Update item class
+        if (messageEl) messageEl.textContent = message;
+        if (detailsEl) detailsEl.textContent = details;
+        
         item.className = `status-item ${success ? 'success' : 'error'}`;
     }
 
-    async loadConfigSchema() {
-        try {
-            const response = await fetch('/api/v1/installer/config-schema');
-            const data = await response.json();
-            
-            if (data.success) {
-                this.configSchema = data.data;
-                this.renderConfigurationTabs();
-                this.initializeDefaultValues();
-            } else {
-                this.showNotification('error', 'Failed to load configuration schema');
-            }
-        } catch (error) {
-            this.showNotification('error', 'Error loading configuration: ' + error.message);
-        }
-    }
+    /**
+     * Update the start installation button
+     */
+    updateStartButton(allPassed) {
+        const startButton = document.getElementById('start-installation');
+        if (!startButton) return;
 
-    renderConfigurationTabs() {
-        if (!this.configSchema || !this.configSchema.categories) return;
-
-        const tabNav = document.getElementById('config-tab-nav');
-        const tabContent = document.getElementById('config-tab-content');
+        startButton.disabled = !allPassed;
         
-        if (!tabNav || !tabContent) return;
-
-        tabNav.innerHTML = '';
-        tabContent.innerHTML = '';
-
-        let isFirst = true;
-        
-        Object.entries(this.configSchema.categories).forEach(([categoryKey, category]) => {
-            // Create tab button
-            const tabButton = document.createElement('div');
-            tabButton.className = `tab-button ${isFirst ? 'active' : ''}`;
-            tabButton.dataset.tab = categoryKey;
-            tabButton.textContent = category.display_name;
-            tabButton.addEventListener('click', () => this.switchConfigTab(categoryKey));
-            tabNav.appendChild(tabButton);
-
-            // Create tab content
-            const tabPane = document.createElement('div');
-            tabPane.className = `tab-pane ${isFirst ? 'active' : ''}`;
-            tabPane.id = `config-${categoryKey}`;
-            
-            tabPane.innerHTML = `
-                <div class="category-header">
-                    <h3>${category.display_name}</h3>
-                    <p>${category.description}</p>
-                </div>
-                <div class="category-fields" id="fields-${categoryKey}">
-                    ${this.renderCategoryFields(category.fields)}
-                </div>
-            `;
-            
-            tabContent.appendChild(tabPane);
-            isFirst = false;
-        });
-
-        // Bind field events
-        this.bindFieldEvents();
-    }
-
-    renderCategoryFields(fields) {
-        return fields.map(field => {
-            const required = field.required ? 'required' : '';
-            const sharedInfo = field.shared_with ? ` (shared with: ${field.shared_with.join(', ')})` : '';
-            
-            switch (field.type) {
-                case 'select':
-                    return `
-                        <div class="form-group">
-                            <label class="form-label ${required}" for="${field.name}">
-                                ${field.display_name}
-                            </label>
-                            <select class="form-control select" id="${field.name}" name="${field.name}" ${required}>
-                                ${field.options.map(option => 
-                                    `<option value="${option}" ${field.default === option ? 'selected' : ''}>${option}</option>`
-                                ).join('')}
-                            </select>
-                            <div class="form-help">${field.description}${sharedInfo}</div>
-                            <div class="form-error" id="error-${field.name}"></div>
-                        </div>
-                    `;
-                
-                case 'checkbox':
-                    return `
-                        <div class="form-group">
-                            <div class="checkbox-group">
-                                <input type="checkbox" class="checkbox" id="${field.name}" name="${field.name}" 
-                                       ${field.default ? 'checked' : ''}>
-                                <label class="form-label" for="${field.name}">
-                                    ${field.display_name}
-                                </label>
-                            </div>
-                            <div class="form-help">${field.description}${sharedInfo}</div>
-                            <div class="form-error" id="error-${field.name}"></div>
-                        </div>
-                    `;
-                
-                case 'password':
-                    return `
-                        <div class="form-group">
-                            <label class="form-label ${required}" for="${field.name}">
-                                ${field.display_name}
-                            </label>
-                            <input type="password" class="form-control" id="${field.name}" name="${field.name}" 
-                                   value="${field.default || ''}" ${required} autocomplete="new-password">
-                            <div class="form-help">${field.description}${sharedInfo}</div>
-                            <div class="form-error" id="error-${field.name}"></div>
-                        </div>
-                    `;
-                
-                case 'number':
-                    return `
-                        <div class="form-group">
-                            <label class="form-label ${required}" for="${field.name}">
-                                ${field.display_name}
-                            </label>
-                            <input type="number" class="form-control" id="${field.name}" name="${field.name}" 
-                                   value="${field.default || ''}" ${required}>
-                            <div class="form-help">${field.description}${sharedInfo}</div>
-                            <div class="form-error" id="error-${field.name}"></div>
-                        </div>
-                    `;
-                
-                default: // text
-                    return `
-                        <div class="form-group">
-                            <label class="form-label ${required}" for="${field.name}">
-                                ${field.display_name}
-                            </label>
-                            <input type="text" class="form-control" id="${field.name}" name="${field.name}" 
-                                   value="${field.default || ''}" ${required}>
-                            <div class="form-help">${field.description}${sharedInfo}</div>
-                            <div class="form-error" id="error-${field.name}"></div>
-                        </div>
-                    `;
-            }
-        }).join('');
-    }
-
-    bindFieldEvents() {
-        // Bind change events to all form fields for real-time validation and auto-population
-        document.querySelectorAll('.form-control, .checkbox').forEach(field => {
-            field.addEventListener('input', () => this.handleFieldChange(field));
-            field.addEventListener('change', () => this.handleFieldChange(field));
-        });
-    }
-
-    handleFieldChange(field) {
-        const fieldName = field.name;
-        const fieldValue = field.type === 'checkbox' ? field.checked : field.value;
-        
-        // Update current config
-        this.currentConfig[fieldName] = fieldValue;
-        
-        // Clear previous error
-        this.clearFieldError(fieldName);
-        
-        // Auto-populate dependent fields
-        this.autoPopulateFields();
-        
-        // Update shared parameters display
-        this.updateSharedParametersDisplay();
-        
-        // Real-time validation for this field
-        this.validateField(fieldName, fieldValue);
-    }
-
-    autoPopulateFields() {
-        // Smart auto-population based on configuration dependencies
-        const config = this.currentConfig;
-
-        // Auto-populate MinIO endpoint if credentials are set
-        if (config.minio_username && config.minio_password) {
-            this.setFieldValue('s3_endpoint', 'http://minio:9000');
-            this.setFieldValue('s3_access_key', config.minio_username);
-            this.setFieldValue('s3_secret_key', config.minio_password);
-        }
-
-        // Auto-populate PostgreSQL details
-        if (config.project_name) {
-            this.setFieldValue('postgres_user', 'nessie');
-            this.setFieldValue('postgres_db', 'nessie');
-        }
-
-        // Auto-populate service URLs
-        if (config.nessie_port) {
-            this.setFieldValue('nessie_uri', `http://nessie:${config.nessie_port}/iceberg/main/`);
-        }
-
-        if (config.spark_master_port) {
-            this.setFieldValue('spark_master_url', `spark://spark-master:${config.spark_master_port}`);
-        }
-    }
-
-    setFieldValue(fieldName, value) {
-        const field = document.getElementById(fieldName);
-        if (field && !field.value) { // Only set if field is empty
-            field.value = value;
-            this.currentConfig[fieldName] = value;
-        }
-    }
-
-    updateSharedParametersDisplay() {
-        const sharedParamsContainer = document.querySelector('.shared-params-list');
-        if (!sharedParamsContainer || !this.configSchema) return;
-
-        const sharedParams = this.configSchema.shared_params;
-        let html = '';
-
-        Object.entries(sharedParams).forEach(([groupName, fields]) => {
-            const fieldValues = fields.map(fieldName => {
-                const value = this.currentConfig[fieldName];
-                return value ? `${fieldName}: ${value.length > 20 ? '***' : value}` : `${fieldName}: (not set)`;
-            }).join('<br>');
-
-            html += `
-                <div class="shared-param">
-                    <div class="shared-param-title">${groupName.replace('_', ' ').toUpperCase()}</div>
-                    <div class="shared-param-services">${fieldValues}</div>
-                </div>
-            `;
-        });
-
-        sharedParamsContainer.innerHTML = html;
-    }
-
-    initializeDefaultValues() {
-        if (!this.configSchema) return;
-
-        Object.values(this.configSchema.categories).forEach(category => {
-            category.fields.forEach(field => {
-                if (field.default !== undefined) {
-                    this.currentConfig[field.name] = field.default;
-                    
-                    const fieldElement = document.getElementById(field.name);
-                    if (fieldElement) {
-                        if (field.type === 'checkbox') {
-                            fieldElement.checked = field.default;
-                        } else {
-                            fieldElement.value = field.default;
-                        }
-                    }
-                }
-            });
-        });
-
-        this.updateSharedParametersDisplay();
-    }
-
-    switchConfigTab(categoryKey) {
-        // Update tab buttons
-        document.querySelectorAll('.tab-button').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-tab="${categoryKey}"]`).classList.add('active');
-
-        // Update tab content
-        document.querySelectorAll('.tab-pane').forEach(pane => {
-            pane.classList.remove('active');
-        });
-        document.getElementById(`config-${categoryKey}`).classList.add('active');
-    }
-
-    switchPreviewTab(tabName) {
-        // Update tab buttons
-        document.querySelectorAll('.preview-tabs .tab-button').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-
-        // Update tab content
-        document.querySelectorAll('.preview-tabs .tab-pane').forEach(pane => {
-            pane.classList.remove('active');
-        });
-        document.getElementById(`preview-${tabName}`).classList.add('active');
-
-        // Load content for the selected tab
-        if (tabName === 'compose') {
-            this.loadComposePreview();
-        } else if (tabName === 'environment') {
-            this.loadEnvironmentPreview();
-        } else if (tabName === 'services') {
-            this.loadServicesPreview();
-        }
-    }
-
-    async validateConfiguration() {
-        this.showLoading(true);
-        
-        try {
-            const response = await fetch('/api/v1/installer/validate-config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.currentConfig)
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                // Update config with auto-populated values
-                this.currentConfig = { ...this.currentConfig, ...data.populated_config };
-                
-                // Update form fields with populated values
-                Object.entries(data.populated_config).forEach(([key, value]) => {
-                    const field = document.getElementById(key);
-                    if (field && !field.value) {
-                        if (field.type === 'checkbox') {
-                            field.checked = value;
-                        } else {
-                            field.value = value;
-                        }
-                    }
-                });
-                
-                this.validationErrors = {};
-                this.clearAllFieldErrors();
-                
-                // Enable next button
-                const nextButton = document.getElementById('next-to-preview');
-                if (nextButton) {
-                    nextButton.disabled = false;
-                }
-                
-                this.showNotification('success', 'Configuration validated successfully!');
-                this.updateSharedParametersDisplay();
-                
-            } else {
-                this.validationErrors = data.validation_errors || [];
-                this.displayValidationErrors();
-                this.showNotification('error', 'Configuration validation failed');
-            }
-        } catch (error) {
-            this.showNotification('error', 'Validation error: ' + error.message);
-        } finally {
-            this.showLoading(false);
-        }
-    }
-
-    validateField(fieldName, value) {
-        // Basic field validation
-        const field = document.getElementById(fieldName);
-        if (!field) return;
-
-        let isValid = true;
-        let errorMessage = '';
-
-        // Required field check
-        if (field.hasAttribute('required') && (!value || value.toString().trim() === '')) {
-            isValid = false;
-            errorMessage = 'This field is required';
-        }
-
-        // Port number validation
-        if (field.type === 'number' && fieldName.includes('port')) {
-            const portNumber = parseInt(value);
-            if (portNumber < 1024 || portNumber > 65535) {
-                isValid = false;
-                errorMessage = 'Port must be between 1024 and 65535';
-            }
-        }
-
-        // Password strength validation
-        if (field.type === 'password' && value && value.length < 6) {
-            isValid = false;
-            errorMessage = 'Password must be at least 6 characters';
-        }
-
-        if (isValid) {
-            this.clearFieldError(fieldName);
+        if (allPassed) {
+            startButton.innerHTML = '<i class="fas fa-play"></i> Start Installation';
         } else {
-            this.showFieldError(fieldName, errorMessage);
+            startButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> System Requirements Not Met';
         }
+    }
+} 
+/* === Step Controller Component === */
+/**
+ * Step Controller Component
+ * Manages multi-step installer navigation
+ */
 
-        return isValid;
+class StepController {
+    constructor(totalSteps = 5) {
+        this.currentStep = 1;
+        this.totalSteps = totalSteps;
+        this.bindEvents();
     }
 
-    displayValidationErrors() {
-        this.clearAllFieldErrors();
-        
-        if (Array.isArray(this.validationErrors)) {
-            this.validationErrors.forEach(error => {
-                // Try to extract field name from error message
-                const fieldMatch = error.match(/^(\w+)/);
-                if (fieldMatch) {
-                    this.showFieldError(fieldMatch[1], error);
+    /**
+     * Bind step navigation events
+     */
+    bindEvents() {
+        // Step navigation buttons
+        document.getElementById('start-installation')?.addEventListener('click', () => this.nextStep());
+        document.getElementById('next-to-preview')?.addEventListener('click', () => this.nextStep());
+        document.getElementById('back-to-config')?.addEventListener('click', () => this.previousStep());
+        document.getElementById('start-deployment')?.addEventListener('click', () => this.nextStep());
+
+        // Preview tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const tabName = e.target.dataset.tab;
+                if (tabName) {
+                    this.switchPreviewTab(tabName);
                 }
             });
-        }
-    }
-
-    showFieldError(fieldName, message) {
-        const errorElement = document.getElementById(`error-${fieldName}`);
-        const fieldElement = document.getElementById(fieldName);
-        
-        if (errorElement) {
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
-        }
-        
-        if (fieldElement) {
-            fieldElement.style.borderColor = 'var(--error-color)';
-        }
-    }
-
-    clearFieldError(fieldName) {
-        const errorElement = document.getElementById(`error-${fieldName}`);
-        const fieldElement = document.getElementById(fieldName);
-        
-        if (errorElement) {
-            errorElement.textContent = '';
-            errorElement.style.display = 'none';
-        }
-        
-        if (fieldElement) {
-            fieldElement.style.borderColor = '';
-        }
-    }
-
-    clearAllFieldErrors() {
-        document.querySelectorAll('.form-error').forEach(error => {
-            error.textContent = '';
-            error.style.display = 'none';
-        });
-        
-        document.querySelectorAll('.form-control').forEach(field => {
-            field.style.borderColor = '';
         });
     }
 
-    async loadServicesPreview() {
-        const container = document.getElementById('services-preview');
-        if (!container) return;
-
-        // Show which services will be deployed based on current config
-        const services = [
-            { name: 'PostgreSQL', icon: 'database', enabled: true, description: 'Database for Nessie metadata' },
-            { name: 'MinIO', icon: 'cloud', enabled: this.currentConfig.object_storage_type === 'builtin_minio', description: 'Object storage' },
-            { name: 'Nessie', icon: 'layer-group', enabled: true, description: 'Data catalog service' },
-            { name: 'Trino', icon: 'search', enabled: true, description: 'SQL query engine' },
-            { name: 'Spark Master', icon: 'fire', enabled: true, description: 'Distributed computing' },
-            { name: 'Spark Worker', icon: 'cogs', enabled: true, description: 'Compute workers' }
-        ];
-
-        const html = services.map(service => `
-            <div class="service-card ${service.enabled ? 'enabled' : ''}">
-                <div class="service-header">
-                    <div class="service-icon">
-                        <i class="fas fa-${service.icon}"></i>
-                    </div>
-                    <div class="service-name">${service.name}</div>
-                    <div class="service-status ${service.enabled ? 'enabled' : 'disabled'}">
-                        ${service.enabled ? 'Enabled' : 'Disabled'}
-                    </div>
-                </div>
-                <div class="service-description">${service.description}</div>
-            </div>
-        `).join('');
-
-        container.innerHTML = html;
-    }
-
-    async loadComposePreview() {
-        const container = document.getElementById('compose-preview');
-        if (!container) return;
-
-        try {
-            const response = await fetch('/api/v1/compose/preview', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    project_name: this.currentConfig.project_name || 'shudl',
-                    environment: this.currentConfig.environment || 'development',
-                    services: {
-                        postgresql: { enabled: true },
-                        minio: { enabled: this.currentConfig.object_storage_type === 'builtin_minio' },
-                        nessie: { enabled: true },
-                        trino: { enabled: true },
-                        'spark-master': { enabled: true },
-                        'spark-worker': { enabled: true }
-                    }
-                })
-            });
-
-            const data = await response.json();
-            
-            if (data.success && data.data.compose_content) {
-                container.innerHTML = `<code>${this.escapeHtml(data.data.compose_content)}</code>`;
-            } else {
-                container.innerHTML = '<code>Error loading compose preview</code>';
-            }
-        } catch (error) {
-            container.innerHTML = `<code>Error: ${error.message}</code>`;
-        }
-    }
-
-    async loadEnvironmentPreview() {
-        const container = document.getElementById('env-preview');
-        if (!container) return;
-
-        try {
-            const response = await fetch('/api/v1/compose/preview', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    project_name: this.currentConfig.project_name || 'shudl',
-                    environment: this.currentConfig.environment || 'development',
-                    services: {
-                        postgresql: { enabled: true },
-                        minio: { enabled: this.currentConfig.object_storage_type === 'builtin_minio' },
-                        nessie: { enabled: true },
-                        trino: { enabled: true },
-                        'spark-master': { enabled: true },
-                        'spark-worker': { enabled: true }
-                    }
-                })
-            });
-
-            const data = await response.json();
-            
-            if (data.success && data.data.env_content) {
-                container.innerHTML = `<code>${this.escapeHtml(data.data.env_content)}</code>`;
-            } else {
-                container.innerHTML = '<code>Error loading environment preview</code>';
-            }
-        } catch (error) {
-            container.innerHTML = `<code>Error: ${error.message}</code>`;
-        }
-    }
-
-    async startDeployment() {
-        this.nextStep(); // Move to deployment step
-        
-        try {
-            // Generate configuration files
-            const generateResponse = await fetch('/api/v1/compose/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    project_name: this.currentConfig.project_name || 'shudl',
-                    environment: this.currentConfig.environment || 'development',
-                    services: {
-                        postgresql: { enabled: true },
-                        minio: { enabled: this.currentConfig.object_storage_type === 'builtin_minio' },
-                        nessie: { enabled: true },
-                        trino: { enabled: true },
-                        'spark-master': { enabled: true },
-                        'spark-worker': { enabled: true }
-                    }
-                })
-            });
-
-            const generateData = await generateResponse.json();
-            
-            if (!generateData.success) {
-                throw new Error('Failed to generate configuration files');
-            }
-
-            // Start services
-            const startResponse = await fetch('/api/v1/docker/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    compose_file: generateData.data.compose_file,
-                    project_name: this.currentConfig.project_name || 'shudl',
-                    env_file: generateData.data.env_file
-                })
-            });
-
-            const startData = await startResponse.json();
-            
-            if (startData.success) {
-                this.monitorDeployment();
-            } else {
-                this.showNotification('error', 'Deployment failed: ' + startData.message);
-            }
-            
-        } catch (error) {
-            this.showNotification('error', 'Deployment error: ' + error.message);
-        }
-    }
-
-    async monitorDeployment() {
-        const services = ['postgresql', 'minio', 'nessie', 'trino', 'spark-master', 'spark-worker'];
-        let progress = 0;
-        const totalSteps = services.length;
-        
-        this.updateDeploymentProgress(0, 'Starting deployment...');
-        this.addDeploymentLog('Starting ShuDL deployment...');
-        
-        for (let i = 0; i < services.length; i++) {
-            const service = services[i];
-            
-            this.addDeploymentLog(`Starting ${service}...`);
-            
-            // Simulate deployment progress
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            progress = ((i + 1) / totalSteps) * 100;
-            this.updateDeploymentProgress(progress, `${service} started`);
-            this.addDeploymentLog(`✓ ${service} is running`);
-        }
-
-        // Deployment complete
-        this.updateDeploymentProgress(100, 'Deployment complete!');
-        this.addDeploymentLog('🎉 ShuDL deployment completed successfully!');
-        
-        setTimeout(() => {
-            this.nextStep(); // Move to dashboard
-        }, 2000);
-    }
-
-    updateDeploymentProgress(percentage, status) {
-        const progressFill = document.getElementById('deployment-progress-fill');
-        const progressText = document.getElementById('deployment-status');
-        const progressPercentage = document.getElementById('deployment-percentage');
-        
-        if (progressFill) progressFill.style.width = percentage + '%';
-        if (progressText) progressText.textContent = status;
-        if (progressPercentage) progressPercentage.textContent = Math.round(percentage) + '%';
-    }
-
-    addDeploymentLog(message) {
-        const logsContainer = document.getElementById('deployment-logs');
-        if (!logsContainer) return;
-        
-        const timestamp = new Date().toLocaleTimeString();
-        const logEntry = document.createElement('div');
-        logEntry.textContent = `[${timestamp}] ${message}`;
-        logsContainer.appendChild(logEntry);
-        logsContainer.scrollTop = logsContainer.scrollHeight;
-    }
-
+    /**
+     * Navigate to next step
+     */
     nextStep() {
         if (this.currentStep < this.totalSteps) {
             this.currentStep++;
-            this.updateUI();
-            
-            // Special handling for preview step
-            if (this.currentStep === 3) {
-                this.loadServicesPreview();
-            }
+            this.updateStepDisplay();
         }
     }
 
+    /**
+     * Navigate to previous step
+     */
     previousStep() {
         if (this.currentStep > 1) {
             this.currentStep--;
-            this.updateUI();
+            this.updateStepDisplay();
         }
     }
 
-    updateUI() {
-        // Update progress steps
+    /**
+     * Go to specific step
+     */
+    goToStep(step) {
+        if (step >= 1 && step <= this.totalSteps) {
+            this.currentStep = step;
+            this.updateStepDisplay();
+        }
+    }
+
+    /**
+     * Update the UI to show current step
+     */
+    updateStepDisplay() {
+        // Update progress indicators
         document.querySelectorAll('.step').forEach((step, index) => {
             const stepNumber = index + 1;
             step.classList.remove('active', 'completed');
@@ -846,7 +348,7 @@ class ShuDLInstaller {
             }
         });
 
-        // Show/hide step content
+        // Update step content visibility
         document.querySelectorAll('.step-content').forEach((content, index) => {
             const stepNumber = index + 1;
             content.classList.remove('active');
@@ -855,104 +357,689 @@ class ShuDLInstaller {
                 content.classList.add('active');
             }
         });
+
+        // Dispatch step change event
+        window.dispatchEvent(new CustomEvent('stepChanged', {
+            detail: { currentStep: this.currentStep }
+        }));
     }
 
-    async restartServices() {
-        this.showLoading(true);
-        
-        try {
-            const response = await fetch('/api/v1/docker/restart', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    compose_file: 'generated/docker-compose.yml',
-                    project_name: this.currentConfig.project_name || 'shudl'
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                this.showNotification('success', 'Services restarted successfully');
-            } else {
-                this.showNotification('error', 'Failed to restart services: ' + data.message);
+    /**
+     * Switch preview tabs
+     */
+    switchPreviewTab(tabName) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.classList.remove('active');
+            if (button.dataset.tab === tabName) {
+                button.classList.add('active');
             }
-        } catch (error) {
-            this.showNotification('error', 'Error restarting services: ' + error.message);
-        } finally {
-            this.showLoading(false);
-        }
-    }
+        });
 
-    async stopServices() {
-        this.showLoading(true);
-        
-        try {
-            const response = await fetch('/api/v1/docker/stop', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    compose_file: 'generated/docker-compose.yml',
-                    project_name: this.currentConfig.project_name || 'shudl'
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                this.showNotification('success', 'Services stopped successfully');
-            } else {
-                this.showNotification('error', 'Failed to stop services: ' + data.message);
+        // Update tab panes
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+            pane.classList.remove('active');
+            if (pane.id === `${tabName}-preview`) {
+                pane.classList.add('active');
             }
-        } catch (error) {
-            this.showNotification('error', 'Error stopping services: ' + error.message);
-        } finally {
-            this.showLoading(false);
+        });
+    }
+
+    /**
+     * Mark current step as completed
+     */
+    completeCurrentStep() {
+        document.querySelector(`.step[data-step="${this.currentStep}"]`)?.classList.add('completed');
+    }
+
+    /**
+     * Get current step number
+     */
+    getCurrentStep() {
+        return this.currentStep;
+    }
+} 
+/* === Notifications Component === */
+/**
+ * Notification System Component
+ * Handles toast notifications and user feedback
+ */
+
+class NotificationManager {
+    constructor() {
+        this.container = this.createContainer();
+        this.notifications = new Map();
+    }
+
+    /**
+     * Create notifications container if it doesn't exist
+     */
+    createContainer() {
+        let container = document.querySelector('.notifications-container');
+        
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'notifications-container';
+            document.body.appendChild(container);
         }
+        
+        return container;
     }
 
-    viewLogs() {
-        this.showNotification('info', 'Log viewer feature coming soon!');
+    /**
+     * Show notification
+     */
+    show(message, type = 'info', duration = 5000) {
+        const id = Date.now() + Math.random();
+        const notification = this.createNotification(id, message, type);
+        
+        this.container.appendChild(notification);
+        this.notifications.set(id, notification);
+
+        // Auto-remove after duration
+        if (duration > 0) {
+            setTimeout(() => this.remove(id), duration);
+        }
+
+        return id;
     }
 
-    showNotification(type, message) {
-        const container = document.getElementById('notifications');
-        if (!container) return;
+    /**
+     * Show success notification
+     */
+    success(message, duration = 5000) {
+        return this.show(message, 'success', duration);
+    }
 
+    /**
+     * Show error notification
+     */
+    error(message, duration = 8000) {
+        return this.show(message, 'error', duration);
+    }
+
+    /**
+     * Show warning notification
+     */
+    warning(message, duration = 6000) {
+        return this.show(message, 'warning', duration);
+    }
+
+    /**
+     * Show info notification
+     */
+    info(message, duration = 5000) {
+        return this.show(message, 'info', duration);
+    }
+
+    /**
+     * Create notification element
+     */
+    createNotification(id, message, type) {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
+        notification.dataset.id = id;
+        
+        const icon = this.getIconForType(type);
+        
         notification.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span>${message}</span>
-                <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 1.2em; cursor: pointer;">&times;</button>
+            <div class="notification-content">
+                <div class="notification-icon">
+                    <i class="fas fa-${icon}"></i>
+                </div>
+                <div class="notification-message">${message}</div>
+                <button class="notification-close" onclick="notificationManager.remove('${id}')">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
         `;
 
-        container.appendChild(notification);
-
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.remove();
-            }
-        }, 5000);
+        return notification;
     }
 
-    showLoading(show) {
-        const overlay = document.getElementById('loading-overlay');
-        if (overlay) {
-            overlay.classList.toggle('show', show);
+    /**
+     * Get icon for notification type
+     */
+    getIconForType(type) {
+        const icons = {
+            success: 'check-circle',
+            error: 'exclamation-circle',
+            warning: 'exclamation-triangle',
+            info: 'info-circle'
+        };
+        return icons[type] || 'info-circle';
+    }
+
+    /**
+     * Remove notification
+     */
+    remove(id) {
+        const notification = this.notifications.get(id);
+        if (notification) {
+            notification.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+                this.notifications.delete(id);
+            }, 300);
         }
     }
 
+    /**
+     * Clear all notifications
+     */
+    clear() {
+        this.notifications.forEach((_, id) => this.remove(id));
+    }
+
+    /**
+     * Show loading notification
+     */
+    showLoading(message = 'Loading...') {
+        return this.show(`
+            <div class="loading-notification">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>${message}</span>
+            </div>
+        `, 'info', 0);
+    }
+}
+
+// Export singleton instance
+const notificationManager = new NotificationManager();
+
+// Make it globally available for inline event handlers
+window.notificationManager = notificationManager; 
+/* === Main Application === */
+/**
+ * ShuDL Installer - Main Application Controller
+ * Modular, modern JavaScript architecture with Phase 1B enhancements
+ */
+
+
+
+
+
+
+
+class ShuDLInstallerApp {
+    constructor() {
+        this.stepController = new StepController();
+        this.systemValidator = new SystemValidator();
+        this.serviceBuilder = null; // Will be initialized when needed
+        this.currentConfig = {};
+        this.configSchema = null;
+        this.validationErrors = {};
+        this.deploymentProgress = 0;
+        this.serviceStatus = {};
+        
+        this.init();
+    }
+
+    /**
+     * Initialize the application
+     */
+    async init() {
+        try {
+            this.bindGlobalEvents();
+            await this.systemValidator.runAllChecks();
+            await this.loadConfigSchema();
+            
+            notificationManager.success('Application initialized successfully');
+        } catch (error) {
+            console.error('Application initialization failed:', error);
+            notificationManager.error('Failed to initialize application');
+        }
+    }
+
+    /**
+     * Bind global event listeners
+     */
+    bindGlobalEvents() {
+        // Configuration events
+        document.getElementById('validate-config')?.addEventListener('click', () => this.validateConfiguration());
+        
+        // Dashboard events
+        document.getElementById('restart-services')?.addEventListener('click', () => this.restartServices());
+        document.getElementById('stop-services')?.addEventListener('click', () => this.stopServices());
+        document.getElementById('view-logs')?.addEventListener('click', () => this.viewLogs());
+
+        // Listen to step changes
+        window.addEventListener('stepChanged', (event) => {
+            this.onStepChanged(event.detail.currentStep);
+        });
+    }
+
+    /**
+     * Handle step change events
+     */
+    async onStepChanged(step) {
+        switch (step) {
+            case 2: // Configuration step
+                await this.loadConfigurationStep();
+                break;
+            case 3: // Preview step
+                await this.loadPreviewStep();
+                break;
+            case 4: // Deployment step
+                await this.startDeployment();
+                break;
+            case 5: // Dashboard step
+                await this.loadDashboard();
+                break;
+        }
+    }
+
+    /**
+     * Load configuration schema from API
+     */
+    async loadConfigSchema() {
+        try {
+            const response = await apiClient.getConfigSchema();
+            if (response.success) {
+                this.configSchema = response.data;
+            }
+        } catch (error) {
+            console.error('Failed to load config schema:', error);
+        }
+    }
+
+    /**
+     * Load configuration step with Phase 1B enhancements
+     */
+    async loadConfigurationStep() {
+        try {
+            // Initialize ServiceBuilder if not already done
+            if (!this.serviceBuilder) {
+                this.serviceBuilder = new ServiceBuilder();
+                
+                // Wait for ServiceBuilder to initialize
+                await new Promise(resolve => {
+                    const checkInit = () => {
+                        if (this.serviceBuilder.serviceDefinitions.size > 0) {
+                            resolve();
+                        } else {
+                            setTimeout(checkInit, 100);
+                        }
+                    };
+                    checkInit();
+                });
+            }
+            
+            notificationManager.info('Configuration interface loaded with visual builder');
+        } catch (error) {
+            console.error('Failed to load configuration step:', error);
+            notificationManager.error('Failed to load configuration interface');
+        }
+    }
+
+    /**
+     * Load preview step with enhanced functionality
+     */
+    async loadPreviewStep() {
+        try {
+            // Get configuration from ServiceBuilder if available
+            if (this.serviceBuilder) {
+                this.currentConfig = this.serviceBuilder.getConfiguration();
+            }
+            
+            await this.generatePreview();
+            notificationManager.info('Configuration preview generated');
+        } catch (error) {
+            console.error('Failed to load preview step:', error);
+            notificationManager.error('Failed to generate preview');
+        }
+    }
+
+    /**
+     * Generate configuration preview
+     */
+    async generatePreview() {
+        try {
+            const response = await apiClient.previewGeneration(this.currentConfig);
+            
+            if (response.success) {
+                this.updatePreviewDisplay(response.data);
+            } else {
+                notificationManager.error('Failed to generate preview');
+            }
+        } catch (error) {
+            console.error('Preview generation failed:', error);
+            notificationManager.error('Preview generation failed');
+        }
+    }
+
+    /**
+     * Update preview display with generated content
+     */
+    updatePreviewDisplay(previewData) {
+        // Update services preview
+        const servicesPreview = document.getElementById('services-preview');
+        if (servicesPreview && previewData.services) {
+            servicesPreview.innerHTML = this.renderServicesPreview(previewData.services);
+        }
+
+        // Update compose preview
+        const composePreview = document.getElementById('compose-preview');
+        if (composePreview && previewData.compose_content) {
+            composePreview.innerHTML = `<code>${this.escapeHtml(previewData.compose_content)}</code>`;
+        }
+
+        // Update environment preview
+        const envPreview = document.getElementById('env-preview');
+        if (envPreview && previewData.env_content) {
+            envPreview.innerHTML = `<code>${this.escapeHtml(previewData.env_content)}</code>`;
+        }
+    }
+
+    /**
+     * Render services preview with dependency information
+     */
+    renderServicesPreview(services) {
+        return Object.entries(services).map(([serviceName, serviceConfig]) => {
+            const service = this.serviceBuilder?.serviceDefinitions.get(serviceName);
+            const icon = this.serviceBuilder?.getServiceIcon(serviceName) || 'fas fa-cube';
+            
+            return `
+                <div class="service-preview-card">
+                    <div class="service-header">
+                        <i class="${icon}"></i>
+                        <h4>${service?.display_name || serviceName}</h4>
+                        <span class="service-status ${serviceConfig.enabled ? 'enabled' : 'disabled'}">
+                            ${serviceConfig.enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                    </div>
+                    <div class="service-config">
+                        ${this.renderServiceConfigPreview(serviceConfig.config)}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Render service configuration preview
+     */
+    renderServiceConfigPreview(config) {
+        if (!config || Object.keys(config).length === 0) {
+            return '<p class="text-muted">Default configuration</p>';
+        }
+
+        return Object.entries(config).map(([key, value]) => {
+            return `<div class="config-item"><strong>${key}:</strong> ${value}</div>`;
+        }).join('');
+    }
+
+    /**
+     * Validate current configuration
+     */
+    async validateConfiguration() {
+        const loadingId = notificationManager.showLoading('Validating configuration...');
+        
+        try {
+            // Use ServiceBuilder configuration if available
+            const configToValidate = this.serviceBuilder ? 
+                this.serviceBuilder.getConfiguration() : 
+                this.currentConfig;
+            
+            const response = await apiClient.validateConfiguration(configToValidate);
+            notificationManager.remove(loadingId);
+            
+            if (response.success && response.data.valid) {
+                notificationManager.success('Configuration is valid');
+                this.validationErrors = {};
+            } else {
+                notificationManager.warning('Configuration has validation errors');
+                this.validationErrors = response.data.errors || {};
+            }
+        } catch (error) {
+            notificationManager.remove(loadingId);
+            notificationManager.error('Configuration validation failed');
+            console.error('Validation failed:', error);
+        }
+    }
+
+    /**
+     * Start deployment process
+     */
+    async startDeployment() {
+        const loadingId = notificationManager.showLoading('Starting deployment...');
+        
+        try {
+            // Use ServiceBuilder configuration if available
+            const configToDeploy = this.serviceBuilder ? 
+                this.serviceBuilder.getConfiguration() : 
+                this.currentConfig;
+            
+            const response = await apiClient.startServices(configToDeploy);
+            notificationManager.remove(loadingId);
+            
+            if (response.success) {
+                notificationManager.success('Deployment started successfully');
+                this.monitorDeployment();
+            } else {
+                notificationManager.error('Failed to start deployment');
+            }
+        } catch (error) {
+            notificationManager.remove(loadingId);
+            notificationManager.error('Deployment failed to start');
+            console.error('Deployment failed:', error);
+        }
+    }
+
+    /**
+     * Monitor deployment progress
+     */
+    async monitorDeployment() {
+        try {
+            const response = await apiClient.getDeploymentProgress();
+            
+            if (response.success) {
+                this.updateDeploymentProgress(response.data);
+                
+                // Continue monitoring if not complete
+                if (response.data.status !== 'completed' && response.data.status !== 'failed') {
+                    setTimeout(() => this.monitorDeployment(), 2000);
+                } else if (response.data.status === 'completed') {
+                    notificationManager.success('Deployment completed successfully');
+                    // Auto-advance to monitoring step
+                    this.stepController.goToStep(5);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to monitor deployment:', error);
+        }
+    }
+
+    /**
+     * Update deployment progress display
+     */
+    updateDeploymentProgress(progressData) {
+        // Update progress bar
+        const progressFill = document.getElementById('deployment-progress-fill');
+        const progressText = document.getElementById('deployment-percentage');
+        const statusText = document.getElementById('deployment-status');
+        
+        if (progressFill) {
+            progressFill.style.width = `${progressData.percentage || 0}%`;
+        }
+        
+        if (progressText) {
+            progressText.textContent = `${progressData.percentage || 0}%`;
+        }
+        
+        if (statusText) {
+            statusText.textContent = progressData.status || 'Deploying...';
+        }
+
+        // Update service status
+        if (progressData.services) {
+            this.updateServicesStatus(progressData.services);
+        }
+    }
+
+    /**
+     * Update services status display
+     */
+    updateServicesStatus(servicesStatus) {
+        const container = document.getElementById('services-status');
+        if (!container) return;
+
+        container.innerHTML = Object.entries(servicesStatus).map(([serviceName, status]) => {
+            const icon = this.serviceBuilder?.getServiceIcon(serviceName) || 'fas fa-cube';
+            const statusClass = status.status === 'running' ? 'success' : 
+                              status.status === 'failed' ? 'error' : 'pending';
+            
+            return `
+                <div class="service-status-item ${statusClass}">
+                    <i class="${icon}"></i>
+                    <span class="service-name">${serviceName}</span>
+                    <span class="service-status">${status.status}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Load dashboard with monitoring integration
+     */
+    async loadDashboard() {
+        try {
+            await this.loadServiceStatus();
+            notificationManager.info('Dashboard loaded successfully');
+        } catch (error) {
+            console.error('Failed to load dashboard:', error);
+            notificationManager.error('Failed to load dashboard');
+        }
+    }
+
+    /**
+     * Load service status for dashboard
+     */
+    async loadServiceStatus() {
+        try {
+            const response = await apiClient.getServiceStatus();
+            
+            if (response.success) {
+                this.serviceStatus = response.data;
+                this.updateDashboardDisplay();
+            }
+        } catch (error) {
+            console.error('Failed to load service status:', error);
+        }
+    }
+
+    /**
+     * Update dashboard display
+     */
+    updateDashboardDisplay() {
+        // Implementation for dashboard updates
+        // This would include service status, metrics, etc.
+    }
+
+    /**
+     * Utility functions
+     */
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
+
+    /**
+     * Restart services
+     */
+    async restartServices() {
+        const loadingId = notificationManager.showLoading('Restarting services...');
+        
+        try {
+            const response = await apiClient.restartServices();
+            notificationManager.remove(loadingId);
+            
+            if (response.success) {
+                notificationManager.success('Services restarted successfully');
+                await this.loadServiceStatus();
+            } else {
+                notificationManager.error('Failed to restart services');
+            }
+        } catch (error) {
+            notificationManager.remove(loadingId);
+            notificationManager.error('Failed to restart services');
+            console.error('Restart failed:', error);
+        }
+    }
+
+    /**
+     * Stop services
+     */
+    async stopServices() {
+        const loadingId = notificationManager.showLoading('Stopping services...');
+        
+        try {
+            const response = await apiClient.stopServices();
+            notificationManager.remove(loadingId);
+            
+            if (response.success) {
+                notificationManager.success('Services stopped successfully');
+                await this.loadServiceStatus();
+            } else {
+                notificationManager.error('Failed to stop services');
+            }
+        } catch (error) {
+            notificationManager.remove(loadingId);
+            notificationManager.error('Failed to stop services');
+            console.error('Stop failed:', error);
+        }
+    }
+
+    /**
+     * View logs
+     */
+    async viewLogs() {
+        try {
+            const response = await apiClient.getLogs();
+            
+            if (response.success) {
+                // Display logs in a modal or dedicated area
+                this.displayLogs(response.data);
+            } else {
+                notificationManager.error('Failed to load logs');
+            }
+        } catch (error) {
+            notificationManager.error('Failed to load logs');
+            console.error('Failed to load logs:', error);
+        }
+    }
+
+    /**
+     * Display logs
+     */
+    displayLogs(logs) {
+        // Implementation for displaying logs
+        console.log('Logs:', logs);
+    }
+
+    /**
+     * Public API for external access
+     */
+    getServiceBuilder() {
+        return this.serviceBuilder;
+    }
+
+    getCurrentConfiguration() {
+        return this.serviceBuilder ? this.serviceBuilder.getConfiguration() : this.currentConfig;
+    }
+
+    isConfigurationValid() {
+        return this.serviceBuilder ? this.serviceBuilder.isValid() : Object.keys(this.validationErrors).length === 0;
+    }
 }
 
-// Initialize installer when DOM is loaded
+// Initialize application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.shuDLInstaller = new ShuDLInstaller();
-}); 
+    window.shuDLApp = new ShuDLInstallerApp();
+});
+
+// Export for module usage
+ 

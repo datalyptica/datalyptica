@@ -1,0 +1,212 @@
+/* Dependency Graph Component */
+.dependency-graph {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-lg);
+    margin: var(--spacing-lg) 0;
+}
+
+.dependency-graph h3 {
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.graph-container {
+    position: relative;
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-lg);
+    min-height: 300px;
+    overflow: hidden;
+}
+
+.graph-node {
+    position: absolute;
+    background: var(--color-primary);
+    color: white;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius-md);
+    font-weight: 500;
+    font-size: 0.875rem;
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    z-index: 10;
+    min-width: 100px;
+    text-align: center;
+}
+
+.graph-node:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-lg);
+}
+
+.graph-node.infrastructure {
+    background: var(--color-primary);
+}
+
+.graph-node.compute {
+    background: var(--color-secondary);
+}
+
+.graph-node.monitoring {
+    background: var(--color-accent);
+}
+
+.graph-node.selected {
+    background: var(--color-success);
+    border: 2px solid var(--color-success-dark);
+}
+
+.graph-node.disabled {
+    background: var(--color-neutral-400);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.graph-edge {
+    position: absolute;
+    background: var(--color-border);
+    z-index: 1;
+}
+
+.graph-edge.horizontal {
+    height: 2px;
+}
+
+.graph-edge.vertical {
+    width: 2px;
+}
+
+.graph-edge.dependency {
+    background: var(--color-warning);
+}
+
+.graph-edge.active {
+    background: var(--color-primary);
+    height: 3px;
+    width: 3px;
+}
+
+.dependency-legend {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background: var(--color-neutral-50);
+    border-radius: var(--border-radius-sm);
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: 0.875rem;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: var(--border-radius-sm);
+}
+
+.legend-color.infrastructure {
+    background: var(--color-primary);
+}
+
+.legend-color.compute {
+    background: var(--color-secondary);
+}
+
+.legend-color.monitoring {
+    background: var(--color-accent);
+}
+
+.legend-color.selected {
+    background: var(--color-success);
+}
+
+.graph-controls {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.graph-control-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: var(--transition-fast);
+}
+
+.graph-control-btn:hover {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+}
+
+.graph-control-btn.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+/* Dependency Flow Animation */
+@keyframes dependency-flow {
+    0% {
+        background-position: 0% 0%;
+    }
+    100% {
+        background-position: 100% 100%;
+    }
+}
+
+.graph-edge.animated {
+    background: linear-gradient(
+        45deg,
+        var(--color-primary) 25%,
+        transparent 25%,
+        transparent 50%,
+        var(--color-primary) 50%,
+        var(--color-primary) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 8px 8px;
+    animation: dependency-flow 2s linear infinite;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dependency-graph {
+        padding: var(--spacing-md);
+    }
+    
+    .graph-container {
+        min-height: 250px;
+        padding: var(--spacing-md);
+    }
+    
+    .graph-node {
+        font-size: 0.75rem;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        min-width: 80px;
+    }
+    
+    .dependency-legend {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .graph-controls {
+        flex-wrap: wrap;
+    }
+} 

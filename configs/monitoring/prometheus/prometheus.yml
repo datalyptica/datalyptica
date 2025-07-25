@@ -1,0 +1,72 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ShuDL Platform Services
+  - job_name: 'shudl-installer'
+    static_configs:
+      - targets: ['shudl-installer:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # PostgreSQL Metrics (via postgres_exporter if available)
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['shudl-postgresql:9187']
+    scrape_interval: 30s
+
+  # MinIO Metrics
+  - job_name: 'minio'
+    static_configs:
+      - targets: ['shudl-minio:9000']
+    metrics_path: '/minio/v2/metrics/cluster'
+    scrape_interval: 30s
+
+  # Nessie Metrics (if available)
+  - job_name: 'nessie'
+    static_configs:
+      - targets: ['shudl-nessie:19120']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Trino Metrics
+  - job_name: 'trino'
+    static_configs:
+      - targets: ['shudl-trino:8080']
+    metrics_path: '/v1/info'
+    scrape_interval: 30s
+
+  # Spark Master Metrics
+  - job_name: 'spark-master'
+    static_configs:
+      - targets: ['shudl-spark-master:4040']
+    metrics_path: '/metrics/json'
+    scrape_interval: 30s
+
+  # Spark Worker Metrics
+  - job_name: 'spark-worker'
+    static_configs:
+      - targets: ['shudl-spark-worker:8081']
+    metrics_path: '/metrics/json'
+    scrape_interval: 30s
+
+  # Node Exporter (if deployed)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Docker Container Metrics (via cAdvisor if available)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s 

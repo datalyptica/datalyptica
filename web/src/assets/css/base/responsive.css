@@ -1,0 +1,86 @@
+/* Responsive Design */
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 var(--spacing-md);
+    }
+    
+    .progress-steps {
+        overflow-x: auto;
+        padding-bottom: var(--spacing-sm);
+    }
+    
+    .step {
+        min-width: 80px;
+    }
+    
+    .step-label {
+        font-size: var(--font-size-xs);
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        text-align: center;
+    }
+    
+    .logo h1 {
+        font-size: var(--font-size-2xl);
+    }
+    
+    .welcome-actions,
+    .config-actions,
+    .preview-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+    }
+    
+    .tab-nav {
+        flex-wrap: wrap;
+    }
+    
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .status-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .services-preview {
+        grid-template-columns: 1fr;
+    }
+    
+    .services-status {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding: var(--spacing-lg) 0;
+    }
+    
+    .system-check,
+    .config-tabs,
+    .preview-tabs,
+    .deployment-progress,
+    .deployment-logs,
+    .dashboard-card {
+        margin-left: calc(-1 * var(--spacing-md));
+        margin-right: calc(-1 * var(--spacing-md));
+        border-radius: 0;
+    }
+    
+    .notifications-container {
+        left: var(--spacing-md);
+        right: var(--spacing-md);
+        max-width: none;
+    }
+} 

@@ -52,7 +52,7 @@ wait_for_postgresql() {
     local attempt=1
     
     while [ $attempt -le $max_attempts ]; do
-        if pg_isready -h shudl-postgresql -p 5432 -U "$QUARKUS_DATASOURCE_USERNAME" -d "$POSTGRES_DB" >/dev/null 2>&1; then
+        if pg_isready -h "${POSTGRES_HOST:-postgresql}" -p 5432 -U "$QUARKUS_DATASOURCE_USERNAME" -d "$POSTGRES_DB" >/dev/null 2>&1; then
             echo "PostgreSQL is ready!"
             return 0
         fi
@@ -69,7 +69,7 @@ wait_for_postgresql() {
 # Function to start Nessie server
 start_nessie() {
     echo "Starting Nessie server..."
-    echo "Database: jdbc:postgresql://shudl-postgresql:5432/$POSTGRES_DB"
+    echo "Database: jdbc:postgresql://${POSTGRES_HOST:-postgresql}:5432/$POSTGRES_DB"
     echo "User: $QUARKUS_DATASOURCE_USERNAME"
     echo "S3 Endpoint: ${S3_ENDPOINT:-http://minio:9000}"
     echo "Warehouse: ${WAREHOUSE_LOCATION:-s3://lakehouse/}"

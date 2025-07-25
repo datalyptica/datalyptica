@@ -1,0 +1,13 @@
+{
+  "name": "shudl-frontend",
+  "version": "1.0.0",
+  "description": "ShuDL Installer Frontend Assets",
+  "scripts": {
+    "build": "node build.js build",
+    "watch": "node build.js watch",
+    "dev": "npm run build && npm run watch"
+  },
+  "keywords": ["shudl", "installer", "frontend"],
+  "author": "ShuDL Team",
+  "license": "MIT"
+} 

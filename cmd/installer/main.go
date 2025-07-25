@@ -14,10 +14,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/shudl/shudl/internal/api"
-	"github.com/shudl/shudl/internal/config"
-	"github.com/shudl/shudl/internal/docker"
-	"github.com/shudl/shudl/internal/logger"
+	"github.com/shudl/shudl/internal/api/handlers/compose"
+	"github.com/shudl/shudl/internal/api/handlers/docker"
+	"github.com/shudl/shudl/internal/api/handlers/health"
+	"github.com/shudl/shudl/internal/api/handlers/web"
+	"github.com/shudl/shudl/internal/api/routes"
+	"github.com/shudl/shudl/internal/pkg/logger"
+	"github.com/shudl/shudl/internal/services/config"
+	dockerService "github.com/shudl/shudl/internal/services/docker"
 )
 
 func main() {
@@ -36,63 +40,64 @@ func main() {
 		"port":        cfg.Server.Port,
 	})
 
-	// Initialize docker service
-	dockerService := docker.NewService(&cfg.Docker, log)
+	// Initialize services
+	dockerSvc := dockerService.NewService(&cfg.Docker, log)
 
 	// Validate Docker installation
 	log.LogInfo("Validating Docker installation", nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	validationResult, err := dockerService.ValidateDockerInstallation(ctx)
+	validationResult, err := dockerSvc.ValidateDockerInstallation(ctx)
 	if err != nil {
 		log.LogError(err, "Docker validation failed", map[string]interface{}{
 			"error": err.Error(),
 		})
-		os.Exit(1)
-	}
-
-	if !validationResult.Success {
-		log.LogError(nil, "Docker validation failed", map[string]interface{}{
-			"output": validationResult.Output,
-			"error":  validationResult.Error,
+		// Continue anyway - validation failures are logged but not fatal
+	} else if validationResult.Valid {
+		log.LogInfo("Docker validation successful", map[string]interface{}{
+			"details": validationResult.Details,
 		})
-		os.Exit(1)
+	} else {
+		log.LogWarn("Docker validation issues found", map[string]interface{}{
+			"errors": validationResult.Errors,
+		})
 	}
-
-	log.LogInfo("Docker validation successful", map[string]interface{}{
-		"output": validationResult.Output,
-	})
 
 	// Initialize handlers
-	apiHandler := api.NewHandler(dockerService, log)
-	composeHandler := api.NewComposeHandler("./generated", log)
-	webHandler := api.NewWebHandler(log)
+	healthHandler := health.NewHandler(log)
+	dockerHandler := docker.NewHandler(dockerSvc, log)
+	composeHandler := compose.NewHandler("./generated", log) // TODO: Make configurable
+	webHandler := web.NewHandler(log)
 
-	// Initialize router with all handlers
-	router := api.NewRouter(apiHandler, composeHandler, webHandler, &cfg.Server, log)
+	// Initialize router
+	router := routes.NewRouter(
+		healthHandler,
+		dockerHandler,
+		composeHandler,
+		webHandler,
+		&cfg.Server,
+		log,
+	)
+
+	// Setup routes and middleware
 	router.Setup()
 
 	// Create HTTP server
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      router.GetEngine(),
-		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
+		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
+		Handler: router.GetEngine(),
 	}
 
 	// Start server in a goroutine
 	go func() {
 		log.LogInfo("Starting HTTP server", map[string]interface{}{
-			"address":    server.Addr,
-			"swagger_ui": fmt.Sprintf("http://localhost:%d/swagger/", cfg.Server.Port),
-			"installer":  fmt.Sprintf("http://localhost:%d/", cfg.Server.Port),
+			"port": cfg.Server.Port,
+			"addr": server.Addr,
 		})
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.LogError(err, "Server failed to start", map[string]interface{}{
-				"error": err.Error(),
-			})
+			log.LogError(err, "Failed to start server", nil)
 			os.Exit(1)
 		}
 	}()
@@ -104,16 +109,14 @@ func main() {
 
 	log.LogInfo("Shutting down server...", nil)
 
-	// Give outstanding requests 30 seconds to complete
+	// Gracefully shutdown the server with a 30 second timeout
 	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.LogError(err, "Server forced to shutdown", map[string]interface{}{
-			"error": err.Error(),
-		})
+		log.LogError(err, "Server forced to shutdown", nil)
 		os.Exit(1)
 	}
 
 	log.LogInfo("Server gracefully stopped", nil)
-} 
+}
