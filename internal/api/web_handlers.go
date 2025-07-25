@@ -65,7 +65,7 @@ func (h *WebHandler) ServeInstaller(c *gin.Context) {
 		"Description": "Intelligent installer for ShuDL data lakehouse stack",
 	}
 
-	c.HTML(http.StatusOK, "installer/index.html", data)
+	c.HTML(http.StatusOK, "index.html", data)
 }
 
 // GetConfigSchema returns the dynamic configuration schema

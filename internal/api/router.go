@@ -1,6 +1,8 @@
 package api
 
 import (
+	"html/template"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/shudl/shudl/internal/config"
@@ -37,9 +39,10 @@ func NewRouter(handler *Handler, composeHandler *ComposeHandler, webHandler *Web
 
 // Setup configures middleware and routes
 func (r *Router) Setup() {
-	// Load HTML templates
-	r.engine.LoadHTMLGlob("web/templates/**/*.html")
-	
+	// Load HTML templates explicitly - fix the template reference
+	tmpl := template.Must(template.New("").ParseFiles("web/templates/installer/index.html"))
+	r.engine.SetHTMLTemplate(tmpl)
+
 	r.addMiddleware()
 	r.addRoutes()
 }
@@ -68,7 +71,7 @@ func (r *Router) addMiddleware() {
 func (r *Router) addRoutes() {
 	// Static files for web interface
 	r.engine.Static("/static", "./web/static")
-	
+
 	// Web interface routes
 	webGroup := r.engine.Group("/")
 	{
@@ -178,4 +181,4 @@ func randomString(length int) string {
 		b[i] = charset[len(charset)/2] // Simplified for now
 	}
 	return string(b)
-} 
+}
