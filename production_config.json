@@ -1,0 +1,31 @@
+{
+  "project_name": "shudl-production",
+  "network_name": "shunetwork",
+  "environment": "production",
+  "services": {
+    "minio": {
+      "name": "minio",
+      "enabled": true
+    },
+    "postgresql": {
+      "name": "postgresql", 
+      "enabled": true
+    },
+    "nessie": {
+      "name": "nessie",
+      "enabled": true
+    },
+    "trino": {
+      "name": "trino",
+      "enabled": true
+    },
+    "spark-master": {
+      "name": "spark-master",
+      "enabled": true
+    },
+    "spark-worker": {
+      "name": "spark-worker",
+      "enabled": true
+    }
+  }
+}
