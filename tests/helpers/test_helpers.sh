@@ -120,7 +120,7 @@ execute_trino_query() {
     local ready_attempt=1
     
     while [[ $ready_attempt -le $max_ready_attempts ]]; do
-        if timeout 10 docker exec shudl-trino /opt/trino/bin/trino --server http://localhost:8080 --execute "SELECT 1;" >/dev/null 2>&1; then
+        if docker exec docker-trino /opt/trino/bin/trino --server http://localhost:8080 --execute "SELECT 1;" >/dev/null 2>&1; then
             break
         fi
         if [[ $ready_attempt -eq $max_ready_attempts ]]; then
@@ -131,7 +131,11 @@ execute_trino_query() {
     done
     
     # Execute the actual query with proper error handling
-    timeout "$timeout" docker exec shudl-trino /opt/trino/bin/trino --server http://localhost:8080 --execute "$query" 2>/dev/null
+    local result
+    result=$(docker exec docker-trino /opt/trino/bin/trino --server http://localhost:8080 --execute "$query" 2>&1 | grep -v "WARNING" | grep -v "Unable to create a system terminal")
+    local exit_code=$?
+    echo "$result"
+    return $exit_code
 }
 
 execute_spark_sql() {
@@ -144,7 +148,7 @@ from pyspark.sql import SparkSession
 
 spark = SparkSession.builder \\
     .appName("TestQuery") \\
-    .master("spark://shudl-spark-master:7077") \\
+    .master("spark://docker-spark-master:7077") \\
     .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \\
     .config("spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog") \\
     .config("spark.sql.catalog.iceberg.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \\
@@ -169,12 +173,12 @@ result.show()
 spark.stop()
 EOF
     
-    docker cp "$temp_script" shudl-spark-master:/tmp/spark_test.py
-    timeout "$timeout" docker exec shudl-spark-master /opt/spark/bin/spark-submit /tmp/spark_test.py 2>/dev/null
+    docker cp "$temp_script" docker-spark-master:/tmp/spark_test.py
+    timeout "$timeout" docker exec docker-spark-master /opt/spark/bin/spark-submit /tmp/spark_test.py 2>/dev/null
     local result=$?
     
     rm -f "$temp_script"
-    docker exec shudl-spark-master rm -f /tmp/spark_test.py 2>/dev/null || true
+    docker exec docker-spark-master rm -f /tmp/spark_test.py 2>/dev/null || true
     
     return $result
 }
@@ -194,7 +198,7 @@ from datetime import datetime, timedelta
 
 spark = SparkSession.builder \\
     .appName("DataGenerator") \\
-    .master("spark://shudl-spark-master:7077") \\
+    .master("spark://docker-spark-master:7077") \\
     .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") \\
     .config("spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog") \\
     .config("spark.sql.catalog.iceberg.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \\
@@ -247,12 +251,12 @@ print(f"Generated $num_rows rows in iceberg.$schema.$table_name")
 spark.stop()
 EOF
     
-    docker cp "$temp_script" shudl-spark-master:/tmp/generate_data.py
-    docker exec shudl-spark-master /opt/spark/bin/spark-submit /tmp/generate_data.py
+    docker cp "$temp_script" docker-spark-master:/tmp/generate_data.py
+    docker exec docker-spark-master /opt/spark/bin/spark-submit /tmp/generate_data.py
     local result=$?
     
     rm -f "$temp_script"
-    docker exec shudl-spark-master rm -f /tmp/generate_data.py 2>/dev/null || true
+    docker exec docker-spark-master rm -f /tmp/generate_data.py 2>/dev/null || true
     
     return $result
 }

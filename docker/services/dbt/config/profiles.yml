@@ -1,0 +1,27 @@
+# dbt profiles configuration for ShuDL
+
+shudl:
+  target: trino
+  outputs:
+    trino:
+      type: trino
+      method: none
+      host: "{{ env_var('TRINO_HOST', 'trino') }}"
+      port: "{{ env_var('TRINO_PORT', 8080) | int }}"
+      database: iceberg
+      schema: analytics
+      threads: 4
+      http_scheme: http
+      session_properties:
+        query_max_run_time: 5m
+        exchange_compression: True
+
+    spark:
+      type: spark
+      method: thrift
+      host: "{{ env_var('SPARK_HOST', 'spark-master') }}"
+      port: "{{ env_var('SPARK_PORT', 10000) | int }}"
+      schema: analytics
+      threads: 4
+      connect_retries: 3
+      connect_timeout: 10

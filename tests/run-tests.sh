@@ -252,25 +252,45 @@ run_test "Trino Health" "$TESTS_DIR/health/test_trino.sh" "health"
 run_test "Spark Health" "$TESTS_DIR/health/test_spark.sh" "health"
 
 # =============================================================================
-# Phase 3: Integration Tests
+# Phase 3: Unit Tests
 # =============================================================================
-log "Phase 3: Integration Tests"
+log "Phase 3: Unit Tests"
+
+# Storage unit tests
+run_test "MinIO Unit Tests" "$TESTS_DIR/unit/storage/minio.unit.test.sh" "unit"
+run_test "PostgreSQL Unit Tests" "$TESTS_DIR/unit/storage/postgresql.unit.test.sh" "unit"
+run_test "Nessie Unit Tests" "$TESTS_DIR/unit/storage/nessie.unit.test.sh" "unit"
+
+# Compute unit tests
+run_test "Trino Unit Tests" "$TESTS_DIR/unit/compute/trino.unit.test.sh" "unit"
+
+# =============================================================================
+# Phase 4: Integration Tests
+# =============================================================================
+log "Phase 4: Integration Tests"
 
 run_test "Spark-Iceberg Integration" "$TESTS_DIR/integration/test_spark_iceberg.sh" "integration"
 run_test "Cross-Engine Data Access" "$TESTS_DIR/integration/test_cross_engine.sh" "integration"
 
 # =============================================================================
-# Phase 4: Data Pipeline Tests
+# Phase 5: E2E Tests
 # =============================================================================
-log "Phase 4: Data Pipeline Tests"
+log "Phase 5: End-to-End Tests"
+
+run_test "Complete Pipeline E2E" "$TESTS_DIR/e2e/complete-pipeline.e2e.test.sh" "e2e"
+
+# =============================================================================
+# Phase 6: Data Pipeline Tests
+# =============================================================================
+log "Phase 6: Data Pipeline Tests"
 
 # Additional integration tests can be added here as needed
 
 # =============================================================================
-# Phase 5: Performance Tests (unless quick mode)
+# Phase 7: Performance Tests (unless quick mode)
 # =============================================================================
 if [[ "$QUICK_MODE" != "true" ]]; then
-    log "Phase 5: Performance Tests"
+    log "Phase 7: Performance Tests"
     
     # Performance tests can be added here as needed
     log_info "No performance tests implemented yet"

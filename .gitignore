@@ -1,37 +1,183 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
+# ==========================================
+# ShuDL - Data Lakehouse Platform
+# ==========================================
+
+# ----------------
+# Build Artifacts
+# ----------------
+bin/
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+dist/
+build/
 
+# ----------------
+# Go
+# ----------------
 # Test binary, built with `go test -c`
 *.test
 
-# Code coverage profiles and other test artifacts
+# Code coverage profiles and test artifacts
 *.out
 coverage.*
 *.coverprofile
 profile.cov
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
 # Go workspace file
 go.work
 go.work.sum
 
-# env file
+# Vendor directory (uncomment if using vendoring)
+# vendor/
+
+# ----------------
+# Docker
+# ----------------
+# Environment files with secrets
 .env
+.env.local
+.env.*.local
+docker/.env
+docker/.env.local
 
+# Docker volumes and data
+**/data/
+**/volumes/
+
+# ----------------
+# Logs
+# ----------------
+*.log
+logs/
+*.log.*
+build*.log
+
+# ----------------
+# Configuration
+# ----------------
+# Local/test configurations (keep templates)
+**/config.local.yml
+**/config.test.yml
+test_config*.json
+*_config.json
+
+# Generated configurations
+generated/
+
+# ----------------
 # Editor/IDE
-# .idea/
-# .vscode/
+# ----------------
+# VSCode
+.vscode/
+*.code-workspace
 
-# Node / React
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ----------------
+# Node / JavaScript
+# ----------------
 node_modules/
 .portal-cache/
 tmp/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ----------------
+# Operating System
+# ----------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ----------------
+# Temporary Files
+# ----------------
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+
+# ----------------
+# Security
+# ----------------
+# Private keys and certificates
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# ----------------
+# Testing
+# ----------------
+test-results/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ----------------
+# Documentation Build
+# ----------------
+docs/_build/
+site/
+.docusaurus/
+
+# ----------------
+# Archive
+# ----------------
+# Old documentation and summaries
+archive/
+
+# ----------------
+# Kubernetes
+# ----------------
+# Helm temporary files
+*.tgz
+charts/*/charts/
+charts/*/tmpcharts/
+
+# Kubernetes secrets
+k8s-secrets/
+
+# Test logs (keep directory but ignore log files)
+tests/logs/*.log

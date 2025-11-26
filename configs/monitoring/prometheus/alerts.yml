@@ -1,0 +1,409 @@
+groups:
+  # Critical System Alerts
+  - name: system_critical
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been unreachable for more than 2 minutes. Immediate action required."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#service-down"
+
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.90
+        for: 5m
+        labels:
+          severity: critical
+          category: resources
+        annotations:
+          summary: "Critical memory usage on {{ $labels.container_name }}"
+          description: "Container {{ $labels.container_name }} is using {{ $value | humanizePercentage }} of its memory limit for 5+ minutes."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#high-memory-usage"
+
+      - alert: ContainerOOMKilled
+        expr: increase(container_oom_events_total[5m]) > 0
+        labels:
+          severity: critical
+          category: resources
+        annotations:
+          summary: "Container {{ $labels.container_name }} was OOM killed"
+          description: "Container {{ $labels.container_name }} was killed due to out-of-memory. Check resource limits."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#oom-killed"
+
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "High CPU usage on {{ $labels.container_name }}"
+          description: "Container {{ $labels.container_name }} CPU usage is {{ $value | humanizePercentage }} for 10+ minutes."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#high-cpu-usage"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.15
+        for: 5m
+        labels:
+          severity: warning
+          category: storage
+        annotations:
+          summary: "Low disk space on {{ $labels.device }}"
+          description: "Disk {{ $labels.device }} has only {{ $value | humanizePercentage }} space remaining."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#disk-space-low"
+
+      - alert: DiskSpaceCritical
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.10
+        for: 2m
+        labels:
+          severity: critical
+          category: storage
+        annotations:
+          summary: "Critical disk space on {{ $labels.device }}"
+          description: "Disk {{ $labels.device }} has only {{ $value | humanizePercentage }} space remaining. Immediate cleanup required."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#disk-space-critical"
+
+  # PostgreSQL Alerts
+  - name: postgresql_alerts
+    interval: 30s
+    rules:
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database is not responding."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#postgresql-down"
+
+      - alert: PostgreSQLTooManyConnections
+        expr: pg_stat_activity_count > (pg_settings_max_connections * 0.8)
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "PostgreSQL connection pool near capacity"
+          description: "PostgreSQL has {{ $value }} active connections (80%+ of max). Consider increasing max_connections or investigating connection leaks."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#too-many-connections"
+
+      - alert: PostgreSQLConnectionsCritical
+        expr: pg_stat_activity_count > (pg_settings_max_connections * 0.95)
+        for: 2m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "PostgreSQL connection pool critically full"
+          description: "PostgreSQL has {{ $value }} connections (95%+ of max). New connections will be rejected."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#connections-critical"
+
+      - alert: PostgreSQLDeadlocks
+        expr: rate(pg_stat_database_deadlocks[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "PostgreSQL deadlocks detected"
+          description: "Database {{ $labels.datname }} is experiencing {{ $value }} deadlocks per second."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#deadlocks"
+
+      - alert: PostgreSQLSlowQueries
+        expr: pg_stat_activity_max_tx_duration > 300
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "PostgreSQL slow queries detected"
+          description: "Long-running query detected ({{ $value }}s). Check pg_stat_activity for details."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#slow-queries"
+
+      - alert: PostgreSQLReplicationLag
+        expr: pg_replication_lag > 300
+        for: 5m
+        labels:
+          severity: warning
+          category: replication
+        annotations:
+          summary: "PostgreSQL replication lag high"
+          description: "Replication lag is {{ $value }}s. Check replica health."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#replication-lag"
+
+  # MinIO Alerts
+  - name: minio_alerts
+    interval: 30s
+    rules:
+      - alert: MinIODown
+        expr: minio_cluster_health_status == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: storage
+        annotations:
+          summary: "MinIO is down"
+          description: "MinIO object storage is not responding."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#minio-down"
+
+      - alert: MinIOHighErrorRate
+        expr: rate(minio_s3_requests_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          category: storage
+        annotations:
+          summary: "MinIO high error rate"
+          description: "MinIO is returning errors on {{ $value | humanizePercentage }} of requests."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#minio-errors"
+
+      - alert: MinIODiskUsageHigh
+        expr: (minio_bucket_usage_total_bytes / minio_cluster_capacity_total_bytes) > 0.80
+        for: 10m
+        labels:
+          severity: warning
+          category: storage
+        annotations:
+          summary: "MinIO storage usage high"
+          description: "MinIO storage is {{ $value | humanizePercentage }} full."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#minio-disk-full"
+
+      - alert: MinIODiskUsageCritical
+        expr: (minio_bucket_usage_total_bytes / minio_cluster_capacity_total_bytes) > 0.90
+        for: 5m
+        labels:
+          severity: critical
+          category: storage
+        annotations:
+          summary: "MinIO storage critically full"
+          description: "MinIO storage is {{ $value | humanizePercentage }} full. Immediate action required."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#minio-critical"
+
+  # Trino Alerts
+  - name: trino_alerts
+    interval: 30s
+    rules:
+      - alert: TrinoDown
+        expr: up{job="trino"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: compute
+        annotations:
+          summary: "Trino is down"
+          description: "Trino query engine is not responding."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#trino-down"
+
+      - alert: TrinoHighQueryFailureRate
+        expr: rate(trino_execution_QueryManager_FailedQueries_TotalCount[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: compute
+        annotations:
+          summary: "High Trino query failure rate"
+          description: "Trino is failing {{ $value }} queries per second."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#trino-query-failures"
+
+      - alert: TrinoQueuedQueries
+        expr: trino_execution_QueryManager_QueuedQueries > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "Trino queries queued"
+          description: "{{ $value }} queries are queued waiting for resources."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#trino-queued"
+
+      - alert: TrinoMemoryPressure
+        expr: trino_memory_ClusterMemoryManager_ClusterMemoryUsage / trino_memory_ClusterMemoryManager_ClusterTotalMemory > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "Trino memory pressure"
+          description: "Trino cluster memory usage is {{ $value | humanizePercentage }}."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#trino-memory"
+
+  # Kafka Alerts
+  - name: kafka_alerts
+    interval: 30s
+    rules:
+      - alert: KafkaDown
+        expr: up{job="kafka"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: streaming
+        annotations:
+          summary: "Kafka is down"
+          description: "Kafka broker is not responding."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#kafka-down"
+
+      - alert: KafkaUnderReplicatedPartitions
+        expr: kafka_server_ReplicaManager_UnderReplicatedPartitions > 0
+        for: 5m
+        labels:
+          severity: warning
+          category: replication
+        annotations:
+          summary: "Kafka under-replicated partitions"
+          description: "{{ $value }} partitions are under-replicated."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#kafka-under-replicated"
+
+      - alert: KafkaOfflinePartitions
+        expr: kafka_controller_KafkaController_OfflinePartitionsCount > 0
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Kafka offline partitions"
+          description: "{{ $value }} partitions are offline."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#kafka-offline"
+
+      - alert: KafkaConsumerLag
+        expr: kafka_consumergroup_lag > 1000
+        for: 10m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "Kafka consumer lag high"
+          description: "Consumer group {{ $labels.consumergroup }} has lag of {{ $value }} messages."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#kafka-lag"
+
+  # Spark Alerts
+  - name: spark_alerts
+    interval: 30s
+    rules:
+      - alert: SparkMasterDown
+        expr: up{job="spark-master"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: compute
+        annotations:
+          summary: "Spark Master is down"
+          description: "Spark Master node is not responding."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#spark-master-down"
+
+      - alert: SparkWorkerDown
+        expr: up{job="spark-worker"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          category: compute
+        annotations:
+          summary: "Spark Worker is down"
+          description: "One or more Spark workers are not responding."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#spark-worker-down"
+
+      - alert: SparkJobFailures
+        expr: rate(spark_driver_appStatus_failedTasks[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: compute
+        annotations:
+          summary: "Spark job failures detected"
+          description: "Spark is experiencing {{ $value }} failed tasks per second."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#spark-failures"
+
+  # Nessie Alerts
+  - name: nessie_alerts
+    interval: 30s
+    rules:
+      - alert: NessieDown
+        expr: up{job="nessie"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: catalog
+        annotations:
+          summary: "Nessie catalog is down"
+          description: "Nessie catalog service is not responding."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#nessie-down"
+
+      - alert: NessieHighErrorRate
+        expr: rate(nessie_operations_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          category: catalog
+        annotations:
+          summary: "Nessie high error rate"
+          description: "Nessie is returning errors on {{ $value | humanizePercentage }} of requests."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#nessie-errors"
+
+  # Schema Registry Alerts
+  - name: schema_registry_alerts
+    interval: 30s
+    rules:
+      - alert: SchemaRegistryDown
+        expr: up{job="schema-registry"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: streaming
+        annotations:
+          summary: "Schema Registry is down"
+          description: "Schema Registry service is not responding."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#schema-registry-down"
+
+      - alert: SchemaRegistryErrorRate
+        expr: rate(schema_registry_request_error_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          category: streaming
+        annotations:
+          summary: "Schema Registry high error rate"
+          description: "Schema Registry is experiencing {{ $value | humanizePercentage }} error rate."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#schema-registry-errors"
+
+  # Docker Alerts
+  - name: docker_alerts
+    interval: 30s
+    rules:
+      - alert: ContainerRestarting
+        expr: rate(container_restart_count[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          category: availability
+        annotations:
+          summary: "Container {{ $labels.container_name }} restarting"
+          description: "Container {{ $labels.container_name }} is restarting frequently."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#container-restarting"
+
+      - alert: ContainerHighNetworkUsage
+        expr: rate(container_network_transmit_bytes_total[5m]) > 100000000
+        for: 10m
+        labels:
+          severity: warning
+          category: network
+        annotations:
+          summary: "High network usage on {{ $labels.container_name }}"
+          description: "Container {{ $labels.container_name }} is transmitting {{ $value | humanize }}B/s."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#high-network"
+
+      - alert: ContainerHighDiskIO
+        expr: rate(container_fs_writes_bytes_total[5m]) > 100000000
+        for: 10m
+        labels:
+          severity: warning
+          category: storage
+        annotations:
+          summary: "High disk I/O on {{ $labels.container_name }}"
+          description: "Container {{ $labels.container_name }} is writing {{ $value | humanize }}B/s to disk."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#high-disk-io"

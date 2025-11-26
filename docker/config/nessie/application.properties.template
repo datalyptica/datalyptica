@@ -14,14 +14,15 @@ quarkus.http.cors.access-control-max-age=24H
 
 # JDBC Backend Configuration (PostgreSQL)
 # Credentials provided via environment variables
-nessie.version.store.type=JDBC2
-nessie.version.store.persist.jdbc.datasource=postgresql
-quarkus.datasource.postgresql.jdbc.url=jdbc:postgresql://shudl-postgresql:5432/${POSTGRES_DB}
-quarkus.datasource.postgresql.username=${QUARKUS_DATASOURCE_USERNAME}
-quarkus.datasource.postgresql.password=${QUARKUS_DATASOURCE_PASSWORD}
-quarkus.datasource.postgresql.jdbc.initial-size=2
-quarkus.datasource.postgresql.jdbc.min-size=2
-quarkus.datasource.postgresql.jdbc.max-size=10
+# NOTE: Using default datasource (no name) to match docker-compose environment variables
+nessie.version.store.type=JDBC
+quarkus.datasource.db-kind=postgresql
+quarkus.datasource.jdbc.url=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
+quarkus.datasource.username=${QUARKUS_DATASOURCE_USERNAME}
+quarkus.datasource.password=${QUARKUS_DATASOURCE_PASSWORD}
+quarkus.datasource.jdbc.initial-size=2
+quarkus.datasource.jdbc.min-size=2
+quarkus.datasource.jdbc.max-size=10
 
 # Catalog Configuration
 nessie.catalog.default-warehouse=warehouse

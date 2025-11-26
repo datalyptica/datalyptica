@@ -1,0 +1,5 @@
+# ShuDL Image Versions
+# Update these versions for reproducible builds
+
+SHUDL_VERSION=v1.0.0
+KAFKA_UI_VERSION=v0.7.2

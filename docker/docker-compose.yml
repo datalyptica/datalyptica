@@ -1,11 +1,11 @@
 services:
   # MinIO Object Storage
   minio:
-    image: ghcr.io/shugur-network/shudl/minio:latest
+    image: ghcr.io/shugur-network/shudl/minio:${SHUDL_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-minio
     ports:
-      - "${MINIO_API_PORT}:9000"  # API
-      - "${MINIO_CONSOLE_PORT}:9001"  # Console
+      - "${MINIO_API_PORT}:9000" # API
+      - "${MINIO_CONSOLE_PORT}:9001" # Console
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
@@ -13,7 +13,7 @@ services:
       - MINIO_OPTS=--console-address :9001
       - MINIO_REGION=${MINIO_REGION}
       - MINIO_DEFAULT_BUCKETS=${MINIO_BUCKET_NAME}
-      
+
       # Additional MinIO Configuration
       - MINIO_ADDRESS=${MINIO_ADDRESS}
       - MINIO_CONSOLE_ADDRESS=${MINIO_CONSOLE_ADDRESS}
@@ -27,11 +27,24 @@ services:
       - MINIO_COMPRESS=${MINIO_COMPRESS}
       - MINIO_COMPRESS_MIME_TYPES=${MINIO_COMPRESS_MIME_TYPES}
       - MINIO_BROWSER=${MINIO_BROWSER}
+
+      # SSL/TLS Configuration
+      - MINIO_CERTS_DIR=/certs
     volumes:
       - minio_data:/data
+      - ../secrets/certificates/minio:/certs:ro
     networks:
-      - ${NETWORK_NAME}
+      - storage_network
+      - data_network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "1.0"
+          memory: 512M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: ${HEALTHCHECK_INTERVAL}
@@ -41,7 +54,7 @@ services:
 
   # PostgreSQL Database
   postgresql:
-    image: ghcr.io/shugur-network/shudl/postgresql:latest
+    image: ghcr.io/shugur-network/shudl/postgresql:${SHUDL_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-postgresql
     ports:
       - "${POSTGRES_PORT}:5432"
@@ -52,13 +65,13 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
       - PGDATA=/var/lib/postgresql/data/pgdata
-      
+
       # ShuDL specific database settings
       - SHUDL_DB=${SHUDL_DB}
       - SHUDL_USER=${SHUDL_USER}
       - SHUDL_PASSWORD=${SHUDL_PASSWORD}
       - NESSIE_DB=${NESSIE_DB}
-      
+
       # Performance Configuration
       - POSTGRES_MAX_CONNECTIONS=${POSTGRES_MAX_CONNECTIONS}
       - POSTGRES_SHARED_BUFFERS=${POSTGRES_SHARED_BUFFERS}
@@ -71,7 +84,7 @@ services:
       - POSTGRES_CHECKPOINT_COMPLETION_TARGET=${POSTGRES_CHECKPOINT_COMPLETION_TARGET}
       - POSTGRES_SUPERUSER_RESERVED_CONNECTIONS=${POSTGRES_SUPERUSER_RESERVED_CONNECTIONS}
       - POSTGRES_LISTEN_ADDRESSES=${POSTGRES_LISTEN_ADDRESSES}
-      
+
       # Authentication Configuration (pg_hba.conf equivalent)
       - POSTGRES_AUTH_LOCAL=${POSTGRES_AUTH_LOCAL}
       - POSTGRES_AUTH_HOST_IPV4=${POSTGRES_AUTH_HOST_IPV4}
@@ -80,11 +93,27 @@ services:
       - POSTGRES_AUTH_REPLICATION_HOST=${POSTGRES_AUTH_REPLICATION_HOST}
       - POSTGRES_AUTH_DOCKER_NETWORKS=${POSTGRES_AUTH_DOCKER_NETWORKS}
       - POSTGRES_ALLOWED_NETWORKS=${POSTGRES_ALLOWED_NETWORKS}
+
+      # SSL/TLS Configuration (Temporarily disabled - will be re-enabled with proper setup)
+      # - POSTGRES_SSL_MODE=${POSTGRES_SSL_MODE:-prefer}
+      # - POSTGRES_SSL_CERT_FILE=/var/lib/postgresql/certs/server-cert.pem
+      # - POSTGRES_SSL_KEY_FILE=/var/lib/postgresql/certs/server-key.pem
+      # - POSTGRES_SSL_CA_FILE=/var/lib/postgresql/certs/ca-cert.pem
     volumes:
       - postgresql_data:/var/lib/postgresql/data
+      # - ../secrets/certificates/postgresql:/var/lib/postgresql/certs:ro
     networks:
-      - ${NETWORK_NAME}
+      - storage_network
+      - data_network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 4G
+        reservations:
+          cpus: "2.0"
+          memory: 1G
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: ${HEALTHCHECK_INTERVAL}
@@ -94,7 +123,7 @@ services:
 
   # Nessie Catalog Service
   nessie:
-    image: ghcr.io/shugur-network/shudl/nessie:latest
+    image: ghcr.io/shugur-network/shudl/nessie:${SHUDL_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-nessie
     ports:
       - "${NESSIE_PORT}:19120"
@@ -102,7 +131,7 @@ services:
       # Server Configuration
       - QUARKUS_HTTP_PORT=${NESSIE_PORT}
       - QUARKUS_HTTP_HOST=${NESSIE_HOST}
-      
+
       # CORS Configuration
       - QUARKUS_HTTP_CORS=${NESSIE_CORS_ENABLED}
       - QUARKUS_HTTP_CORS_ORIGINS=${NESSIE_CORS_ORIGINS}
@@ -110,55 +139,62 @@ services:
       - QUARKUS_HTTP_CORS_HEADERS=${NESSIE_CORS_HEADERS}
       - QUARKUS_HTTP_CORS_EXPOSED_HEADERS=${NESSIE_CORS_EXPOSED_HEADERS}
       - QUARKUS_HTTP_CORS_ACCESS_CONTROL_MAX_AGE=${NESSIE_CORS_MAX_AGE}
-      
-      # Database Configuration
+
+      # Database Configuration - Use default datasource (no name)
       - NESSIE_VERSION_STORE_TYPE=${NESSIE_VERSION_STORE_TYPE}
-      - NESSIE_VERSION_STORE_PERSIST_JDBC_DATASOURCE=${NESSIE_DATASOURCE_NAME}
-      - QUARKUS_DATASOURCE_POSTGRESQL_JDBC_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
-      - QUARKUS_DATASOURCE_POSTGRESQL_USERNAME=${POSTGRES_USER}
-      - QUARKUS_DATASOURCE_POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
-      - QUARKUS_DATASOURCE_POSTGRESQL_JDBC_INITIAL_SIZE=${NESSIE_DB_INITIAL_SIZE}
-      - QUARKUS_DATASOURCE_POSTGRESQL_JDBC_MIN_SIZE=${NESSIE_DB_MIN_SIZE}
-      - QUARKUS_DATASOURCE_POSTGRESQL_JDBC_MAX_SIZE=${NESSIE_DB_MAX_SIZE}
-      
-      # Legacy environment variables for compatibility
+
+      # Default Quarkus datasource configuration
+      - QUARKUS_DATASOURCE_DB_KIND=postgresql
       - QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
-      - QUARKUS_DATASOURCE_USERNAME=${QUARKUS_DATASOURCE_USERNAME}
-      - QUARKUS_DATASOURCE_PASSWORD=${QUARKUS_DATASOURCE_PASSWORD}
+      - QUARKUS_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - QUARKUS_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - QUARKUS_DATASOURCE_JDBC_INITIAL_SIZE=${NESSIE_DB_INITIAL_SIZE}
+      - QUARKUS_DATASOURCE_JDBC_MIN_SIZE=${NESSIE_DB_MIN_SIZE}
+      - QUARKUS_DATASOURCE_JDBC_MAX_SIZE=${NESSIE_DB_MAX_SIZE}
+
+      # PostgreSQL database name
       - POSTGRES_DB=${POSTGRES_DB}
-      
+
       # Catalog Configuration
       - NESSIE_CATALOG_DEFAULT_WAREHOUSE=${NESSIE_DEFAULT_WAREHOUSE}
       - NESSIE_CATALOG_WAREHOUSES_WAREHOUSE_LOCATION=${NESSIE_WAREHOUSE_LOCATION}
       - WAREHOUSE_LOCATION=${WAREHOUSE_LOCATION}
-      
+
       # Metrics Configuration
       - NESSIE_MICROMETER_ENABLED=${NESSIE_MICROMETER_ENABLED}
       - NESSIE_MICROMETER_EXPORT_PROMETHEUS_ENABLED=${NESSIE_MICROMETER_EXPORT_PROMETHEUS_ENABLED}
-      
+
       # Health Check Configuration
       - NESSIE_HEALTH_ROOT_PATH=${NESSIE_HEALTH_ROOT_PATH}
-      
+
       # OpenAPI Configuration
       - NESSIE_SWAGGER_UI_ALWAYS_INCLUDE=${NESSIE_SWAGGER_UI_ALWAYS_INCLUDE}
       - NESSIE_SWAGGER_UI_PATH=${NESSIE_SWAGGER_UI_PATH}
-      
+
       # Authentication Configuration
       - NESSIE_SERVER_AUTHENTICATION_ENABLED=${NESSIE_SERVER_AUTHENTICATION_ENABLED}
-      
+
       # S3/MinIO Configuration
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_ENDPOINT=${S3_ENDPOINT}
       - MINIO_REGION=${MINIO_REGION}
     networks:
-      - ${NETWORK_NAME}
+      - storage_network
     depends_on:
       postgresql:
         condition: service_healthy
       minio:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "1.0"
+          memory: 512M
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:19120/api/v2/config"]
       interval: ${HEALTHCHECK_INTERVAL}
@@ -168,7 +204,7 @@ services:
 
   # Trino Query Engine
   trino:
-    image: ghcr.io/shugur-network/shudl/trino:latest
+    image: ghcr.io/shugur-network/shudl/trino:${SHUDL_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-trino
     ports:
       - "${TRINO_PORT}:8080"
@@ -180,12 +216,12 @@ services:
       - TRINO_DISCOVERY_URI=${TRINO_DISCOVERY_URI}
       - TRINO_QUERY_MAX_MEMORY=${TRINO_QUERY_MAX_MEMORY}
       - TRINO_MEMORY_HEAP_HEADROOM_PER_NODE=${TRINO_MEMORY_HEAP_HEADROOM}
-      
+
       # Node Configuration
       - TRINO_NODE_ENVIRONMENT=${TRINO_NODE_ENVIRONMENT}
       - TRINO_NODE_DATA_DIR=${TRINO_NODE_DATA_DIR}
       - TRINO_NODE_ID=${TRINO_NODE_ID}
-      
+
       # JVM Configuration
       - TRINO_JVM_XMX=${TRINO_JVM_XMX}
       - TRINO_JVM_GC=${TRINO_JVM_GC}
@@ -194,7 +230,7 @@ services:
       - TRINO_JVM_USE_GC_OVERHEAD_LIMIT=${TRINO_JVM_USE_GC_OVERHEAD_LIMIT}
       - TRINO_JVM_NIO_MAX_CACHED_BUFFER_SIZE=${TRINO_JVM_NIO_MAX_CACHED_BUFFER_SIZE}
       - TRINO_JVM_ALLOW_ATTACH_SELF=${TRINO_JVM_ALLOW_ATTACH_SELF}
-      
+
       # Logging Configuration
       - TRINO_LOG_LEVEL_ROOT=${TRINO_LOG_LEVEL_ROOT}
       - TRINO_LOG_LEVEL_SERVER=${TRINO_LOG_LEVEL_SERVER}
@@ -207,7 +243,7 @@ services:
       - TRINO_LOG_LEVEL_TYPE=${TRINO_LOG_LEVEL_TYPE}
       - TRINO_LOG_LEVEL_UTIL=${TRINO_LOG_LEVEL_UTIL}
       - TRINO_LOG_LEVEL_HTTP_REQUEST=${TRINO_LOG_LEVEL_HTTP_REQUEST}
-      
+
       # Iceberg Catalog Configuration (Nessie-based)
       - TRINO_CATALOG_ICEBERG_CONNECTOR_NAME=icebergoka
       - TRINO_CATALOG_ICEBERG_CATALOG_TYPE=${TRINO_CATALOG_ICEBERG_CATALOG_TYPE}
@@ -216,7 +252,7 @@ services:
       - TRINO_CATALOG_ICEBERG_NESSIE_CATALOG_DEFAULT_WAREHOUSE_DIR=${TRINO_CATALOG_ICEBERG_NESSIE_CATALOG_DEFAULT_WAREHOUSE_DIR}
       - TRINO_CATALOG_ICEBERG_FILE_FORMAT=${TRINO_CATALOG_ICEBERG_FILE_FORMAT}
       - TRINO_CATALOG_ICEBERG_COMPRESSION_CODEC=${TRINO_CATALOG_ICEBERG_COMPRESSION_CODEC}
-      
+
       # S3/MinIO Configuration
       - TRINO_CATALOG_ICEBERG_S3_ENDPOINT=${S3_ENDPOINT}
       - TRINO_CATALOG_ICEBERG_S3_REGION=${S3_REGION}
@@ -230,13 +266,22 @@ services:
       - S3_PATH_STYLE_ACCESS=${S3_PATH_STYLE_ACCESS}
       - FS_NATIVE_S3_ENABLED=true
     networks:
-      - ${NETWORK_NAME}
+      - data_network
+      - storage_network
     depends_on:
       minio:
         condition: service_healthy
       nessie:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 8G
+        reservations:
+          cpus: "2.0"
+          memory: 2G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
       interval: ${HEALTHCHECK_INTERVAL}
@@ -246,11 +291,11 @@ services:
 
   # Spark Master
   spark-master:
-    image: ghcr.io/shugur-network/shudl/spark:latest
+    image: ghcr.io/shugur-network/shudl/spark:${SHUDL_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-spark-master
     ports:
-      - "${SPARK_UI_PORT}:4040"  # Spark UI
-      - "${SPARK_MASTER_PORT}:7077"  # Spark Master
+      - "${SPARK_UI_PORT}:4040" # Spark UI
+      - "${SPARK_MASTER_PORT}:7077" # Spark Master
     environment:
       # Spark Core Configuration
       - SPARK_MODE=master
@@ -267,7 +312,7 @@ services:
       - SPARK_EXECUTOR_INSTANCES=${SPARK_EXECUTOR_INSTANCES}
       - SPARK_DYNAMIC_ALLOCATION_ENABLED=${SPARK_DYNAMIC_ALLOCATION_ENABLED}
       - SPARK_SERIALIZER=${SPARK_SERIALIZER}
-      
+
       # Original working Spark configuration (no AWS region conflicts)
       - SPARK_MODE=master
       - SPARK_WEBUI_PORT=4040
@@ -298,13 +343,22 @@ services:
       # Spark Configuration Directory
       - SPARK_CONF_DIR=/tmp/spark/conf
     networks:
-      - ${NETWORK_NAME}
+      - data_network
+      - storage_network
     depends_on:
       minio:
         condition: service_healthy
       nessie:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 4G
+        reservations:
+          cpus: "2.0"
+          memory: 1G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4040"]
       interval: ${HEALTHCHECK_INTERVAL}
@@ -314,10 +368,10 @@ services:
 
   # Spark Worker
   spark-worker:
-    image: ghcr.io/shugur-network/shudl/spark:latest
+    image: ghcr.io/shugur-network/shudl/spark:${SHUDL_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-spark-worker
     ports:
-      - "4041:4040"  # Spark Worker UI
+      - "4041:4040" # Spark Worker UI
     environment:
       # Spark Core Configuration
       - SPARK_MODE=worker
@@ -330,14 +384,14 @@ services:
       - SPARK_WORKER_CORES=${SPARK_WORKER_CORES}
       - SPARK_EXECUTOR_MEMORY=${SPARK_EXECUTOR_MEMORY}
       - SPARK_EXECUTOR_CORES=${SPARK_EXECUTOR_CORES}
-      
+
       # Spark Iceberg Configuration (for Nessie integration)
       - SPARK_ICEBERG_CATALOG_NAME=${SPARK_ICEBERG_CATALOG_NAME}
       - SPARK_ICEBERG_URI=${SPARK_ICEBERG_URI}
       - SPARK_ICEBERG_REF=${SPARK_ICEBERG_REF}
       - SPARK_ICEBERG_WAREHOUSE=${SPARK_ICEBERG_WAREHOUSE}
       - SPARK_ICEBERG_IO_IMPL=${SPARK_ICEBERG_IO_IMPL}
-      
+
       # Original working Spark worker configuration (template-based approach)
       - SPARK_MODE=worker
       - SPARK_RPC_AUTHENTICATION_ENABLED=false
@@ -366,14 +420,24 @@ services:
       - AWS_REGION=${S3_REGION}
       - AWS_ACCESS_KEY_ID=${S3_ACCESS_KEY}
       - AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}
-      # Spark Configuration Directory  
+      # Spark Configuration Directory
       - SPARK_CONF_DIR=/tmp/spark/conf
     networks:
-      - ${NETWORK_NAME}
+      - data_network
+      - storage_network
+      - control_network
     depends_on:
       spark-master:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 4G
+        reservations:
+          cpus: "2.0"
+          memory: 1G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4040"]
       interval: ${HEALTHCHECK_INTERVAL}
@@ -381,13 +445,726 @@ services:
       retries: ${HEALTHCHECK_RETRIES}
       start_period: 60s
 
+  # Zookeeper for Kafka
+  zookeeper:
+    image: ghcr.io/shugur-network/shudl/zookeeper:${SHUDL_VERSION:-v1.0.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-zookeeper
+    ports:
+      - "${ZOOKEEPER_PORT:-2181}:2181"
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+      - ZOOKEEPER_SYNC_LIMIT=2
+      - ZOOKEEPER_INIT_LIMIT=5
+      - ZOOKEEPER_MAX_CLIENT_CNXNS=60
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    networks:
+      - control_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Apache Kafka
+  kafka:
+    image: ghcr.io/shugur-network/shudl/kafka:${SHUDL_VERSION:-v1.0.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-kafka
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
+      - "9093:9093"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_LOG_RETENTION_HOURS=168
+      - KAFKA_LOG_SEGMENT_BYTES=1073741824
+      - KAFKA_NUM_PARTITIONS=3
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - control_network
+      - data_network
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "1.0"
+          memory: 512M
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "kafka-broker-api-versions",
+          "--bootstrap-server",
+          "localhost:9092",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Confluent Schema Registry
+  schema-registry:
+    image: ghcr.io/shugur-network/shudl/schema-registry:${SHUDL_VERSION:-v1.0.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-schema-registry
+    ports:
+      - "${SCHEMA_REGISTRY_PORT:-8085}:8081"
+    environment:
+      - SCHEMA_REGISTRY_HOST_NAME=schema-registry
+      - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=kafka:9092
+      - SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:8081
+      - SCHEMA_REGISTRY_KAFKASTORE_TOPIC=_schemas
+      - SCHEMA_REGISTRY_KAFKASTORE_TOPIC_REPLICATION_FACTOR=1
+      - SCHEMA_REGISTRY_DEBUG=false
+      - SCHEMA_REGISTRY_AVRO_COMPATIBILITY_LEVEL=BACKWARD
+      - SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL=INFO
+    volumes:
+      - schema_registry_data:/var/lib/schema-registry
+    networks:
+      - control_network
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Kafka UI (Management Interface)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:${KAFKA_UI_VERSION:-v0.7.2}
+    container_name: ${COMPOSE_PROJECT_NAME}-kafka-ui
+    ports:
+      - "${KAFKA_UI_PORT:-8090}:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=shudl-cluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+      - KAFKA_CLUSTERS_0_METRICS_PORT=9997
+      - KAFKA_CLUSTERS_0_SCHEMAREGISTRY=http://schema-registry:8081
+    networks:
+      - management_network
+      - control_network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Flink JobManager
+  flink-jobmanager:
+    image: ghcr.io/shugur-network/shudl/flink:${SHUDL_VERSION:-v1.0.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-flink-jobmanager
+    ports:
+      - "${FLINK_JOBMANAGER_PORT:-8081}:8081"
+      - "6123:6123"
+    command: jobmanager
+    environment:
+      JOB_MANAGER_RPC_ADDRESS: flink-jobmanager
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      NESSIE_URI: ${NESSIE_URI:-http://nessie:19120/api/v2}
+      WAREHOUSE_LOCATION: ${WAREHOUSE_LOCATION:-s3a://lakehouse/warehouse}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_PATH_STYLE_ACCESS: "true"
+    volumes:
+      - flink_checkpoints:/opt/flink/checkpoints
+      - flink_savepoints:/opt/flink/savepoints
+    networks:
+      - data_network
+      - control_network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      nessie:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "1.0"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/overview"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Flink TaskManager
+  flink-taskmanager:
+    image: ghcr.io/shugur-network/shudl/flink:${SHUDL_VERSION:-v1.0.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-flink-taskmanager
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    command: taskmanager
+    environment:
+      JOB_MANAGER_RPC_ADDRESS: flink-jobmanager
+      TASK_MANAGER_NUMBER_OF_TASK_SLOTS: ${FLINK_TASK_SLOTS:-4}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      NESSIE_URI: ${NESSIE_URI:-http://nessie:19120/api/v2}
+      WAREHOUSE_LOCATION: ${WAREHOUSE_LOCATION:-s3a://lakehouse/warehouse}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_PATH_STYLE_ACCESS: "true"
+    volumes:
+      - flink_checkpoints:/opt/flink/checkpoints
+      - flink_savepoints:/opt/flink/savepoints
+    networks:
+      - data_network
+      - control_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "1.0"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://flink-jobmanager:8081/taskmanagers"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Kafka Connect with Debezium (Avro Support)
+  kafka-connect:
+    image: ghcr.io/shugur-network/shudl/kafka-connect:${SHUDL_VERSION:-v1.0.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-kafka-connect
+    ports:
+      - "${KAFKA_CONNECT_PORT:-8083}:8083"
+    environment:
+      - CONNECT_BOOTSTRAP_SERVERS=kafka:9092
+      - CONNECT_REST_PORT=8083
+      - CONNECT_GROUP_ID=debezium-connect-cluster
+      - CONNECT_CONFIG_STORAGE_TOPIC=debezium-connect-configs
+      - CONNECT_OFFSET_STORAGE_TOPIC=debezium-connect-offsets
+      - CONNECT_STATUS_STORAGE_TOPIC=debezium-connect-status
+      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
+      # Avro Converters with Schema Registry
+      - CONNECT_KEY_CONVERTER=io.confluent.connect.avro.AvroConverter
+      - CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - CONNECT_VALUE_CONVERTER=io.confluent.connect.avro.AvroConverter
+      - CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect
+      - CONNECT_PLUGIN_PATH=/usr/share/confluent-hub-components
+    volumes:
+      - kafka_connect_data:/var/lib/kafka-connect
+    networks:
+      - data_network
+      - control_network
+      - storage_network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "1.0"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ClickHouse (OLAP database)
+  clickhouse:
+    image: ghcr.io/shugur-network/shudl/clickhouse:${SHUDL_VERSION:-v1.0.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-clickhouse
+    ports:
+      - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"
+      - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
+      - "9009:9009"
+    environment:
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB:-default}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    networks:
+      - storage_network
+      - data_network
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 4G
+        reservations:
+          cpus: "2.0"
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # dbt for SQL Transformations
+  dbt:
+    image: ghcr.io/shugur-network/shudl/dbt:${SHUDL_VERSION:-v1.0.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-dbt
+    ports:
+      - "${DBT_DOCS_PORT:-8580}:8580"
+    environment:
+      - TRINO_HOST=trino
+      - TRINO_PORT=8080
+      - SPARK_HOST=spark-master
+      - SPARK_PORT=10000
+      - DBT_PROFILES_DIR=/root/.dbt
+    volumes:
+      - dbt_project:/dbt
+      - dbt_profiles:/root/.dbt
+    networks:
+      - data_network
+      - storage_network
+    depends_on:
+      trino:
+        condition: service_healthy
+      spark-master:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    command: ["sh", "-c", "sleep infinity"]
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v2.48.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    environment:
+      - TZ=${TIMEZONE:-UTC}
+    volumes:
+      - ../configs/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../configs/monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-15d}"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    networks:
+      - management_network
+      - data_network
+      - storage_network
+      - control_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "1.0"
+          memory: 512M
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9090/-/healthy",
+        ]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-3}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+
+  # Grafana Dashboards
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION:-10.2.2}
+    container_name: ${COMPOSE_PROJECT_NAME}-grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=${GRAFANA_ALLOW_SIGN_UP:-false}
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
+      - GF_INSTALL_PLUGINS=${GRAFANA_INSTALL_PLUGINS:-}
+      - TZ=${TIMEZONE:-UTC}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../configs/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - management_network
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/health",
+        ]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-3}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+
+  # Loki Log Aggregation
+  loki:
+    image: grafana/loki:${LOKI_VERSION:-2.9.3}
+    container_name: ${COMPOSE_PROJECT_NAME}-loki
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    environment:
+      - TZ=${TIMEZONE:-UTC}
+    volumes:
+      - ../configs/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - management_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3100/ready",
+        ]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-3}
+      start_period: ${HEALTHCHECK_START_PERIOD:-60s}
+
+  # Grafana Alloy Log Collector (Promtail successor)
+  alloy:
+    image: grafana/alloy:${ALLOY_VERSION:-v1.0.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-alloy
+    volumes:
+      - ../configs/monitoring/loki/alloy-config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - alloy_data:/var/lib/alloy
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy
+    ports:
+      - "${ALLOY_HTTP_PORT:-12345}:12345" # Alloy HTTP API
+    networks:
+      - management_network
+      - data_network
+      - storage_network
+      - control_network
+    depends_on:
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'alloy.*run' || exit 1"]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-3}
+      start_period: ${HEALTHCHECK_START_PERIOD:-30s}
+
+  # Alertmanager for Alert Routing and Notifications
+  alertmanager:
+    image: prom/alertmanager:${ALERTMANAGER_VERSION:-v0.27.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-alertmanager
+    ports:
+      - "${ALERTMANAGER_PORT:-9095}:9093"
+    environment:
+      - TZ=${TIMEZONE:-UTC}
+    volumes:
+      - ../configs/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ../configs/monitoring/alertmanager/templates:/etc/alertmanager/templates:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+      - "--web.external-url=http://localhost:9093"
+      - "--cluster.advertise-address=0.0.0.0:9093"
+    networks:
+      - management_network
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9093/-/healthy",
+        ]
+      interval: ${HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${HEALTHCHECK_RETRIES:-3}
+      start_period: ${HEALTHCHECK_START_PERIOD:-30s}
+
+  # Keycloak Identity and Access Management
+  keycloak:
+    image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION:-23.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-keycloak
+    ports:
+      - "${KEYCLOAK_PORT:-8180}:8080"
+      - "${KEYCLOAK_HTTPS_PORT:-8543}:8443"
+    environment:
+      # Database Configuration
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgresql:5432/${KEYCLOAK_DB:-keycloak}
+      - KC_DB_USERNAME=${KEYCLOAK_DB_USER:-keycloak_user}
+      - KC_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD:-keycloak_pass}
+
+      # Admin User
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN_USER:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+
+      # Keycloak Configuration
+      - KC_HOSTNAME=${KEYCLOAK_HOSTNAME:-localhost}
+      - KC_HOSTNAME_PORT=${KEYCLOAK_PORT:-8180}
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_HTTP_ENABLED=true
+      - KC_HEALTH_ENABLED=true
+      - KC_METRICS_ENABLED=true
+
+      # Proxy Configuration
+      - KC_PROXY=edge
+      - KC_HOSTNAME_STRICT_BACKCHANNEL=false
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    networks:
+      - management_network
+      - storage_network
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    command: start-dev
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200\\|UP' || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
 volumes:
   minio_data:
     driver: local
   postgresql_data:
     driver: local
+  zookeeper_data:
+    driver: local
+  zookeeper_log:
+    driver: local
+  kafka_data:
+    driver: local
+  schema_registry_data:
+    driver: local
+  kafka_connect_data:
+    driver: local
+  flink_checkpoints:
+    driver: local
+  flink_savepoints:
+    driver: local
+  clickhouse_data:
+    driver: local
+  clickhouse_logs:
+    driver: local
+  dbt_project:
+    driver: local
+  dbt_profiles:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+  alloy_data:
+    driver: local
+  alertmanager_data:
+    driver: local
+  keycloak_data:
+    driver: local
 
 networks:
-  shunetwork:
-    name: ${NETWORK_NAME}
+  # Management Network - Monitoring and observability services
+  management_network:
+    name: ${COMPOSE_PROJECT_NAME}_management
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+  # Control Network - Orchestration and coordination services
+  control_network:
+    name: ${COMPOSE_PROJECT_NAME}_control
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+  # Data Network - Processing engines and compute services
+  data_network:
+    name: ${COMPOSE_PROJECT_NAME}_data
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+
+  # Storage Network - Data persistence and storage services
+  storage_network:
+    name: ${COMPOSE_PROJECT_NAME}_storage
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.23.0.0/16

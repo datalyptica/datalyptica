@@ -1,0 +1,217 @@
+// Grafana Alloy Configuration for ShuDL
+// Replaces Promtail for log collection and forwarding to Loki
+
+// Logging configuration
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+// Loki write endpoint
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+// Docker service discovery
+discovery.docker "docker_containers" {
+  host = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+}
+
+// Relabel Docker containers
+discovery.relabel "docker_relabel" {
+  targets = discovery.docker.docker_containers.targets
+
+  // Extract container name
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  // Extract compose service name
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  // Extract compose project name
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "project"
+  }
+
+  // Extract container ID (short)
+  rule {
+    source_labels = ["__meta_docker_container_id"]
+    regex         = "(.{12})"
+    target_label  = "container_id"
+  }
+
+  // Set path to container logs
+  rule {
+    source_labels = ["__meta_docker_container_id"]
+    target_label  = "__path__"
+    replacement   = "/var/lib/docker/containers/${1}/${1}-json.log"
+  }
+
+  // Add stream label from log stream type
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
+}
+
+// Scrape Docker logs
+loki.source.docker "docker_logs" {
+  host    = "unix:///var/run/docker.sock"
+  targets = discovery.relabel.docker_relabel.output
+  
+  forward_to = [loki.process.docker_pipeline.receiver]
+  
+  relabel_rules = discovery.relabel.docker_relabel.rules
+}
+
+// Process Docker logs
+loki.process "docker_pipeline" {
+  forward_to = [loki.write.default.receiver]
+
+  // Parse JSON logs
+  stage.json {
+    expressions = {
+      level   = "level",
+      msg     = "message",
+      time    = "time",
+      logger  = "logger",
+    }
+  }
+
+  // Extract log level
+  stage.labels {
+    values = {
+      level = "",
+    }
+  }
+
+  // Parse timestamp if present
+  stage.timestamp {
+    source = "time"
+    format = "RFC3339"
+  }
+
+  // Drop noisy health check logs (optional)
+  stage.drop {
+    expression = ".*healthcheck.*"
+    drop_counter_reason = "healthcheck"
+  }
+
+  // Add source label
+  stage.static_labels {
+    values = {
+      source = "docker",
+    }
+  }
+}
+
+// PostgreSQL specific logs (if mounted)
+local.file_match "postgresql_logs" {
+  path_targets = [{
+    __path__ = "/var/log/postgresql/*.log",
+    job      = "postgresql",
+    service  = "postgresql",
+  }]
+}
+
+loki.source.file "postgresql" {
+  targets    = local.file_match.postgresql_logs.targets
+  forward_to = [loki.process.postgresql_pipeline.receiver]
+}
+
+loki.process "postgresql_pipeline" {
+  forward_to = [loki.write.default.receiver]
+
+  // Parse PostgreSQL log format
+  stage.regex {
+    expression = "^(?P<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d+) (?P<level>\\w+):  (?P<message>.*)"
+  }
+
+  stage.labels {
+    values = {
+      level = "",
+    }
+  }
+
+  stage.static_labels {
+    values = {
+      source = "postgresql_file",
+    }
+  }
+}
+
+// ShuDL application logs (if mounted)
+local.file_match "shudl_logs" {
+  path_targets = [{
+    __path__ = "/var/log/shudl/*.log",
+    job      = "shudl",
+    service  = "shudl",
+  }]
+}
+
+loki.source.file "shudl" {
+  targets    = local.file_match.shudl_logs.targets
+  forward_to = [loki.process.shudl_pipeline.receiver]
+}
+
+loki.process "shudl_pipeline" {
+  forward_to = [loki.write.default.receiver]
+
+  // Parse JSON logs
+  stage.json {
+    expressions = {
+      level     = "level",
+      msg       = "msg",
+      timestamp = "timestamp",
+      service   = "service",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level   = "",
+      service = "",
+    }
+  }
+
+  stage.static_labels {
+    values = {
+      source = "shudl_file",
+    }
+  }
+}
+
+// Expose metrics for monitoring Alloy itself
+prometheus.exporter.self "alloy" { }
+
+prometheus.scrape "alloy" {
+  targets    = prometheus.exporter.self.alloy.targets
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+// Optional: Forward metrics to Prometheus
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+    
+    queue_config {
+      capacity = 10000
+      max_shards = 10
+      min_shards = 1
+      max_samples_per_send = 5000
+      batch_send_deadline = "5s"
+      min_backoff = "30ms"
+      max_backoff = "5s"
+    }
+  }
+}

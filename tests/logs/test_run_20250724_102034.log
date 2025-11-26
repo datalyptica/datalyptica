@@ -1,5 +1,0 @@
-[0;36m[10:20:34][0m Phase 1: Prerequisites and Environment Validation
-[0;36m[10:20:34][0m Running test: Environment Variables
-[0;32m✅ Environment Variables completed in 0s[0m
-[0;36m[10:20:34][0m Running test: Docker Compose Validation
-[0;31m❌ Docker Compose Validation failed after 1s (check logs: Docker_Compose_Validation_20250724_102034.log)[0m

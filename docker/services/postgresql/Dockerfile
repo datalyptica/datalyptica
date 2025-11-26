@@ -58,13 +58,10 @@ VOLUME ["/var/lib/postgresql/data", "/etc/postgresql"]
 # Expose standard PostgreSQL port
 EXPOSE 5432
 
-# Switch to postgres user
-USER postgres
-
 # Set working directory
 WORKDIR /var/lib/postgresql
 
-# Override USER to root for proper Docker volume handling, entrypoint will switch to postgres
+# Run as root - entrypoint will switch to postgres user
 USER root
 
 # Standard PostgreSQL health check with proper error handling
