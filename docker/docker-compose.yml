@@ -1,3 +1,24 @@
+# Docker Secrets Configuration
+secrets:
+  postgres_password:
+    file: ../secrets/passwords/postgres_password
+  shudl_password:
+    file: ../secrets/passwords/shudl_password
+  minio_root_password:
+    file: ../secrets/passwords/minio_root_password
+  s3_access_key:
+    file: ../secrets/passwords/s3_access_key
+  s3_secret_key:
+    file: ../secrets/passwords/s3_secret_key
+  grafana_admin_password:
+    file: ../secrets/passwords/grafana_admin_password
+  keycloak_admin_password:
+    file: ../secrets/passwords/keycloak_admin_password
+  keycloak_db_password:
+    file: ../secrets/passwords/keycloak_db_password
+  clickhouse_password:
+    file: ../secrets/passwords/clickhouse_password
+
 services:
   # MinIO Object Storage
   minio:
@@ -6,11 +27,12 @@ services:
     ports:
       - "${MINIO_API_PORT}:9000" # API
       - "${MINIO_CONSOLE_PORT}:9001" # Console
+      - "${MINIO_API_HTTPS_PORT:-9443}:9443" # HTTPS API
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_root_password
       - MINIO_VOLUMES=/data
-      - MINIO_OPTS=--console-address :9001
+      - MINIO_OPTS=--console-address :9001 --certs-dir /certs --address :9443
       - MINIO_REGION=${MINIO_REGION}
       - MINIO_DEFAULT_BUCKETS=${MINIO_BUCKET_NAME}
 
@@ -30,9 +52,15 @@ services:
 
       # SSL/TLS Configuration
       - MINIO_CERTS_DIR=/certs
+      - MINIO_SERVER_URL=${MINIO_SERVER_URL:-https://localhost:9443}
     volumes:
       - minio_data:/data
       - ../secrets/certificates/minio:/certs:ro
+      - ../secrets/certificates/ca:/certs/CAs:ro
+    secrets:
+      - minio_root_password
+      - s3_access_key
+      - s3_secret_key
     networks:
       - storage_network
       - data_network
@@ -46,7 +74,7 @@ services:
           cpus: "1.0"
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-fk", "https://localhost:9443/minio/health/live"]
       interval: ${HEALTHCHECK_INTERVAL}
       timeout: ${HEALTHCHECK_TIMEOUT}
       retries: ${HEALTHCHECK_RETRIES}
@@ -62,14 +90,14 @@ services:
       # Database Configuration
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
       - PGDATA=/var/lib/postgresql/data/pgdata
 
       # ShuDL specific database settings
       - SHUDL_DB=${SHUDL_DB}
       - SHUDL_USER=${SHUDL_USER}
-      - SHUDL_PASSWORD=${SHUDL_PASSWORD}
+      - SHUDL_PASSWORD_FILE=/run/secrets/shudl_password
       - NESSIE_DB=${NESSIE_DB}
 
       # Performance Configuration
@@ -94,14 +122,18 @@ services:
       - POSTGRES_AUTH_DOCKER_NETWORKS=${POSTGRES_AUTH_DOCKER_NETWORKS}
       - POSTGRES_ALLOWED_NETWORKS=${POSTGRES_ALLOWED_NETWORKS}
 
-      # SSL/TLS Configuration (Temporarily disabled - will be re-enabled with proper setup)
-      # - POSTGRES_SSL_MODE=${POSTGRES_SSL_MODE:-prefer}
-      # - POSTGRES_SSL_CERT_FILE=/var/lib/postgresql/certs/server-cert.pem
-      # - POSTGRES_SSL_KEY_FILE=/var/lib/postgresql/certs/server-key.pem
-      # - POSTGRES_SSL_CA_FILE=/var/lib/postgresql/certs/ca-cert.pem
+      # SSL/TLS Configuration (Phase 2: Enabled)
+      - POSTGRES_SSL_MODE=${POSTGRES_SSL_MODE:-require}
+      - POSTGRES_SSL_CERT_FILE=/var/lib/postgresql/certs/server-cert.pem
+      - POSTGRES_SSL_KEY_FILE=/var/lib/postgresql/certs/server-key.pem
+      - POSTGRES_SSL_CA_FILE=/var/lib/postgresql/certs/ca-cert.pem
     volumes:
       - postgresql_data:/var/lib/postgresql/data
-      # - ../secrets/certificates/postgresql:/var/lib/postgresql/certs:ro
+      - ../secrets/certificates/postgresql:/var/lib/postgresql/certs:ro
+      - ../secrets/certificates/ca:/var/lib/postgresql/ca:ro
+    secrets:
+      - postgres_password
+      - shudl_password
     networks:
       - storage_network
       - data_network
@@ -127,10 +159,15 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-nessie
     ports:
       - "${NESSIE_PORT}:19120"
+      - "${NESSIE_HTTPS_PORT:-19443}:19443"
     environment:
       # Server Configuration
       - QUARKUS_HTTP_PORT=${NESSIE_PORT}
       - QUARKUS_HTTP_HOST=${NESSIE_HOST}
+      - QUARKUS_HTTP_SSL_PORT=${NESSIE_HTTPS_PORT:-19443}
+      - QUARKUS_HTTP_SSL_CERTIFICATE_FILE=/etc/nessie/certs/server-cert.pem
+      - QUARKUS_HTTP_SSL_CERTIFICATE_KEY_FILE=/etc/nessie/certs/server-key.pem
+      - QUARKUS_HTTP_INSECURE_REQUESTS=enabled
 
       # CORS Configuration
       - QUARKUS_HTTP_CORS=${NESSIE_CORS_ENABLED}
@@ -179,6 +216,9 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_ENDPOINT=${S3_ENDPOINT}
       - MINIO_REGION=${MINIO_REGION}
+    volumes:
+      - ../secrets/certificates/nessie:/etc/nessie/certs:ro
+      - ../secrets/certificates/ca:/etc/nessie/ca:ro
     networks:
       - storage_network
     depends_on:
@@ -208,11 +248,16 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-trino
     ports:
       - "${TRINO_PORT}:8080"
+      - "${TRINO_HTTPS_PORT:-8443}:8443"
     environment:
       # Server Configuration
       - TRINO_COORDINATOR=${TRINO_COORDINATOR}
       - TRINO_NODE_SCHEDULER_INCLUDE_COORDINATOR=${TRINO_INCLUDE_COORDINATOR}
       - TRINO_HTTP_SERVER_PORT=${TRINO_PORT}
+      - TRINO_HTTPS_PORT=${TRINO_HTTPS_PORT:-8443}
+      - TRINO_HTTPS_ENABLED=${TRINO_HTTPS_ENABLED:-true}
+      - TRINO_HTTPS_KEYSTORE_PATH=${TRINO_HTTPS_KEYSTORE_PATH:-/etc/trino/certs/server-cert.pem}
+      - TRINO_HTTPS_KEYSTORE_KEY=${TRINO_HTTPS_KEYSTORE_KEY:-/etc/trino/certs/server-key.pem}
       - TRINO_DISCOVERY_URI=${TRINO_DISCOVERY_URI}
       - TRINO_QUERY_MAX_MEMORY=${TRINO_QUERY_MAX_MEMORY}
       - TRINO_MEMORY_HEAP_HEADROOM_PER_NODE=${TRINO_MEMORY_HEAP_HEADROOM}
@@ -265,6 +310,9 @@ services:
       - S3_REGION=${S3_REGION}
       - S3_PATH_STYLE_ACCESS=${S3_PATH_STYLE_ACCESS}
       - FS_NATIVE_S3_ENABLED=true
+    volumes:
+      - ../secrets/certificates/trino:/etc/trino/certs:ro
+      - ../secrets/certificates/ca:/etc/trino/ca:ro
     networks:
       - data_network
       - storage_network
@@ -283,7 +331,7 @@ services:
           cpus: "2.0"
           memory: 2G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
+      test: ["CMD", "curl", "-fk", "https://localhost:8443/v1/info"]
       interval: ${HEALTHCHECK_INTERVAL}
       timeout: ${HEALTHCHECK_TIMEOUT}
       retries: ${HEALTHCHECK_RETRIES}
@@ -301,9 +349,11 @@ services:
       - SPARK_MODE=master
       - SPARK_WEBUI_PORT=${SPARK_UI_PORT}
       - SPARK_RPC_AUTHENTICATION_ENABLED=false
-      - SPARK_RPC_ENCRYPTION_ENABLED=false
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=false
-      - SPARK_SSL_ENABLED=false
+      - SPARK_RPC_ENCRYPTION_ENABLED=true
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=true
+      - SPARK_SSL_ENABLED=true
+      - SPARK_SSL_KEYSTORE=/opt/spark/certs/server-cert.pem
+      - SPARK_SSL_TRUSTSTORE=/opt/spark/ca/ca-cert.pem
       - SPARK_MASTER_URL=${SPARK_MASTER_URL}
       - SPARK_DRIVER_MEMORY=${SPARK_DRIVER_MEMORY}
       - SPARK_DRIVER_MAX_RESULT_SIZE=${SPARK_DRIVER_MAX_RESULT_SIZE}
@@ -317,9 +367,11 @@ services:
       - SPARK_MODE=master
       - SPARK_WEBUI_PORT=4040
       - SPARK_RPC_AUTHENTICATION_ENABLED=false
-      - SPARK_RPC_ENCRYPTION_ENABLED=false
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=false
-      - SPARK_SSL_ENABLED=false
+      - SPARK_RPC_ENCRYPTION_ENABLED=true
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=true
+      - SPARK_SSL_ENABLED=true
+      - SPARK_SSL_KEYSTORE=/opt/spark/certs/server-cert.pem
+      - SPARK_SSL_TRUSTSTORE=/opt/spark/ca/ca-cert.pem
       - SPARK_MASTER_URL=${SPARK_MASTER_URL}
       # Environment variables for template processing (original approach)
       - NESSIE_URI=${NESSIE_URI}
@@ -342,6 +394,9 @@ services:
       - AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}
       # Spark Configuration Directory
       - SPARK_CONF_DIR=/tmp/spark/conf
+    volumes:
+      - ../secrets/certificates/spark:/opt/spark/certs:ro
+      - ../secrets/certificates/ca:/opt/spark/ca:ro
     networks:
       - data_network
       - storage_network
@@ -376,9 +431,11 @@ services:
       # Spark Core Configuration
       - SPARK_MODE=worker
       - SPARK_RPC_AUTHENTICATION_ENABLED=false
-      - SPARK_RPC_ENCRYPTION_ENABLED=false
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=false
-      - SPARK_SSL_ENABLED=false
+      - SPARK_RPC_ENCRYPTION_ENABLED=true
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=true
+      - SPARK_SSL_ENABLED=true
+      - SPARK_SSL_KEYSTORE=/opt/spark/certs/server-cert.pem
+      - SPARK_SSL_TRUSTSTORE=/opt/spark/ca/ca-cert.pem
       - SPARK_MASTER_URL=${SPARK_MASTER_URL}
       - SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY}
       - SPARK_WORKER_CORES=${SPARK_WORKER_CORES}
@@ -395,9 +452,11 @@ services:
       # Original working Spark worker configuration (template-based approach)
       - SPARK_MODE=worker
       - SPARK_RPC_AUTHENTICATION_ENABLED=false
-      - SPARK_RPC_ENCRYPTION_ENABLED=false
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=false
-      - SPARK_SSL_ENABLED=false
+      - SPARK_RPC_ENCRYPTION_ENABLED=true
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=true
+      - SPARK_SSL_ENABLED=true
+      - SPARK_SSL_KEYSTORE=/opt/spark/certs/server-cert.pem
+      - SPARK_SSL_TRUSTSTORE=/opt/spark/ca/ca-cert.pem
       - SPARK_MASTER_URL=${SPARK_MASTER_URL}
       - SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY}
       - SPARK_WORKER_CORES=${SPARK_WORKER_CORES}
@@ -422,6 +481,9 @@ services:
       - AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}
       # Spark Configuration Directory
       - SPARK_CONF_DIR=/tmp/spark/conf
+    volumes:
+      - ../secrets/certificates/spark:/opt/spark/certs:ro
+      - ../secrets/certificates/ca:/opt/spark/ca:ro
     networks:
       - data_network
       - storage_network
@@ -445,52 +507,35 @@ services:
       retries: ${HEALTHCHECK_RETRIES}
       start_period: 60s
 
-  # Zookeeper for Kafka
-  zookeeper:
-    image: ghcr.io/shugur-network/shudl/zookeeper:${SHUDL_VERSION:-v1.0.0}
-    container_name: ${COMPOSE_PROJECT_NAME}-zookeeper
-    ports:
-      - "${ZOOKEEPER_PORT:-2181}:2181"
-    environment:
-      - ZOOKEEPER_CLIENT_PORT=2181
-      - ZOOKEEPER_TICK_TIME=2000
-      - ZOOKEEPER_SYNC_LIMIT=2
-      - ZOOKEEPER_INIT_LIMIT=5
-      - ZOOKEEPER_MAX_CLIENT_CNXNS=60
-    volumes:
-      - zookeeper_data:/var/lib/zookeeper/data
-      - zookeeper_log:/var/lib/zookeeper/log
-    networks:
-      - control_network
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 1G
-        reservations:
-          cpus: "0.5"
-          memory: 256M
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-  # Apache Kafka
+  # Apache Kafka (KRaft Mode - No ZooKeeper Required)
   kafka:
     image: ghcr.io/shugur-network/shudl/kafka:${SHUDL_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-kafka
     ports:
       - "${KAFKA_PORT:-9092}:9092"
       - "9093:9093"
+      - "9094:9094" # Controller port for KRaft
     environment:
-      - KAFKA_BROKER_ID=1
-      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
-      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # KRaft Mode Configuration
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_NODE_ID=1
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9094
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - CLUSTER_ID=xR9VObP1SvO9P4tYW3VApw
+
+      # Listeners Configuration (with SSL/TLS)
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,SSL://0.0.0.0:9093,CONTROLLER://0.0.0.0:9094
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,SSL://localhost:9093
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,SSL:SSL,CONTROLLER:PLAINTEXT
       - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_SSL_KEYSTORE_LOCATION=/etc/kafka/certs/server-cert.pem
+      - KAFKA_SSL_KEYSTORE_TYPE=PEM
+      - KAFKA_SSL_KEY_LOCATION=/etc/kafka/certs/server-key.pem
+      - KAFKA_SSL_TRUSTSTORE_LOCATION=/etc/kafka/ca/ca-cert.pem
+      - KAFKA_SSL_TRUSTSTORE_TYPE=PEM
+      - KAFKA_SSL_CLIENT_AUTH=none
+
+      # Replication & Topic Configuration
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
       - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
@@ -498,14 +543,16 @@ services:
       - KAFKA_LOG_RETENTION_HOURS=168
       - KAFKA_LOG_SEGMENT_BYTES=1073741824
       - KAFKA_NUM_PARTITIONS=3
+
+      # Storage Configuration
+      - KAFKA_LOG_DIRS=/var/lib/kafka/data
     volumes:
       - kafka_data:/var/lib/kafka/data
+      - ../secrets/certificates/kafka:/etc/kafka/certs:ro
+      - ../secrets/certificates/ca:/etc/kafka/ca:ro
     networks:
       - control_network
       - data_network
-    depends_on:
-      zookeeper:
-        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:
@@ -526,7 +573,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 40s
 
   # Confluent Schema Registry
   schema-registry:
@@ -534,17 +581,24 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-schema-registry
     ports:
       - "${SCHEMA_REGISTRY_PORT:-8085}:8081"
+      - "${SCHEMA_REGISTRY_HTTPS_PORT:-8445}:8443"
     environment:
       - SCHEMA_REGISTRY_HOST_NAME=schema-registry
       - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=kafka:9092
-      - SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:8081
+      - SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:8081,https://0.0.0.0:8443
       - SCHEMA_REGISTRY_KAFKASTORE_TOPIC=_schemas
       - SCHEMA_REGISTRY_KAFKASTORE_TOPIC_REPLICATION_FACTOR=1
       - SCHEMA_REGISTRY_DEBUG=false
       - SCHEMA_REGISTRY_AVRO_COMPATIBILITY_LEVEL=BACKWARD
       - SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL=INFO
+      - SCHEMA_REGISTRY_SSL_KEYSTORE_LOCATION=/etc/schema-registry/certs/server-cert.pem
+      - SCHEMA_REGISTRY_SSL_KEYSTORE_PASSWORD=""
+      - SCHEMA_REGISTRY_SSL_KEY_PASSWORD=""
+      - SCHEMA_REGISTRY_SSL_TRUSTSTORE_LOCATION=/etc/schema-registry/ca/ca-cert.pem
     volumes:
       - schema_registry_data:/var/lib/schema-registry
+      - ../secrets/certificates/schema-registry:/etc/schema-registry/certs:ro
+      - ../secrets/certificates/ca:/etc/schema-registry/ca:ro
     networks:
       - control_network
     depends_on:
@@ -623,9 +677,14 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       S3_PATH_STYLE_ACCESS: "true"
+      FLINK_SSL_ENABLED: "true"
+      FLINK_SSL_KEYSTORE: "/opt/flink/certs/server-cert.pem"
+      FLINK_SSL_TRUSTSTORE: "/opt/flink/ca/ca-cert.pem"
     volumes:
       - flink_checkpoints:/opt/flink/checkpoints
       - flink_savepoints:/opt/flink/savepoints
+      - ../secrets/certificates/flink:/opt/flink/certs:ro
+      - ../secrets/certificates/ca:/opt/flink/ca:ro
     networks:
       - data_network
       - control_network
@@ -670,9 +729,14 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       S3_PATH_STYLE_ACCESS: "true"
+      FLINK_SSL_ENABLED: "true"
+      FLINK_SSL_KEYSTORE: "/opt/flink/certs/server-cert.pem"
+      FLINK_SSL_TRUSTSTORE: "/opt/flink/ca/ca-cert.pem"
     volumes:
       - flink_checkpoints:/opt/flink/checkpoints
       - flink_savepoints:/opt/flink/savepoints
+      - ../secrets/certificates/flink:/opt/flink/certs:ro
+      - ../secrets/certificates/ca:/opt/flink/ca:ro
     networks:
       - data_network
       - control_network
@@ -698,9 +762,13 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-kafka-connect
     ports:
       - "${KAFKA_CONNECT_PORT:-8083}:8083"
+      - "${KAFKA_CONNECT_HTTPS_PORT:-8444}:8444"
     environment:
       - CONNECT_BOOTSTRAP_SERVERS=kafka:9092
       - CONNECT_REST_PORT=8083
+      - CONNECT_REST_ADVERTISED_PORT=8083
+      - CONNECT_REST_ADVERTISED_HTTPS_PORT=8444
+      - CONNECT_LISTENERS=http://0.0.0.0:8083,https://0.0.0.0:8444
       - CONNECT_GROUP_ID=debezium-connect-cluster
       - CONNECT_CONFIG_STORAGE_TOPIC=debezium-connect-configs
       - CONNECT_OFFSET_STORAGE_TOPIC=debezium-connect-offsets
@@ -717,8 +785,13 @@ services:
       - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
       - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect
       - CONNECT_PLUGIN_PATH=/usr/share/confluent-hub-components
+      # SSL/TLS Configuration
+      - CONNECT_SSL_KEYSTORE_LOCATION=/etc/kafka-connect/certs/server-cert.pem
+      - CONNECT_SSL_TRUSTSTORE_LOCATION=/etc/kafka-connect/ca/ca-cert.pem
     volumes:
       - kafka_connect_data:/var/lib/kafka-connect
+      - ../secrets/certificates/kafka-connect:/etc/kafka-connect/certs:ro
+      - ../secrets/certificates/ca:/etc/kafka-connect/ca:ro
     networks:
       - data_network
       - control_network
@@ -752,16 +825,27 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-clickhouse
     ports:
       - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"
+      - "${CLICKHOUSE_HTTPS_PORT:-8443}:8443"
       - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
+      - "${CLICKHOUSE_NATIVE_SECURE_PORT:-9440}:9440"
       - "9009:9009"
     environment:
       - CLICKHOUSE_DB=${CLICKHOUSE_DB:-default}
       - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
-      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-}
+      - CLICKHOUSE_PASSWORD_FILE=/run/secrets/clickhouse_password
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+      - CLICKHOUSE_HTTPS_PORT=${CLICKHOUSE_HTTPS_PORT:-8443}
+      - CLICKHOUSE_TCP_PORT_SECURE=${CLICKHOUSE_NATIVE_SECURE_PORT:-9440}
+      - CLICKHOUSE_OPENSSL_SERVER_CERT_FILE=/etc/clickhouse-server/certs/server-cert.pem
+      - CLICKHOUSE_OPENSSL_SERVER_KEY_FILE=/etc/clickhouse-server/certs/server-key.pem
+      - CLICKHOUSE_OPENSSL_CA_CERT_FILE=/etc/clickhouse-server/ca/ca-cert.pem
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - clickhouse_logs:/var/log/clickhouse-server
+      - ../secrets/certificates/clickhouse:/etc/clickhouse-server/certs:ro
+      - ../secrets/certificates/ca:/etc/clickhouse-server/ca:ro
+    secrets:
+      - clickhouse_password
     networks:
       - storage_network
       - data_network
@@ -824,11 +908,14 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-prometheus
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
+      - "${PROMETHEUS_HTTPS_PORT:-9443}:9443"
     environment:
       - TZ=${TIMEZONE:-UTC}
     volumes:
       - ../configs/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ../configs/monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ../secrets/certificates/prometheus:/etc/prometheus/certs:ro
+      - ../secrets/certificates/ca:/etc/prometheus/ca:ro
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -837,6 +924,8 @@ services:
       - "--web.console.libraries=/usr/share/prometheus/console_libraries"
       - "--web.console.templates=/usr/share/prometheus/consoles"
       - "--web.enable-lifecycle"
+      - "--web.listen-address=:9443"
+      - "--web.config.file=/etc/prometheus/web-config.yml"
     networks:
       - management_network
       - data_network
@@ -859,7 +948,8 @@ services:
           "--quiet",
           "--tries=1",
           "--spider",
-          "http://localhost:9090/-/healthy",
+          "--no-check-certificate",
+          "https://localhost:9443/-/healthy",
         ]
       interval: ${HEALTHCHECK_INTERVAL:-30s}
       timeout: ${HEALTHCHECK_TIMEOUT:-10s}
@@ -872,16 +962,26 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-grafana
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
+      - "${GRAFANA_HTTPS_PORT:-3443}:3443"
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
       - GF_USERS_ALLOW_SIGN_UP=${GRAFANA_ALLOW_SIGN_UP:-false}
-      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-https://localhost:3443}
+      - GF_SERVER_PROTOCOL=${GRAFANA_PROTOCOL:-https}
+      - GF_SERVER_HTTP_PORT=${GRAFANA_PORT:-3000}
+      - GF_SERVER_HTTPS_PORT=${GRAFANA_HTTPS_PORT:-3443}
+      - GF_SERVER_CERT_FILE=/etc/grafana/certs/server-cert.pem
+      - GF_SERVER_CERT_KEY=/etc/grafana/certs/server-key.pem
       - GF_INSTALL_PLUGINS=${GRAFANA_INSTALL_PLUGINS:-}
       - TZ=${TIMEZONE:-UTC}
     volumes:
       - grafana_data:/var/lib/grafana
       - ../configs/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../secrets/certificates/grafana:/etc/grafana/certs:ro
+      - ../secrets/certificates/ca:/etc/grafana/ca:ro
+    secrets:
+      - grafana_admin_password
     networks:
       - management_network
     depends_on:
@@ -904,7 +1004,8 @@ services:
           "--quiet",
           "--tries=1",
           "--spider",
-          "http://localhost:3000/api/health",
+          "--no-check-certificate",
+          "https://localhost:3443/api/health",
         ]
       interval: ${HEALTHCHECK_INTERVAL:-30s}
       timeout: ${HEALTHCHECK_TIMEOUT:-10s}
@@ -917,10 +1018,13 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-loki
     ports:
       - "${LOKI_PORT:-3100}:3100"
+      - "${LOKI_HTTPS_PORT:-3143}:3143"
     environment:
       - TZ=${TIMEZONE:-UTC}
     volumes:
       - ../configs/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - ../secrets/certificates/loki:/etc/loki/certs:ro
+      - ../secrets/certificates/ca:/etc/loki/ca:ro
       - loki_data:/loki
     command: -config.file=/etc/loki/local-config.yaml
     networks:
@@ -997,17 +1101,22 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-alertmanager
     ports:
       - "${ALERTMANAGER_PORT:-9095}:9093"
+      - "${ALERTMANAGER_HTTPS_PORT:-9445}:9445"
     environment:
       - TZ=${TIMEZONE:-UTC}
     volumes:
       - ../configs/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - ../configs/monitoring/alertmanager/templates:/etc/alertmanager/templates:ro
+      - ../secrets/certificates/alertmanager:/etc/alertmanager/certs:ro
+      - ../secrets/certificates/ca:/etc/alertmanager/ca:ro
       - alertmanager_data:/alertmanager
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--storage.path=/alertmanager"
-      - "--web.external-url=http://localhost:9093"
-      - "--cluster.advertise-address=0.0.0.0:9093"
+      - "--web.external-url=https://localhost:9445"
+      - "--web.listen-address=:9445"
+      - "--cluster.advertise-address=0.0.0.0:9445"
+      - "--web.config.file=/etc/alertmanager/web-config.yml"
     networks:
       - management_network
     depends_on:
@@ -1049,18 +1158,21 @@ services:
       - KC_DB=postgres
       - KC_DB_URL=jdbc:postgresql://postgresql:5432/${KEYCLOAK_DB:-keycloak}
       - KC_DB_USERNAME=${KEYCLOAK_DB_USER:-keycloak_user}
-      - KC_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD:-keycloak_pass}
+      - KC_DB_PASSWORD_FILE=/run/secrets/keycloak_db_password
 
       # Admin User
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN_USER:-admin}
-      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD_FILE=/run/secrets/keycloak_admin_password
 
       # Keycloak Configuration
       - KC_HOSTNAME=${KEYCLOAK_HOSTNAME:-localhost}
-      - KC_HOSTNAME_PORT=${KEYCLOAK_PORT:-8180}
+      - KC_HOSTNAME_PORT=${KEYCLOAK_HTTPS_PORT:-8543}
       - KC_HOSTNAME_STRICT=false
       - KC_HOSTNAME_STRICT_HTTPS=false
       - KC_HTTP_ENABLED=true
+      - KC_HTTPS_ENABLED=true
+      - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/certs/server-cert.pem
+      - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/certs/server-key.pem
       - KC_HEALTH_ENABLED=true
       - KC_METRICS_ENABLED=true
 
@@ -1069,6 +1181,11 @@ services:
       - KC_HOSTNAME_STRICT_BACKCHANNEL=false
     volumes:
       - keycloak_data:/opt/keycloak/data
+      - ../secrets/certificates/keycloak:/opt/keycloak/certs:ro
+      - ../secrets/certificates/ca:/opt/keycloak/ca:ro
+    secrets:
+      - keycloak_admin_password
+      - keycloak_db_password
     networks:
       - management_network
       - storage_network
@@ -1100,10 +1217,6 @@ volumes:
   minio_data:
     driver: local
   postgresql_data:
-    driver: local
-  zookeeper_data:
-    driver: local
-  zookeeper_log:
     driver: local
   kafka_data:
     driver: local

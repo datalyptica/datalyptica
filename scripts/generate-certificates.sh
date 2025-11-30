@@ -12,8 +12,8 @@ echo "=================================================="
 echo "Certificate directory: $CERT_DIR"
 echo ""
 
-# Create directory structure
-mkdir -p "$CERT_DIR"/{ca,postgresql,minio,nessie,trino,kafka,grafana}
+# Create directory structure for all services
+mkdir -p "$CERT_DIR"/{ca,postgresql,minio,nessie,trino,kafka,grafana,prometheus,schema-registry,kafka-connect,clickhouse,keycloak,flink,spark,loki,alertmanager}
 
 # Function to generate CA
 generate_ca() {
@@ -104,25 +104,67 @@ EOF
 # Generate CA
 generate_ca
 
-# Generate service certificates
-generate_service_cert "postgresql" "docker-postgresql" "DNS.4 = docker-postgresql"
-generate_service_cert "minio" "docker-minio" "DNS.4 = docker-minio\nDNS.5 = minio.local"
-generate_service_cert "nessie" "docker-nessie" "DNS.4 = docker-nessie"
-generate_service_cert "trino" "docker-trino" "DNS.4 = docker-trino"
-generate_service_cert "kafka" "docker-kafka" "DNS.4 = docker-kafka\nDNS.5 = docker-zookeeper"
-generate_service_cert "grafana" "docker-grafana" "DNS.4 = docker-grafana"
+# Generate service certificates for all 20 services
+
+echo ""
+echo "📦 Generating certificates for all ShuDL services..."
+echo ""
+
+# Storage Layer
+generate_service_cert "postgresql" "docker-postgresql" "DNS.4 = docker-postgresql\nDNS.5 = postgresql"
+generate_service_cert "minio" "docker-minio" "DNS.4 = docker-minio\nDNS.5 = minio.local\nDNS.6 = minio"
+generate_service_cert "nessie" "docker-nessie" "DNS.4 = docker-nessie\nDNS.5 = nessie"
+
+# Streaming Layer
+generate_service_cert "kafka" "docker-kafka" "DNS.4 = docker-kafka\nDNS.5 = kafka"
+generate_service_cert "schema-registry" "docker-schema-registry" "DNS.4 = docker-schema-registry\nDNS.5 = schema-registry"
+
+# Processing Layer
+generate_service_cert "spark" "docker-spark-master" "DNS.4 = docker-spark-master\nDNS.5 = docker-spark-worker\nDNS.6 = spark-master\nDNS.7 = spark-worker"
+generate_service_cert "flink" "docker-flink-jobmanager" "DNS.4 = docker-flink-jobmanager\nDNS.5 = docker-flink-taskmanager\nDNS.6 = flink-jobmanager\nDNS.7 = flink-taskmanager"
+
+# Query Layer
+generate_service_cert "trino" "docker-trino" "DNS.4 = docker-trino\nDNS.5 = trino"
+generate_service_cert "clickhouse" "docker-clickhouse" "DNS.4 = docker-clickhouse\nDNS.5 = clickhouse"
+generate_service_cert "kafka-connect" "docker-kafka-connect" "DNS.4 = docker-kafka-connect\nDNS.5 = kafka-connect"
+
+# Observability Layer  
+generate_service_cert "prometheus" "docker-prometheus" "DNS.4 = docker-prometheus\nDNS.5 = prometheus"
+generate_service_cert "grafana" "docker-grafana" "DNS.4 = docker-grafana\nDNS.5 = grafana"
+generate_service_cert "loki" "docker-loki" "DNS.4 = docker-loki\nDNS.5 = loki"
+generate_service_cert "alertmanager" "docker-alertmanager" "DNS.4 = docker-alertmanager\nDNS.5 = alertmanager"
+generate_service_cert "keycloak" "docker-keycloak" "DNS.4 = docker-keycloak\nDNS.5 = keycloak"
 
 echo ""
 echo "✅ All certificates generated successfully!"
 echo ""
 echo "📁 Certificate locations:"
 echo "  CA Certificate: $CERT_DIR/ca/ca-cert.pem"
-echo "  PostgreSQL: $CERT_DIR/postgresql/"
-echo "  MinIO: $CERT_DIR/minio/"
-echo "  Nessie: $CERT_DIR/nessie/"
-echo "  Trino: $CERT_DIR/trino/"
-echo "  Kafka: $CERT_DIR/kafka/"
-echo "  Grafana: $CERT_DIR/grafana/"
+echo ""
+echo "  Storage Layer:"
+echo "    - PostgreSQL: $CERT_DIR/postgresql/"
+echo "    - MinIO: $CERT_DIR/minio/"
+echo "    - Nessie: $CERT_DIR/nessie/"
+echo ""
+echo "  Streaming Layer:"
+echo "    - Kafka: $CERT_DIR/kafka/"
+echo "    - Schema Registry: $CERT_DIR/schema-registry/"
+echo ""
+echo "  Processing Layer:"
+echo "    - Spark: $CERT_DIR/spark/"
+echo "    - Flink: $CERT_DIR/flink/"
+echo ""
+echo "  Query Layer:"
+echo "    - Trino: $CERT_DIR/trino/"
+echo "    - ClickHouse: $CERT_DIR/clickhouse/"
+echo "    - Kafka Connect: $CERT_DIR/kafka-connect/"
+echo ""
+echo "  Observability Layer:"
+echo "    - Prometheus: $CERT_DIR/prometheus/"
+echo "    - Grafana: $CERT_DIR/grafana/"
+echo "    - Loki: $CERT_DIR/loki/"
+echo "    - Alertmanager: $CERT_DIR/alertmanager/"
+echo "    - Keycloak: $CERT_DIR/keycloak/"
 echo ""
 echo "⚠️  IMPORTANT:"
 echo "  - Keep the CA private key secure: $CERT_DIR/ca/ca-key.pem"

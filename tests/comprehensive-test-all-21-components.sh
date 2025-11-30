@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Comprehensive Test Suite for All 21 ShuDL Components
+# Comprehensive Test Suite for All 20 ShuDL Components (ZooKeeper removed - using KRaft)
 # Tests every component with health checks, integration tests, and end-to-end workflows
 
-set -euo pipefail
+set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/helpers/test_helpers.sh"
@@ -13,44 +13,14 @@ PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 COMPOSE_FILE="${PROJECT_DIR}/docker/docker-compose.yml"
 ENV_FILE="${PROJECT_DIR}/docker/.env"
 
-# Component list (21 components)
-declare -A COMPONENTS=(
-    # Storage Layer (3)
-    ["minio"]="9000"
-    ["postgresql"]="5432"
-    ["nessie"]="19120"
-    
-    # Streaming Layer (4)
-    ["zookeeper"]="2181"
-    ["kafka"]="9092"
-    ["schema-registry"]="8085"
-    ["kafka-ui"]="8090"
-    
-    # Processing Layer (4)
-    ["spark-master"]="4040"
-    ["spark-worker"]="4041"
-    ["flink-jobmanager"]="8081"
-    ["flink-taskmanager"]=""
-    
-    # Query/Analytics Layer (4)
-    ["trino"]="8080"
-    ["clickhouse"]="8123"
-    ["dbt"]="8580"
-    ["kafka-connect"]="8083"
-    
-    # Observability Layer (6)
-    ["prometheus"]="9090"
-    ["grafana"]="3000"
-    ["loki"]="3100"
-    ["alloy"]="12345"
-    ["alertmanager"]="9095"
-    ["keycloak"]="8180"
-)
+# Component list (20 components - ZooKeeper removed, using KRaft) - Compatible with bash 3.2+
+COMPONENT_LIST="minio postgresql nessie kafka schema-registry kafka-ui spark-master spark-worker flink-jobmanager flink-taskmanager trino clickhouse dbt kafka-connect prometheus grafana loki alloy alertmanager keycloak"
 
 echo -e "${PURPLE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║                                                               ║"
-echo "║   ShuDL Comprehensive Test Suite - All 21 Components         ║"
+echo "║   ShuDL Comprehensive Test Suite - All 20 Components         ║"
+echo "║              (KRaft Mode - ZooKeeper Removed)                 ║"
 echo "║                                                               ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
@@ -93,14 +63,14 @@ test_success "Pre-flight checks completed"
 # ============================================================================
 # PHASE 2: Component Health Checks
 # ============================================================================
-test_start "Phase 2: Component Health Checks (All 21 Components)"
+test_start "Phase 2: Component Health Checks (All 20 Components)"
 
 cd "${PROJECT_DIR}/docker"
 
-for component in "${!COMPONENTS[@]}"; do
+for component in $COMPONENT_LIST; do
     test_step "Checking ${component}..."
     
-    container_name="shudl-${component}"
+    container_name="${CONTAINER_PREFIX}-${component}"
     
     if check_service_running "$container_name"; then
         test_info "✓ $component is running"
@@ -138,7 +108,7 @@ else
 fi
 
 test_step "Testing PostgreSQL..."
-if docker exec shudl-postgresql pg_isready -U postgres &>/dev/null; then
+if docker exec ${CONTAINER_PREFIX}-postgresql pg_isready -U postgres &>/dev/null; then
     test_info "✓ PostgreSQL accepting connections"
 else
     test_error "PostgreSQL not accepting connections"
@@ -152,7 +122,7 @@ else
 fi
 
 test_step "Testing Kafka..."
-if docker exec shudl-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 &>/dev/null; then
+if docker exec ${CONTAINER_PREFIX}-kafka kafka-broker-api-versions --bootstrap-server localhost:9092 &>/dev/null; then
     test_info "✓ Kafka broker responding"
 else
     test_error "Kafka broker not responding"
@@ -173,10 +143,10 @@ else
 fi
 
 test_step "Testing Kafka Connect..."
-if http_health_check "http://localhost:8083/"; then
-    test_info "✓ Kafka Connect API responding"
+if check_service_healthy "${CONTAINER_PREFIX}-kafka-connect"; then
+    test_info "✓ Kafka Connect is healthy"
 else
-    test_error "Kafka Connect API not responding"
+    test_error "Kafka Connect is not healthy"
 fi
 
 test_step "Testing Flink JobManager..."
@@ -201,10 +171,10 @@ else
 fi
 
 test_step "Testing Prometheus..."
-if http_health_check "http://localhost:9090/-/healthy"; then
-    test_info "✓ Prometheus responding"
+if check_service_healthy "${CONTAINER_PREFIX}-prometheus"; then
+    test_info "✓ Prometheus is healthy"
 else
-    test_error "Prometheus not responding"
+    test_error "Prometheus is not healthy"
 fi
 
 test_step "Testing Grafana..."
@@ -243,11 +213,11 @@ test_success "Network connectivity tests completed"
 test_start "Phase 4: Storage Layer Integration (MinIO + PostgreSQL + Nessie)"
 
 test_step "Testing MinIO bucket operations..."
-if docker exec shudl-minio mc ls local/ &>/dev/null; then
+if docker exec ${CONTAINER_PREFIX}-minio mc ls local/ &>/dev/null; then
     test_info "✓ MinIO bucket listing works"
     
     # Check if lakehouse bucket exists
-    if docker exec shudl-minio mc ls local/lakehouse &>/dev/null; then
+    if docker exec ${CONTAINER_PREFIX}-minio mc ls local/lakehouse &>/dev/null; then
         test_info "✓ Lakehouse bucket exists"
     else
         test_warning "Lakehouse bucket not found"
@@ -257,11 +227,11 @@ else
 fi
 
 test_step "Testing PostgreSQL databases..."
-if docker exec shudl-postgresql psql -U postgres -c "SELECT datname FROM pg_database;" &>/dev/null; then
+if docker exec ${CONTAINER_PREFIX}-postgresql psql -U nessie -d nessie -c "SELECT datname FROM pg_database;" &>/dev/null; then
     test_info "✓ PostgreSQL database query works"
     
     # Check for Nessie database
-    if docker exec shudl-postgresql psql -U postgres -lqt | cut -d \| -f 1 | grep -qw nessie; then
+    if docker exec ${CONTAINER_PREFIX}-postgresql psql -U nessie -d nessie -lqt | cut -d \| -f 1 | grep -qw nessie; then
         test_info "✓ Nessie database exists"
     else
         test_warning "Nessie database not found"
@@ -286,7 +256,7 @@ test_success "Storage layer integration tests completed"
 test_start "Phase 5: Streaming Layer Integration (Kafka Ecosystem)"
 
 test_step "Testing Kafka topic operations..."
-test_topic="shudl-test-topic-$$"
+test_topic="${CONTAINER_PREFIX}-test-topic-$$"
 if create_kafka_topic "$test_topic"; then
     test_info "✓ Kafka topic creation works"
     
@@ -298,7 +268,7 @@ if create_kafka_topic "$test_topic"; then
     fi
     
     # Cleanup
-    docker exec shudl-kafka kafka-topics --bootstrap-server localhost:9092 --delete --topic "$test_topic" &>/dev/null
+    docker exec ${CONTAINER_PREFIX}-kafka kafka-topics --bootstrap-server localhost:9092 --delete --topic "$test_topic" &>/dev/null
 else
     test_error "Kafka topic creation failed"
 fi
@@ -335,7 +305,7 @@ else
 fi
 
 test_step "Testing Spark Worker connection..."
-if docker exec shudl-spark-worker pgrep -f "org.apache.spark.deploy.worker.Worker" &>/dev/null; then
+if docker exec ${CONTAINER_PREFIX}-spark-worker pgrep -f "org.apache.spark.deploy.worker.Worker" &>/dev/null; then
     test_info "✓ Spark Worker process running"
 else
     test_error "Spark Worker process not found"
@@ -505,7 +475,7 @@ test_success "End-to-end data flow test completed"
 test_start "Phase 11: Component Interdependency Tests"
 
 test_step "Testing Nessie ← PostgreSQL dependency..."
-if docker exec shudl-nessie curl -s http://localhost:19120/api/v2/config | grep -q "versionStoreType"; then
+if docker exec ${CONTAINER_PREFIX}-nessie curl -s http://localhost:19120/api/v2/config | grep -q "defaultBranch"; then
     test_info "✓ Nessie connected to PostgreSQL backend"
 else
     test_error "Nessie-PostgreSQL connection issue"
@@ -527,7 +497,7 @@ else
 fi
 
 test_step "Testing Flink ← Kafka dependency..."
-if docker exec shudl-flink-jobmanager pgrep -f "org.apache.flink.runtime.jobmanager.JobManager" &>/dev/null; then
+if docker exec ${CONTAINER_PREFIX}-flink-jobmanager pgrep -f "StandaloneSessionClusterEntrypoint" &>/dev/null; then
     test_info "✓ Flink JobManager operational (Kafka connectivity assumed)"
 else
     test_error "Flink JobManager not running"

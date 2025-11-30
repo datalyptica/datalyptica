@@ -29,7 +29,7 @@ fi
 # Simulate sensor data
 for i in {1..10}; do
     sensor_data="{\"sensor_id\": $i, \"temperature\": $((20 + i)), \"humidity\": $((50 + i)), \"timestamp\": \"2024-01-01T10:0$i:00Z\"}"
-    echo "$sensor_data" | docker exec -i shudl-kafka kafka-console-producer \
+    echo "$sensor_data" | docker exec -i ${CONTAINER_PREFIX}-kafka kafka-console-producer \
         --bootstrap-server localhost:9092 \
         --topic "$sensor_topic" &>/dev/null
 done
@@ -153,7 +153,7 @@ fi
 
 # Cleanup
 test_step "Cleanup test resources..."
-docker exec shudl-kafka kafka-topics --bootstrap-server localhost:9092 --delete --topic "$sensor_topic" &>/dev/null || true
+docker exec ${CONTAINER_PREFIX}-kafka kafka-topics --bootstrap-server localhost:9092 --delete --topic "$sensor_topic" &>/dev/null || true
 execute_trino_query "DROP TABLE IF EXISTS iceberg.iot_pipeline.sensor_readings" 30 || true
 execute_trino_query "DROP SCHEMA IF EXISTS iceberg.iot_pipeline" 30 || true
 execute_clickhouse_query "DROP TABLE IF EXISTS iot_analytics.sensor_metrics" &>/dev/null || true

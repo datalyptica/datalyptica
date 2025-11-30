@@ -25,7 +25,7 @@ fi
 
 # Produce test message to Kafka
 test_message='{"id": 1, "name": "integration_test", "timestamp": "2024-01-01T10:00:00Z"}'
-echo "$test_message" | docker exec -i shudl-kafka kafka-console-producer \
+echo "$test_message" | docker exec -i ${CONTAINER_PREFIX}-kafka kafka-console-producer \
     --bootstrap-server localhost:9092 \
     --topic "$test_topic" &>/dev/null
 
@@ -36,7 +36,7 @@ else
 fi
 
 # Verify message in Kafka
-message_count=$(docker exec shudl-kafka kafka-console-consumer \
+message_count=$(docker exec ${CONTAINER_PREFIX}-kafka kafka-console-consumer \
     --bootstrap-server localhost:9092 \
     --topic "$test_topic" \
     --from-beginning \
@@ -50,7 +50,7 @@ else
 fi
 
 # Cleanup
-docker exec shudl-kafka kafka-topics --bootstrap-server localhost:9092 --delete --topic "$test_topic" &>/dev/null
+docker exec ${CONTAINER_PREFIX}-kafka kafka-topics --bootstrap-server localhost:9092 --delete --topic "$test_topic" &>/dev/null
 
 # ============================================================================
 # Test 2: Trino → Iceberg → Trino Flow

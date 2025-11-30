@@ -19,6 +19,19 @@ TESTS_PASSED=0
 TESTS_FAILED=0
 TESTS_TOTAL=0
 
+# Auto-detect container prefix (shudl- or docker-)
+detect_container_prefix() {
+    if docker ps --format '{{.Names}}' | grep -q '^shudl-'; then
+        echo "shudl"
+    elif docker ps --format '{{.Names}}' | grep -q '^docker-'; then
+        echo "docker"
+    else
+        echo "shudl"  # default
+    fi
+}
+
+CONTAINER_PREFIX=$(detect_container_prefix)
+
 # Logging functions
 test_start() {
     TEST_NAME="$1"
@@ -114,7 +127,9 @@ execute_trino_query() {
     local query="$1"
     local timeout="${2:-30}"
     
-    timeout "$timeout" docker exec shudl-trino trino --execute "$query" 2>/dev/null
+    # Use helper script for Trino REST API
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    "${script_dir}/trino_query.sh" "$query" 2>/dev/null
     return $?
 }
 
@@ -144,12 +159,12 @@ except Exception as e:
     sys.exit(1)
 EOF
     
-    docker cp "$temp_script" shudl-spark-master:/tmp/spark_query.py
-    timeout "$timeout" docker exec shudl-spark-master /opt/spark/bin/spark-submit /tmp/spark_query.py 2>/dev/null
+    docker cp "$temp_script" ${CONTAINER_PREFIX}-spark-master:/tmp/spark_query.py
+    timeout "$timeout" docker exec ${CONTAINER_PREFIX}-spark-master /opt/spark/bin/spark-submit /tmp/spark_query.py 2>/dev/null
     local result=$?
     
     rm -f "$temp_script"
-    docker exec shudl-spark-master rm -f /tmp/spark_query.py 2>/dev/null || true
+    docker exec ${CONTAINER_PREFIX}-spark-master rm -f /tmp/spark_query.py 2>/dev/null || true
     
     return $result
 }
@@ -158,7 +173,7 @@ EOF
 execute_clickhouse_query() {
     local query="$1"
     
-    docker exec shudl-clickhouse clickhouse-client --query "$query" 2>/dev/null
+    docker exec ${CONTAINER_PREFIX}-clickhouse clickhouse-client --query "$query" 2>/dev/null
     return $?
 }
 
@@ -166,7 +181,7 @@ execute_clickhouse_query() {
 check_kafka_topic() {
     local topic="$1"
     
-    docker exec shudl-kafka kafka-topics --bootstrap-server localhost:9092 --list 2>/dev/null | grep -q "^${topic}$"
+    docker exec ${CONTAINER_PREFIX}-kafka kafka-topics --bootstrap-server localhost:9092 --list 2>/dev/null | grep -q "^${topic}$"
     return $?
 }
 
@@ -176,7 +191,7 @@ create_kafka_topic() {
     local partitions="${2:-3}"
     local replication="${3:-1}"
     
-    docker exec shudl-kafka kafka-topics --bootstrap-server localhost:9092 \
+    docker exec ${CONTAINER_PREFIX}-kafka kafka-topics --bootstrap-server localhost:9092 \
         --create --topic "$topic" \
         --partitions "$partitions" \
         --replication-factor "$replication" 2>/dev/null
