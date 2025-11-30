@@ -86,6 +86,68 @@ check_service_healthy() {
     fi
 }
 
+# Get the current Patroni primary node
+get_postgres_primary() {
+    # For HA setup, find the primary node
+    if check_service_running "${CONTAINER_PREFIX}-postgresql-patroni-1"; then
+        # Check patroni-1 first
+        if docker exec "${CONTAINER_PREFIX}-postgresql-patroni-1" \
+            psql -h localhost -U postgres -d postgres -tc "SELECT NOT pg_is_in_recovery();" 2>/dev/null | grep -q "t"; then
+            echo "${CONTAINER_PREFIX}-postgresql-patroni-1"
+            return 0
+        fi
+        # Check patroni-2
+        if check_service_running "${CONTAINER_PREFIX}-postgresql-patroni-2"; then
+            if docker exec "${CONTAINER_PREFIX}-postgresql-patroni-2" \
+                psql -h localhost -U postgres -d postgres -tc "SELECT NOT pg_is_in_recovery();" 2>/dev/null | grep -q "t"; then
+                echo "${CONTAINER_PREFIX}-postgresql-patroni-2"
+                return 0
+            fi
+        fi
+    fi
+    # Fallback to non-HA
+    if check_service_running "${CONTAINER_PREFIX}-postgresql"; then
+        echo "${CONTAINER_PREFIX}-postgresql"
+        return 0
+    fi
+    return 1
+}
+
+# Execute PostgreSQL command (auto-detects primary in HA mode)
+execute_postgres_query() {
+    local query="$1"
+    local database="${2:-postgres}"
+    local user="${3:-postgres}"
+    
+    local primary_node=$(get_postgres_primary)
+    if [ -n "$primary_node" ]; then
+        # Direct connection to primary (localhost trust auth enabled)
+        docker exec "$primary_node" \
+            psql -h localhost -U "$user" -d "$database" -c "$query" 2>/dev/null
+    else
+        return 1
+    fi
+}
+
+# Check PostgreSQL health (checks any available node)
+check_postgres_health() {
+    # For HA setup, check if any node is healthy
+    if check_service_running "${CONTAINER_PREFIX}-postgresql-patroni-1"; then
+        # Check if PostgreSQL is accepting connections locally
+        docker exec "${CONTAINER_PREFIX}-postgresql-patroni-1" \
+            psql -h localhost -U postgres -d postgres -c "SELECT 1;" &>/dev/null && return 0
+    fi
+    if check_service_running "${CONTAINER_PREFIX}-postgresql-patroni-2"; then
+        docker exec "${CONTAINER_PREFIX}-postgresql-patroni-2" \
+            psql -h localhost -U postgres -d postgres -c "SELECT 1;" &>/dev/null && return 0
+    fi
+    # Fallback to non-HA setup
+    if check_service_running "${CONTAINER_PREFIX}-postgresql"; then
+        docker exec "${CONTAINER_PREFIX}-postgresql" pg_isready -U postgres &>/dev/null && return 0
+    fi
+    return 1
+}
+
 # Wait for service to be healthy
 wait_for_service() {
     local service_name="$1"

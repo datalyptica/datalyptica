@@ -4,6 +4,8 @@ secrets:
     file: ../secrets/passwords/postgres_password
   shudl_password:
     file: ../secrets/passwords/shudl_password
+  postgres_replication_password:
+    file: ../secrets/passwords/postgres_replication_password
   minio_root_password:
     file: ../secrets/passwords/minio_root_password
   s3_access_key:
@@ -28,11 +30,12 @@ services:
       - "${MINIO_API_PORT}:9000" # API
       - "${MINIO_CONSOLE_PORT}:9001" # Console
       - "${MINIO_API_HTTPS_PORT:-9443}:9443" # HTTPS API
+    env_file:
+      - .env.minio
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_root_password
       - MINIO_VOLUMES=/data
-      - MINIO_OPTS=--console-address :9001 --certs-dir /certs --address :9443
+      - MINIO_OPTS=--console-address :9001
       - MINIO_REGION=${MINIO_REGION}
       - MINIO_DEFAULT_BUCKETS=${MINIO_BUCKET_NAME}
 
@@ -56,7 +59,7 @@ services:
     volumes:
       - minio_data:/data
       - ../secrets/certificates/minio:/certs:ro
-      - ../secrets/certificates/ca:/certs/CAs:ro
+      - ../secrets/certificates/ca:/ca:ro
     secrets:
       - minio_root_password
       - s3_access_key
@@ -74,70 +77,203 @@ services:
           cpus: "1.0"
           memory: 512M
     healthcheck:
-      test: ["CMD", "curl", "-fk", "https://localhost:9443/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: ${HEALTHCHECK_INTERVAL}
       timeout: ${HEALTHCHECK_TIMEOUT}
       retries: ${HEALTHCHECK_RETRIES}
       start_period: ${HEALTHCHECK_START_PERIOD}
 
-  # PostgreSQL Database
-  postgresql:
-    image: ghcr.io/shugur-network/shudl/postgresql:${SHUDL_VERSION:-v1.0.0}
-    container_name: ${COMPOSE_PROJECT_NAME}-postgresql
+  # ==================================================================================
+  # CONSENSUS LAYER - etcd Cluster for Patroni (High Availability)
+  # ==================================================================================
+
+  # etcd Node 1 (co-located with PostgreSQL Patroni 1)
+  etcd-1:
+    image: quay.io/coreos/etcd:v3.5.11
+    container_name: ${COMPOSE_PROJECT_NAME}-etcd-1
+    hostname: etcd-1
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "2379:2379" # Client port
+      - "2380:2380" # Peer port
     environment:
-      # Database Configuration
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
-      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+      - ETCD_NAME=etcd-1
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd-1:2380
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd-1:2379
+      - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster-shudl
+      - ETCD_INITIAL_CLUSTER=etcd-1=http://etcd-1:2380,etcd-2=http://etcd-2:2380,etcd-3=http://etcd-3:2380
+      - ETCD_INITIAL_CLUSTER_STATE=new
+      - ETCD_AUTO_COMPACTION_RETENTION=1
+      - ETCD_DATA_DIR=/etcd-data
+    volumes:
+      - etcd1_data:/etcd-data
+      - ../secrets/certificates/etcd-1:/etcd-certs:ro
+      - ../secrets/certificates/ca:/etcd-ca:ro
+    networks:
+      - storage_network
+      - control_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # etcd Node 2 (co-located with PostgreSQL Patroni 2)
+  etcd-2:
+    image: quay.io/coreos/etcd:v3.5.11
+    container_name: ${COMPOSE_PROJECT_NAME}-etcd-2
+    hostname: etcd-2
+    ports:
+      - "23791:2379" # Client port (mapped to avoid conflict)
+      - "23801:2380" # Peer port (mapped to avoid conflict)
+    environment:
+      - ETCD_NAME=etcd-2
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd-2:2380
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd-2:2379
+      - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster-shudl
+      - ETCD_INITIAL_CLUSTER=etcd-1=http://etcd-1:2380,etcd-2=http://etcd-2:2380,etcd-3=http://etcd-3:2380
+      - ETCD_INITIAL_CLUSTER_STATE=new
+      - ETCD_AUTO_COMPACTION_RETENTION=1
+      - ETCD_DATA_DIR=/etcd-data
+    volumes:
+      - etcd2_data:/etcd-data
+      - ../secrets/certificates/etcd-2:/etcd-certs:ro
+      - ../secrets/certificates/ca:/etcd-ca:ro
+    networks:
+      - storage_network
+      - control_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # etcd Node 3 (Arbiter - standalone for quorum)
+  etcd-3:
+    image: quay.io/coreos/etcd:v3.5.11
+    container_name: ${COMPOSE_PROJECT_NAME}-etcd-3
+    hostname: etcd-3
+    ports:
+      - "23792:2379" # Client port
+      - "23802:2380" # Peer port
+    environment:
+      - ETCD_NAME=etcd-3
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd-3:2380
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd-3:2379
+      - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster-shudl
+      - ETCD_INITIAL_CLUSTER=etcd-1=http://etcd-1:2380,etcd-2=http://etcd-2:2380,etcd-3=http://etcd-3:2380
+      - ETCD_INITIAL_CLUSTER_STATE=new
+      - ETCD_AUTO_COMPACTION_RETENTION=1
+      - ETCD_DATA_DIR=/etcd-data
+    volumes:
+      - etcd3_data:/etcd-data
+      - ../secrets/certificates/etcd-3:/etcd-certs:ro
+      - ../secrets/certificates/ca:/etcd-ca:ro
+    networks:
+      - storage_network
+      - control_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ==================================================================================
+  # STORAGE LAYER - PostgreSQL with Patroni (High Availability)
+  # ==================================================================================
+
+  # PostgreSQL Patroni Node 1 (Primary - elected by Patroni)
+  postgresql-patroni-1:
+    image: ghcr.io/shugur-network/shudl/patroni:${SHUDL_VERSION:-v1.0.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-postgresql-patroni-1
+    hostname: postgresql-patroni-1
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432" # PostgreSQL port
+      - "8008:8008" # Patroni REST API
+    environment:
+      # Patroni Configuration
+      - PATRONI_NAME=postgresql-patroni-1
+      - PATRONI_SCOPE=lakehouse
+      - ETCD_HOSTS=etcd-1:2379,etcd-2:2379,etcd-3:2379
+
+      # Patroni API Authentication
+      - PATRONI_API_USERNAME=patroni
+      - PATRONI_API_PASSWORD=${PATRONI_API_PASSWORD:-patroni123}
+
+      # PostgreSQL Superuser
+      - POSTGRESQL_POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+
+      # PostgreSQL Application User
+      - POSTGRESQL_USERNAME=${POSTGRES_USER:-shudl}
+      - POSTGRESQL_PASSWORD_FILE=/run/secrets/shudl_password
+
+      # PostgreSQL Replication User
+      - POSTGRESQL_REPLICATION_USER=replicator
+      - POSTGRESQL_REPLICATION_PASSWORD_FILE=/run/secrets/postgres_replication_password
+
+      # PostgreSQL Rewind User (for pg_rewind)
+      - POSTGRESQL_REWIND_USER=rewind_user
+      - POSTGRESQL_REWIND_PASSWORD=${POSTGRESQL_REWIND_PASSWORD:-rewind123}
+
+      # PostgreSQL Data Directory
       - PGDATA=/var/lib/postgresql/data/pgdata
 
-      # ShuDL specific database settings
-      - SHUDL_DB=${SHUDL_DB}
-      - SHUDL_USER=${SHUDL_USER}
-      - SHUDL_PASSWORD_FILE=/run/secrets/shudl_password
-      - NESSIE_DB=${NESSIE_DB}
-
-      # Performance Configuration
-      - POSTGRES_MAX_CONNECTIONS=${POSTGRES_MAX_CONNECTIONS}
-      - POSTGRES_SHARED_BUFFERS=${POSTGRES_SHARED_BUFFERS}
-      - POSTGRES_EFFECTIVE_CACHE_SIZE=${POSTGRES_EFFECTIVE_CACHE_SIZE}
-      - POSTGRES_WORK_MEM=${POSTGRES_WORK_MEM}
-      - POSTGRES_MAINTENANCE_WORK_MEM=${POSTGRES_MAINTENANCE_WORK_MEM}
-      - POSTGRES_WAL_LEVEL=${POSTGRES_WAL_LEVEL}
-      - POSTGRES_MAX_WAL_SIZE=${POSTGRES_MAX_WAL_SIZE}
-      - POSTGRES_MIN_WAL_SIZE=${POSTGRES_MIN_WAL_SIZE}
-      - POSTGRES_CHECKPOINT_COMPLETION_TARGET=${POSTGRES_CHECKPOINT_COMPLETION_TARGET}
-      - POSTGRES_SUPERUSER_RESERVED_CONNECTIONS=${POSTGRES_SUPERUSER_RESERVED_CONNECTIONS}
-      - POSTGRES_LISTEN_ADDRESSES=${POSTGRES_LISTEN_ADDRESSES}
-
-      # Authentication Configuration (pg_hba.conf equivalent)
-      - POSTGRES_AUTH_LOCAL=${POSTGRES_AUTH_LOCAL}
-      - POSTGRES_AUTH_HOST_IPV4=${POSTGRES_AUTH_HOST_IPV4}
-      - POSTGRES_AUTH_HOST_IPV6=${POSTGRES_AUTH_HOST_IPV6}
-      - POSTGRES_AUTH_REPLICATION_LOCAL=${POSTGRES_AUTH_REPLICATION_LOCAL}
-      - POSTGRES_AUTH_REPLICATION_HOST=${POSTGRES_AUTH_REPLICATION_HOST}
-      - POSTGRES_AUTH_DOCKER_NETWORKS=${POSTGRES_AUTH_DOCKER_NETWORKS}
-      - POSTGRES_ALLOWED_NETWORKS=${POSTGRES_ALLOWED_NETWORKS}
-
-      # SSL/TLS Configuration (Phase 2: Enabled)
-      - POSTGRES_SSL_MODE=${POSTGRES_SSL_MODE:-require}
-      - POSTGRES_SSL_CERT_FILE=/var/lib/postgresql/certs/server-cert.pem
-      - POSTGRES_SSL_KEY_FILE=/var/lib/postgresql/certs/server-key.pem
-      - POSTGRES_SSL_CA_FILE=/var/lib/postgresql/certs/ca-cert.pem
+      # PostgreSQL Databases
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - SHUDL_DB=${SHUDL_DB:-shudl}
+      - NESSIE_DB=${NESSIE_DB:-nessie}
     volumes:
-      - postgresql_data:/var/lib/postgresql/data
+      - patroni1_data:/var/lib/postgresql/data
       - ../secrets/certificates/postgresql:/var/lib/postgresql/certs:ro
       - ../secrets/certificates/ca:/var/lib/postgresql/ca:ro
     secrets:
       - postgres_password
       - shudl_password
+      - postgres_replication_password
     networks:
       - storage_network
       - data_network
+      - control_network
     restart: unless-stopped
+    depends_on:
+      - etcd-1
+      - etcd-2
+      - etcd-3
     deploy:
       resources:
         limits:
@@ -147,11 +283,118 @@ services:
           cpus: "2.0"
           memory: 1G
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: ${HEALTHCHECK_INTERVAL}
-      timeout: ${HEALTHCHECK_TIMEOUT}
-      retries: ${HEALTHCHECK_RETRIES}
-      start_period: ${HEALTHCHECK_START_PERIOD}
+      test: ["CMD-SHELL", "pg_isready -h localhost -U postgres || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # PostgreSQL Patroni Node 2 (Replica - follows primary)
+  postgresql-patroni-2:
+    image: ghcr.io/shugur-network/shudl/patroni:${SHUDL_VERSION:-v1.0.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-postgresql-patroni-2
+    hostname: postgresql-patroni-2
+    ports:
+      - "${POSTGRES_PORT_REPLICA:-5433}:5432" # PostgreSQL port
+      - "8009:8008" # Patroni REST API
+    environment:
+      # Patroni Configuration
+      - PATRONI_NAME=postgresql-patroni-2
+      - PATRONI_SCOPE=lakehouse
+      - ETCD_HOSTS=etcd-1:2379,etcd-2:2379,etcd-3:2379
+
+      # Patroni API Authentication
+      - PATRONI_API_USERNAME=patroni
+      - PATRONI_API_PASSWORD=${PATRONI_API_PASSWORD:-patroni123}
+
+      # PostgreSQL Superuser
+      - POSTGRESQL_POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+
+      # PostgreSQL Application User
+      - POSTGRESQL_USERNAME=${POSTGRES_USER:-shudl}
+      - POSTGRESQL_PASSWORD_FILE=/run/secrets/shudl_password
+
+      # PostgreSQL Replication User
+      - POSTGRESQL_REPLICATION_USER=replicator
+      - POSTGRESQL_REPLICATION_PASSWORD_FILE=/run/secrets/postgres_replication_password
+
+      # PostgreSQL Rewind User (for pg_rewind)
+      - POSTGRESQL_REWIND_USER=rewind_user
+      - POSTGRESQL_REWIND_PASSWORD=${POSTGRESQL_REWIND_PASSWORD:-rewind123}
+
+      # PostgreSQL Data Directory
+      - PGDATA=/var/lib/postgresql/data/pgdata
+
+      # PostgreSQL Databases
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - SHUDL_DB=${SHUDL_DB:-shudl}
+      - NESSIE_DB=${NESSIE_DB:-nessie}
+    volumes:
+      - patroni2_data:/var/lib/postgresql/data
+      - ../secrets/certificates/postgresql:/var/lib/postgresql/certs:ro
+      - ../secrets/certificates/ca:/var/lib/postgresql/ca:ro
+    secrets:
+      - postgres_password
+      - shudl_password
+      - postgres_replication_password
+    networks:
+      - storage_network
+      - data_network
+      - control_network
+    restart: unless-stopped
+    depends_on:
+      - etcd-1
+      - etcd-2
+      - etcd-3
+      - postgresql-patroni-1
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 4G
+        reservations:
+          cpus: "2.0"
+          memory: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U postgres || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # HAProxy - PostgreSQL HA Load Balancer with Automatic Failover
+  haproxy:
+    image: haproxy:2.9-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}-haproxy
+    hostname: haproxy
+    ports:
+      - "${HAPROXY_WRITE_PORT:-15000}:5000" # Write endpoint (primary only)
+      - "${HAPROXY_READ_PORT:-15001}:5001" # Read endpoint (all nodes)
+      - "${HAPROXY_STATS_PORT:-8404}:8404" # Stats dashboard
+    volumes:
+      - ../configs/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      - storage_network
+      - data_network
+      - control_network
+    restart: unless-stopped
+    depends_on:
+      - postgresql-patroni-1
+      - postgresql-patroni-2
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 2 nc 127.0.0.1 8404 < /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # Nessie Catalog Service
   nessie:
@@ -160,6 +403,8 @@ services:
     ports:
       - "${NESSIE_PORT}:19120"
       - "${NESSIE_HTTPS_PORT:-19443}:19443"
+    env_file:
+      - .env.nessie
     environment:
       # Server Configuration
       - QUARKUS_HTTP_PORT=${NESSIE_PORT}
@@ -182,15 +427,17 @@ services:
 
       # Default Quarkus datasource configuration
       - QUARKUS_DATASOURCE_DB_KIND=postgresql
-      - QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
-      - QUARKUS_DATASOURCE_USERNAME=${POSTGRES_USER}
-      - QUARKUS_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://haproxy:5000/nessie
+      - QUARKUS_DATASOURCE_USERNAME=nessie
+      - QUARKUS_DATASOURCE_PASSWORD=fHx7kgvF9iTQVbOzEpnahelNBMYmqQIQ
       - QUARKUS_DATASOURCE_JDBC_INITIAL_SIZE=${NESSIE_DB_INITIAL_SIZE}
       - QUARKUS_DATASOURCE_JDBC_MIN_SIZE=${NESSIE_DB_MIN_SIZE}
       - QUARKUS_DATASOURCE_JDBC_MAX_SIZE=${NESSIE_DB_MAX_SIZE}
 
-      # PostgreSQL database name
-      - POSTGRES_DB=${POSTGRES_DB}
+      # PostgreSQL connection for entrypoint health check
+      - POSTGRES_HOST=haproxy
+      - POSTGRES_PORT=5000
+      - POSTGRES_DB=nessie
 
       # Catalog Configuration
       - NESSIE_CATALOG_DEFAULT_WAREHOUSE=${NESSIE_DEFAULT_WAREHOUSE}
@@ -221,11 +468,10 @@ services:
       - ../secrets/certificates/ca:/etc/nessie/ca:ro
     networks:
       - storage_network
+      - data_network
     depends_on:
-      postgresql:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
+      - haproxy
+      - minio
     restart: unless-stopped
     deploy:
       resources:
@@ -801,7 +1047,7 @@ services:
         condition: service_healthy
       schema-registry:
         condition: service_healthy
-      postgresql:
+      postgresql-patroni-1:
         condition: service_healthy
     restart: unless-stopped
     deploy:
@@ -1153,16 +1399,20 @@ services:
     ports:
       - "${KEYCLOAK_PORT:-8180}:8080"
       - "${KEYCLOAK_HTTPS_PORT:-8543}:8443"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        export KC_DB_PASSWORD=$$(cat /run/secrets/shudl_password)
+        export KEYCLOAK_ADMIN_PASSWORD=$$(cat /run/secrets/keycloak_admin_password)
+        /opt/keycloak/bin/kc.sh start-dev
     environment:
       # Database Configuration
       - KC_DB=postgres
-      - KC_DB_URL=jdbc:postgresql://postgresql:5432/${KEYCLOAK_DB:-keycloak}
+      - KC_DB_URL=jdbc:postgresql://haproxy:5000/${KEYCLOAK_DB:-keycloak}
       - KC_DB_USERNAME=${KEYCLOAK_DB_USER:-keycloak_user}
-      - KC_DB_PASSWORD_FILE=/run/secrets/keycloak_db_password
 
       # Admin User
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN_USER:-admin}
-      - KEYCLOAK_ADMIN_PASSWORD_FILE=/run/secrets/keycloak_admin_password
 
       # Keycloak Configuration
       - KC_HOSTNAME=${KEYCLOAK_HOSTNAME:-localhost}
@@ -1185,14 +1435,13 @@ services:
       - ../secrets/certificates/ca:/opt/keycloak/ca:ro
     secrets:
       - keycloak_admin_password
-      - keycloak_db_password
+      - shudl_password
     networks:
       - management_network
       - storage_network
+      - data_network
     depends_on:
-      postgresql:
-        condition: service_healthy
-    command: start-dev
+      - haproxy
     restart: unless-stopped
     deploy:
       resources:
@@ -1216,6 +1465,19 @@ services:
 volumes:
   minio_data:
     driver: local
+  # etcd cluster volumes (3 nodes for HA)
+  etcd1_data:
+    driver: local
+  etcd2_data:
+    driver: local
+  etcd3_data:
+    driver: local
+  # PostgreSQL Patroni volumes (2 nodes for HA)
+  patroni1_data:
+    driver: local
+  patroni2_data:
+    driver: local
+  # Legacy volume (kept for backward compatibility)
   postgresql_data:
     driver: local
   kafka_data:

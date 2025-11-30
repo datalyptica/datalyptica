@@ -20,8 +20,8 @@ else
 fi
 
 test_step "2. PostgreSQL (Metadata Store)"
-if docker exec ${CONTAINER_PREFIX}-postgresql pg_isready -U postgres &>/dev/null; then
-    test_info "✅ PostgreSQL is healthy"
+if check_postgres_health; then
+    test_info "✅ PostgreSQL is healthy (HA mode via HAProxy)"
 else
     test_error "❌ PostgreSQL health check failed"
 fi

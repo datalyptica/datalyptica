@@ -2,7 +2,37 @@
 
 ## Project Overview
 
-ShuDL is a comprehensive on-premises **Data Lakehouse platform** built on Apache Iceberg table format with Project Nessie catalog, MinIO object storage, PostgreSQL metadata store, and dual query engines (Trino + Spark). The platform provides ACID transactions, schema evolution, time-travel queries, and git-like data versioning.
+ShuDL is a comprehensive on-premises **Data Lakehouse platform** built on Apache Iceberg table format with Project Nessie catalog, MinIO object storage, PostgreSQL HA cluster, and dual query engines (Trino + Spark). The platform provides ACID transactions, schema evolution, time-travel queries, and git-like data versioning.
+
+### Development Philosophy
+
+- **No Backward Compatibility**: Platform upgrades use direct replacements, not gradual migrations. Clean, modern implementations preferred over compatibility layers.
+- **Production-Ready HA**: PostgreSQL HA with Patroni, etcd, and HAProxy provides automatic failover (~15s) and zero data loss.
+- **Security First**: SSL/TLS for all inter-service communication, Docker Secrets for sensitive data, network segmentation.
+- **Cloud-Native Patterns**: 25 containerized services, declarative configuration, health checks, and automated recovery.
+
+## Platform Maturity
+
+**Current Status**: Phase 2 Complete (60% of Security & HA roadmap)
+
+**Completed**:
+
+- ✅ SSL/TLS Infrastructure (self-signed certificates for all services)
+- ✅ Docker Secrets (sensitive data management)
+- ✅ PostgreSQL HA (Patroni + etcd + HAProxy, automatic failover tested)
+- ✅ Security Hardening (8.5/10 security score, network segmentation)
+- ✅ Enhanced Monitoring (Patroni/etcd metrics in Prometheus/Grafana)
+- ✅ Kafka KRaft Migration (removed ZooKeeper dependency)
+- ✅ CDC Pipeline (Debezium → Kafka → validated)
+
+**In Progress**:
+
+- 🔄 Kafka HA (multi-broker cluster)
+- 🔄 Service Replication (Trino, Flink workers)
+- 🔄 Keycloak Configuration (SSO for services)
+- 🔄 Service Authentication (API security)
+
+**Production Readiness**: 80% (was 52% before Phase 2)
 
 ## Core Architecture
 
@@ -10,13 +40,14 @@ ShuDL is a comprehensive on-premises **Data Lakehouse platform** built on Apache
 
 1. **Data Sources**: Structured, semi-structured, and unstructured data inputs
 2. **Integration Layer**: Airbyte & Debezium for data ingestion and CDC
-3. **Streaming Layer**: Kafka (+ Zookeeper, Schema Registry) for real-time data pipelines
+3. **Streaming Layer**: Kafka (KRaft mode) + Schema Registry for real-time data pipelines
 4. **Processing & Transformation**: Flink for stream processing, Spark for batch ETL
 5. **Storage Layer (Lakehouse)**:
    - **Apache Iceberg**: Table format with ACID transactions
    - **Nessie** (port 19120): Git-like catalog for data versioning
-   - **MinIO** (ports 9000/9001): S3-compatible object storage
-   - **PostgreSQL** (port 5432): Nessie metadata backend
+   - **MinIO** (ports 9000/9001/9443): S3-compatible object storage with SSL/TLS
+   - **PostgreSQL HA**: 2-node Patroni cluster with etcd coordination and HAProxy load balancing
+   - **HAProxy** (ports 15000/15001/8404): PostgreSQL write/read routing and automatic failover
 6. **OLAP Layer**: ClickHouse for real-time analytics
 7. **Semantic & Modeling**: Trino (port 8080) for federated queries, dbt for transformations
 8. **Consumers**: Power BI and other BI tools
@@ -36,12 +67,13 @@ ShuDL is a comprehensive on-premises **Data Lakehouse platform** built on Apache
 
 - **Apache Airflow**: Workflow orchestration and scheduling
 
-**Core Services**:
+**Core Services** (25 total):
 
 - **Integration**: Airbyte (ELT), Debezium (CDC via Kafka Connect port 8083)
-- **Streaming**: Kafka (9092), Zookeeper (2181), Schema Registry (8085), Kafka UI (8090)
+- **Streaming**: Kafka (9092/9093, KRaft mode), Schema Registry (8085), Kafka UI (8090)
 - **Processing**: Flink (JobManager 8081 + TaskManager), Spark (Master 7077 + Worker)
-- **Storage**: MinIO, PostgreSQL/Patroni, Nessie, Iceberg
+- **Storage**: MinIO (9000/9001/9443), PostgreSQL HA (Patroni + etcd + HAProxy), Nessie (19120), Iceberg
+- **High Availability**: Patroni (2 nodes with 8008 REST API), etcd (3-node cluster on 2379), HAProxy (15000/15001/8404)
 - **OLAP**: ClickHouse (HTTP 8123, native 9000)
 - **Query/Transform**: Trino (8080), dbt (docs 8580)
 - **Consumers**: Power BI connector
@@ -50,19 +82,19 @@ ShuDL is a comprehensive on-premises **Data Lakehouse platform** built on Apache
 
 **Batch/ETL Flow**:
 
-```
+```text
 Data Sources → Airbyte → Kafka → Flink/Spark → Iceberg (Nessie + MinIO) → Trino/dbt → ClickHouse → Power BI
 ```
 
 **Real-Time/CDC Flow**:
 
-```
+```text
 Databases → Debezium → Kafka → Flink → Iceberg → ClickHouse → Power BI
 ```
 
 **Query Flow** (Semantic layer):
 
-```
+```text
 Power BI ← ClickHouse ← Trino/dbt ← Iceberg (Nessie catalog)
 ```
 
@@ -70,8 +102,12 @@ Power BI ← ClickHouse ← Trino/dbt ← Iceberg (Nessie catalog)
 
 - **Iceberg as Central Hub**: All processed data lands in Iceberg tables (Nessie catalog + MinIO storage)
 - **Cross-Engine Access**: Trino, Spark, ClickHouse, and dbt all query the same Iceberg tables
-- **Kafka as Message Backbone**: Connects integration layer (Airbyte/Debezium) to processing (Flink/Spark)
+- **Kafka as Message Backbone**: Runs in KRaft mode (self-managed metadata), connects integration layer (Airbyte/Debezium) to processing (Flink/Spark)
 - **Schema Registry**: Manages Avro schemas for Kafka messages (required by Debezium connectors)
+- **HAProxy as PostgreSQL Gateway**: All services connect to PostgreSQL through HAProxy (port 5000 for writes, 5001 for reads) with automatic failover
+- **Patroni for HA**: Manages 2-node PostgreSQL cluster with streaming replication and automatic failover (~15 seconds)
+- **etcd Coordination**: 3-node etcd cluster provides distributed consensus for Patroni leader election
+- **Security**: SSL/TLS for inter-service communication, Docker Secrets for sensitive data, network segmentation
 - **Configuration Pattern**: All services use environment variable substitution at runtime (no mounted config files)
 - **Networking**: 4 Docker bridge networks: `management`, `control`, `data`, `storage` for service isolation
 
@@ -101,10 +137,13 @@ Tests are located in `tests/` (though directory may not exist in your workspace 
 
 ### Environment Configuration
 
-- **Source of truth**: `docker/.env` (copy from `.env.example`)
+- **Source of truth**: `docker/.env` (copy from `.env.example`) + service-specific `.env.*` files
 - **Template processing**: Entrypoint scripts (`docker/services/*/scripts/entrypoint.sh`) use `envsubst` to generate configs at runtime
 - **S3 credentials**: `S3_ACCESS_KEY`/`S3_SECRET_KEY` must match `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD`
+- **PostgreSQL connectivity**: Always use `POSTGRES_HOST=haproxy` and `POSTGRES_PORT=5000` (writes) or `5001` (reads)
 - **Nessie URI pattern**: `http://nessie:19120/api/v2` (Trino/Spark use `/api/v2` endpoint)
+- **Docker Secrets**: Sensitive data stored in `secrets/passwords/` and mounted as files in containers
+- **SSL/TLS**: All inter-service communication uses self-signed certificates from `secrets/certificates/`
 
 ## Project-Specific Conventions
 
@@ -155,13 +194,17 @@ spark.sql.catalog.iceberg.s3.path-style-access=true
 ## Common Gotchas
 
 1. **AWS Region Conflicts**: Spark requires `AWS_REGION=us-east-1` env var for Iceberg S3FileIO, even with MinIO
-2. **Nessie JDBC Backend**: Uses `NESSIE_VERSION_STORE_TYPE=JDBC2` with default Quarkus datasource (no named datasource)
-3. **Port Collisions**:
-   - PostgreSQL: 5432
+2. **Nessie JDBC Backend**: Uses `NESSIE_VERSION_STORE_TYPE=JDBC2` with Quarkus datasource, connects via HAProxy (port 5000)
+3. **PostgreSQL Connectivity**: All services MUST connect through HAProxy (haproxy:5000 for writes, haproxy:5001 for reads), not directly to PostgreSQL
+4. **Port Collisions**:
+   - PostgreSQL (internal): 5432 (not exposed, use HAProxy)
+   - HAProxy Write: 15000 (maps to internal 5000)
+   - HAProxy Read: 15001 (maps to internal 5001)
+   - HAProxy Stats: 8404
    - MinIO API: 9000 (conflicts with ClickHouse native port)
    - MinIO Console: 9001
-   - Zookeeper: 2181
-   - Kafka: 9092, 9093 (internal/external)
+   - MinIO HTTPS: 9443
+   - Kafka: 9092, 9093 (internal/external, KRaft mode)
    - Schema Registry: 8085
    - Kafka Connect: 8083
    - Kafka UI: 8090
@@ -170,22 +213,38 @@ spark.sql.catalog.iceberg.s3.path-style-access=true
    - Nessie: 19120
    - ClickHouse HTTP: 8123
    - dbt Docs: 8580
-   - Keycloak: 8180
-4. **Test Helper Location**: Shell test helpers are in `tests/helpers/test_helpers.sh` with functions like `execute_trino_query`, `execute_spark_sql`
-5. **Docker Compose Project Name**: Always uses `${COMPOSE_PROJECT_NAME}` prefix for containers (e.g., `shudl-minio`)
-6. **Kafka Schema Registry**: Debezium CDC connectors require Schema Registry for Avro serialization
-7. **Service Startup Order**: Must follow dependency chain: Zookeeper → Kafka → Schema Registry → Kafka Connect → Flink
-8. **ClickHouse Kafka Engine**: Requires Kafka to be fully operational before creating Kafka table engines
+   - Keycloak: 8180, 8543
+   - Patroni REST API: 8008 (per node, internal)
+   - etcd: 2379, 2380 (client, peer)
+5. **Test Helper Location**: Shell test helpers are in `tests/helpers/test_helpers.sh` with functions like `execute_trino_query`, `execute_spark_sql`
+6. **Docker Compose Project Name**: Always uses `${COMPOSE_PROJECT_NAME}` prefix for containers (e.g., `docker-minio`)
+7. **Kafka Schema Registry**: Debezium CDC connectors require Schema Registry for Avro serialization
+8. **Service Startup Order**: Must follow dependency chain: etcd → Patroni → HAProxy → (Nessie, Keycloak, Kafka Connect) → Kafka → Schema Registry → Kafka Connect → Flink
+9. **ClickHouse Kafka Engine**: Requires Kafka to be fully operational before creating Kafka table engines
+10. **Kafka KRaft Mode**: No ZooKeeper required; Kafka manages its own metadata via internal Raft consensus
 
 ## Service-Specific Patterns
 
+### PostgreSQL High Availability
+
+- **Patroni** (REST API 8008): Manages 2-node PostgreSQL cluster with automatic failover
+- **etcd** (ports 2379/2380): 3-node cluster for distributed consensus and leader election
+- **HAProxy** (ports 15000/15001/8404): Load balancer with health checks via Patroni REST API
+  - Port 5000 (15000 external): Write endpoint (routes to PRIMARY only)
+  - Port 5001 (15001 external): Read endpoint (load balances across all nodes)
+  - Port 8404: Stats dashboard at `http://localhost:8404/stats`
+- **Connection pattern**: Services use `jdbc:postgresql://haproxy:5000/dbname` for writes, `haproxy:5001` for reads
+- **Failover time**: ~15 seconds for ungraceful failover, ~2 seconds for planned switchover
+- **Monitoring**: Patroni exposes metrics at `/metrics` endpoint, integrated with Prometheus
+
 ### Kafka Ecosystem
 
-- **Kafka** (port 9092): Message broker with Zookeeper coordination (port 2181)
+- **Kafka** (port 9092): Message broker in KRaft mode (self-managed metadata, no ZooKeeper)
 - **Schema Registry** (port 8085): Avro schema management for Kafka messages
 - **Kafka Connect** (port 8083): Runs Debezium CDC connectors with Avro converters
 - **Kafka UI** (port 8090): Management interface for Kafka cluster
 - **Topic naming**: Use descriptive names like `{source}.{schema}.{table}` for CDC topics
+- **KRaft Configuration**: Uses `KAFKA_PROCESS_ROLES=broker,controller` with internal Raft consensus
 
 ### Flink Stream Processing
 
@@ -211,9 +270,59 @@ spark.sql.catalog.iceberg.s3.path-style-access=true
 ### Keycloak IAM
 
 - **Admin console** (port 8180): Identity and access management UI
-- **Database**: Uses dedicated PostgreSQL database (`keycloak` DB)
+- **Database**: Uses dedicated PostgreSQL database (`keycloak` DB) via HAProxy
 - **Realms**: Create separate realms for different environments/tenants
 - **Client configs**: Configure OAuth2/OIDC for services like Grafana, Airflow
+
+### High Availability Operations
+
+#### Patroni Cluster Management
+
+```bash
+# Check cluster status
+docker exec docker-postgresql-patroni-1 patronictl -c /etc/patroni/patroni.yml list
+
+# Planned switchover (graceful, ~2 seconds)
+docker exec docker-postgresql-patroni-1 patronictl -c /etc/patroni/patroni.yml switchover \
+  --leader postgresql-patroni-1 \
+  --candidate postgresql-patroni-2 \
+  --force
+
+# Restart a member (for config changes)
+docker exec docker-postgresql-patroni-1 patronictl -c /etc/patroni/patroni.yml restart postgresql-patroni-1
+
+# Reload configuration (no downtime)
+docker exec docker-postgresql-patroni-1 patronictl -c /etc/patroni/patroni.yml reload postgresql-patroni-1
+```
+
+#### etcd Cluster Health
+
+```bash
+# Check cluster health
+docker exec docker-etcd-1 etcdctl --endpoints=http://etcd-1:2379,http://etcd-2:2379,http://etcd-3:2379 endpoint health
+
+# Check member list
+docker exec docker-etcd-1 etcdctl --endpoints=http://localhost:2379 member list
+
+# Check leader
+docker exec docker-etcd-1 etcdctl --endpoints=http://localhost:2379 endpoint status --write-out=table
+```
+
+#### HAProxy Monitoring
+
+```bash
+# View stats dashboard
+open http://localhost:8404/stats
+
+# Check backend status via CLI
+docker exec docker-haproxy sh -c "echo 'show stat' | socat stdio /run/haproxy/admin.sock"
+
+# Test write routing (should always go to PRIMARY)
+psql -h localhost -p 15000 -U postgres -c "SELECT pg_is_in_recovery();"
+
+# Test read routing (load balanced across all nodes)
+psql -h localhost -p 15001 -U postgres -c "SELECT pg_is_in_recovery();"
+```
 
 ## Data Pipeline Patterns
 
@@ -356,19 +465,31 @@ docker exec shudl-clickhouse clickhouse-client --query "SELECT * FROM transactio
 
 1. **Update entrypoint script**: Changes to config generation logic go in `docker/services/{service}/scripts/entrypoint.sh`
 2. **Reflect in docker-compose**: Add new env vars to `docker/docker-compose.yml` service definition
-3. **Update .env.example**: Document new variables in `docker/.env.example`
-4. **Test integration**: Add test case to `tests/integration/` following `test_cross_engine.sh` pattern
-5. **Rebuild image**: `docker build -t ghcr.io/shugur-network/shudl/{service}:latest docker/services/{service}/`
+3. **Update .env files**: Document new variables in `docker/.env.example` and service-specific `.env` files (e.g., `.env.patroni`, `.env.nessie`)
+4. **Use Docker Secrets**: For sensitive data, add to `secrets/passwords/` and reference in `docker-compose.yml`
+5. **Update dependencies**: If service depends on PostgreSQL, ensure it uses HAProxy (`haproxy:5000`) not direct connection
+6. **Test integration**: Add test case to `tests/integration/` following `test_cross_engine.sh` pattern
+7. **Rebuild image**: `docker build -t ghcr.io/shugur-network/shudl/{service}:latest docker/services/{service}/`
+8. **HA considerations**: For stateful services, consider replication strategy and failover mechanisms
 
 ## Key Files Reference
 
-- `docker/docker-compose.yml`: Complete service definitions (1000+ lines)
+- `docker/docker-compose.yml`: Complete service definitions (1500+ lines, 25 services)
 - `docker/.env.example`: All configurable environment variables
+- `docker/.env.patroni`: PostgreSQL HA specific environment variables
 - `configs/config.yaml`: ShuDL application config (separate from Docker)
 - `docker/services/*/Dockerfile`: Service image definitions
+- `docker/services/patroni/config/patroni.yml`: Patroni cluster configuration
 - `docker/config/*/`: Config templates processed by entrypoint scripts
+- `configs/haproxy/haproxy.cfg`: HAProxy load balancer configuration with health checks
+- `secrets/passwords/*`: Docker Secrets for sensitive data (passwords, keys)
+- `secrets/certificates/*`: SSL/TLS certificates for inter-service communication
 - `scripts/build/build-all-images.sh`: Build all custom images
+- `scripts/generate-certificates.sh`: Generate SSL/TLS certificates for all services
+- `scripts/generate-secrets.sh`: Generate secure passwords and keys
 - `scripts/setup-loki.sh`, `scripts/setup-alloy.sh`: Monitoring stack setup
+- `POSTGRESQL_HA.md`: PostgreSQL High Availability documentation and operations guide
+- `TROUBLESHOOTING.md`: Common issues and solutions
 
 ## Testing Commands
 
@@ -377,13 +498,23 @@ docker exec shudl-clickhouse clickhouse-client --query "SELECT * FROM transactio
 curl http://localhost:19120/api/v2/config      # Nessie
 curl http://localhost:8080/v1/info             # Trino
 curl http://localhost:9000/minio/health/live   # MinIO
-curl http://localhost:5432                     # PostgreSQL (nc/telnet)
+curl http://localhost:8404/stats               # HAProxy stats dashboard
 curl http://localhost:9092                     # Kafka (kafka-broker-api-versions)
 curl http://localhost:8085                     # Schema Registry
 curl http://localhost:8083                     # Kafka Connect
 curl http://localhost:8081/overview            # Flink JobManager
 curl http://localhost:8123/?query=SELECT%201   # ClickHouse
 curl http://localhost:8090/actuator/health     # Kafka UI
+
+# PostgreSQL HA cluster status
+docker exec docker-postgresql-patroni-1 patronictl -c /etc/patroni/patroni.yml list
+docker exec docker-etcd-1 etcdctl --endpoints=http://localhost:2379 endpoint health
+curl http://localhost:8404/stats               # HAProxy dashboard
+
+# Test automatic failover
+docker kill docker-postgresql-patroni-1        # Kill primary
+sleep 15                                       # Wait for failover
+docker exec docker-postgresql-patroni-2 patronictl -c /etc/patroni/patroni.yml list
 
 # Full integration test suite
 cd tests && ./run-tests.sh --quick
@@ -394,14 +525,19 @@ cd tests && ./run-tests.sh --quick
 ./tests/integration/test_spark_iceberg.sh
 ./tests/integration/test_cross_engine.sh
 
-# Verify Kafka ecosystem
-docker exec shudl-kafka kafka-topics --bootstrap-server localhost:9092 --list
-docker exec shudl-schema-registry curl http://localhost:8081/subjects
+# Verify Kafka ecosystem (KRaft mode)
+docker exec docker-kafka kafka-topics --bootstrap-server localhost:9092 --list
+docker exec docker-kafka kafka-metadata --snapshot /tmp/kraft-combined-logs/__cluster_metadata-0/00000000000000000000.log --print
+docker exec docker-schema-registry curl http://localhost:8081/subjects
 curl http://localhost:8083/connectors  # List Debezium connectors
 
 # Check Flink jobs
 curl http://localhost:8081/jobs
 
 # Query ClickHouse
-docker exec shudl-clickhouse clickhouse-client --query "SHOW DATABASES"
+docker exec docker-clickhouse clickhouse-client --query "SHOW DATABASES"
+
+# Monitor Patroni metrics (Prometheus integration)
+curl http://localhost:9090/api/v1/query?query=patroni_cluster_status
+curl http://localhost:9090/api/v1/query?query=etcd_server_has_leader
 ```

@@ -1,4 +1,4 @@
-FROM ghcr.io/shugur-network/shudl/postgresql:latest
+FROM ghcr.io/shugur-network/shudl/postgresql:v1.0.0
 
 # Metadata
 LABEL maintainer="devops@shugur.com"
@@ -35,12 +35,15 @@ RUN apk add --no-cache --update \
 
 # Create Patroni directories with proper permissions
 RUN mkdir -p /etc/patroni \
-    && chown -R postgres:postgres /etc/patroni
+    && chown -R postgres:postgres /etc/patroni \
+    && chmod 755 /etc/patroni
 
 # Copy Patroni configuration and scripts
 COPY services/patroni/config/patroni.yml /etc/patroni/patroni.yml
 COPY services/patroni/scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh \
+    && chown -R postgres:postgres /etc/patroni \
+    && chmod 664 /etc/patroni/patroni.yml
 
 # Switch back to postgres user
 USER postgres

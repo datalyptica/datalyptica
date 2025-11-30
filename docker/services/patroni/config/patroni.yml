@@ -9,14 +9,12 @@ restapi:
     username: ${PATRONI_API_USERNAME}
     password: ${PATRONI_API_PASSWORD}
 
-etcd:
-  host: ${ETCD_HOSTS}
-  port: 2379
+etcd3:
+  hosts: etcd-1:2379,etcd-2:2379,etcd-3:2379
   protocol: http
   ttl: 30
   retry_timeout: 10
   use_proxies: false
-  max_txn_attempts: 1
 
 bootstrap:
   dcs:
@@ -30,7 +28,7 @@ bootstrap:
       parameters:
         max_connections: 100
         shared_buffers: 256MB
-        wal_level: replica
+        wal_level: logical
         hot_standby: "on"
         max_wal_senders: 10
         max_replication_slots: 10
@@ -126,7 +124,7 @@ postgresql:
       password: ${POSTGRESQL_REWIND_PASSWORD}
   parameters:
     unix_socket_directories: "/tmp"
-    wal_level: replica
+    wal_level: logical
     hot_standby: "on"
     max_connections: 100
     max_prepared_transactions: 0

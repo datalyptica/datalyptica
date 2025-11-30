@@ -52,7 +52,7 @@ wait_for_postgresql() {
     local attempt=1
     
     while [ $attempt -le $max_attempts ]; do
-        if pg_isready -h "${POSTGRES_HOST:-postgresql}" -p 5432 -U "$QUARKUS_DATASOURCE_USERNAME" -d "$POSTGRES_DB" >/dev/null 2>&1; then
+        if pg_isready -h "${POSTGRES_HOST:-postgresql}" -p "${POSTGRES_PORT:-5432}" -U "$QUARKUS_DATASOURCE_USERNAME" -d "$POSTGRES_DB" >/dev/null 2>&1; then
             echo "PostgreSQL is ready!"
             return 0
         fi

@@ -14,7 +14,9 @@ COMPOSE_FILE="${PROJECT_DIR}/docker/docker-compose.yml"
 ENV_FILE="${PROJECT_DIR}/docker/.env"
 
 # Component list (20 components - ZooKeeper removed, using KRaft) - Compatible with bash 3.2+
-COMPONENT_LIST="minio postgresql nessie kafka schema-registry kafka-ui spark-master spark-worker flink-jobmanager flink-taskmanager trino clickhouse dbt kafka-connect prometheus grafana loki alloy alertmanager keycloak"
+# Note: PostgreSQL uses HA setup with patroni-1 and patroni-2
+COMPONENT_LIST="minio nessie kafka schema-registry kafka-ui spark-master spark-worker flink-jobmanager flink-taskmanager trino clickhouse dbt kafka-connect prometheus grafana loki alloy alertmanager keycloak"
+POSTGRESQL_HA_NODES="postgresql-patroni-1 postgresql-patroni-2"
 
 echo -e "${PURPLE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
@@ -67,6 +69,38 @@ test_start "Phase 2: Component Health Checks (All 20 Components)"
 
 cd "${PROJECT_DIR}/docker"
 
+# Check PostgreSQL HA nodes first
+for node in $POSTGRESQL_HA_NODES; do
+    test_step "Checking ${node}..."
+    container_name="${CONTAINER_PREFIX}-${node}"
+    
+    if check_service_running "$container_name"; then
+        test_info "✓ $node is running"
+        
+        if check_service_healthy "$container_name"; then
+            test_info "✓ $node is healthy"
+        else
+            test_warning "$node is running but health check not available"
+        fi
+    else
+        test_error "$node is not running"
+    fi
+done
+
+# Check HAProxy
+test_step "Checking haproxy..."
+if check_service_running "${CONTAINER_PREFIX}-haproxy"; then
+    test_info "✓ haproxy is running"
+    if check_service_healthy "${CONTAINER_PREFIX}-haproxy"; then
+        test_info "✓ haproxy is healthy"
+    else
+        test_warning "haproxy is running but health check not available"
+    fi
+else
+    test_warning "haproxy is not running (non-HA mode)"
+fi
+
+# Check other components
 for component in $COMPONENT_LIST; do
     test_step "Checking ${component}..."
     
@@ -108,8 +142,8 @@ else
 fi
 
 test_step "Testing PostgreSQL..."
-if docker exec ${CONTAINER_PREFIX}-postgresql pg_isready -U postgres &>/dev/null; then
-    test_info "✓ PostgreSQL accepting connections"
+if check_postgres_health; then
+    test_info "✓ PostgreSQL accepting connections (HA mode via HAProxy)"
 else
     test_error "PostgreSQL not accepting connections"
 fi
@@ -227,12 +261,12 @@ else
 fi
 
 test_step "Testing PostgreSQL databases..."
-if docker exec ${CONTAINER_PREFIX}-postgresql psql -U nessie -d nessie -c "SELECT datname FROM pg_database;" &>/dev/null; then
-    test_info "✓ PostgreSQL database query works"
+if execute_postgres_query "SELECT datname FROM pg_database;" "nessie" "nessie" &>/dev/null; then
+    test_info "✓ PostgreSQL database query works (HA mode with nessie user)"
     
     # Check for Nessie database
-    if docker exec ${CONTAINER_PREFIX}-postgresql psql -U nessie -d nessie -lqt | cut -d \| -f 1 | grep -qw nessie; then
-        test_info "✓ Nessie database exists"
+    if execute_postgres_query "\l" "nessie" "nessie" 2>/dev/null | grep -qw nessie; then
+        test_info "✓ Nessie database exists (owner: nessie)"
     else
         test_warning "Nessie database not found"
     fi

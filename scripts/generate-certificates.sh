@@ -13,7 +13,7 @@ echo "Certificate directory: $CERT_DIR"
 echo ""
 
 # Create directory structure for all services
-mkdir -p "$CERT_DIR"/{ca,postgresql,minio,nessie,trino,kafka,grafana,prometheus,schema-registry,kafka-connect,clickhouse,keycloak,flink,spark,loki,alertmanager}
+mkdir -p "$CERT_DIR"/{ca,postgresql,minio,nessie,trino,kafka,grafana,prometheus,schema-registry,kafka-connect,clickhouse,keycloak,flink,spark,loki,alertmanager,etcd-1,etcd-2,etcd-3}
 
 # Function to generate CA
 generate_ca() {
@@ -110,8 +110,13 @@ echo ""
 echo "📦 Generating certificates for all ShuDL services..."
 echo ""
 
+# Consensus Layer (etcd for Patroni)
+generate_service_cert "etcd-1" "docker-etcd-1" "DNS.4 = docker-etcd-1\nDNS.5 = etcd-1\nDNS.6 = etcd1"
+generate_service_cert "etcd-2" "docker-etcd-2" "DNS.4 = docker-etcd-2\nDNS.5 = etcd-2\nDNS.6 = etcd2"
+generate_service_cert "etcd-3" "docker-etcd-3" "DNS.4 = docker-etcd-3\nDNS.5 = etcd-3\nDNS.6 = etcd3"
+
 # Storage Layer
-generate_service_cert "postgresql" "docker-postgresql" "DNS.4 = docker-postgresql\nDNS.5 = postgresql"
+generate_service_cert "postgresql" "docker-postgresql" "DNS.4 = docker-postgresql\nDNS.5 = postgresql\nDNS.6 = docker-postgresql-patroni-1\nDNS.7 = docker-postgresql-patroni-2\nDNS.8 = postgresql-patroni-1\nDNS.9 = postgresql-patroni-2"
 generate_service_cert "minio" "docker-minio" "DNS.4 = docker-minio\nDNS.5 = minio.local\nDNS.6 = minio"
 generate_service_cert "nessie" "docker-nessie" "DNS.4 = docker-nessie\nDNS.5 = nessie"
 
@@ -141,8 +146,13 @@ echo ""
 echo "📁 Certificate locations:"
 echo "  CA Certificate: $CERT_DIR/ca/ca-cert.pem"
 echo ""
+echo "  Consensus Layer (High Availability):"
+echo "    - etcd-1: $CERT_DIR/etcd-1/"
+echo "    - etcd-2: $CERT_DIR/etcd-2/"
+echo "    - etcd-3: $CERT_DIR/etcd-3/"
+echo ""
 echo "  Storage Layer:"
-echo "    - PostgreSQL: $CERT_DIR/postgresql/"
+echo "    - PostgreSQL (Patroni): $CERT_DIR/postgresql/"
 echo "    - MinIO: $CERT_DIR/minio/"
 echo "    - Nessie: $CERT_DIR/nessie/"
 echo ""

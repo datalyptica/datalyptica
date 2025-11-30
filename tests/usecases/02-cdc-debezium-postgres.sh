@@ -24,7 +24,12 @@ echo ""
 # Step 1: Create source database and table
 test_step "Step 1: Setting up PostgreSQL source database..."
 
-docker exec ${CONTAINER_PREFIX}-postgresql psql -U nessie -d nessie << 'EOF'
+# Use HA-aware connection (connect directly to patroni-1 with localhost trust auth)
+PRIMARY_NODE=$(get_postgres_primary); if [ -n "$PRIMARY_NODE" ]; then
+    docker exec "$PRIMARY_NODE" psql -h localhost -U nessie -d nessie << 'EOF'
+else
+    docker exec "$PRIMARY_NODE" psql -h localhost -U nessie -d nessie << 'EOF'
+fi
 -- Create schema for CDC demo
 CREATE SCHEMA IF NOT EXISTS ecommerce;
 
@@ -137,7 +142,11 @@ fi
 # Step 7: Insert new orders to trigger CDC
 test_step "Step 7: Inserting new orders (triggering CDC events)..."
 
-docker exec ${CONTAINER_PREFIX}-postgresql psql -U nessie -d nessie << 'EOF'
+PRIMARY_NODE=$(get_postgres_primary); if [ -n "$PRIMARY_NODE" ]; then
+    docker exec "$PRIMARY_NODE" psql -h localhost -U nessie -d nessie << 'EOF'
+else
+    docker exec "$PRIMARY_NODE" psql -h localhost -U nessie -d nessie << 'EOF'
+fi
 INSERT INTO ecommerce.orders (customer_name, product, quantity, price, status) VALUES
     ('Alice Johnson', 'Monitor', 2, 349.99, 'pending'),
     ('Charlie Brown', 'Headphones', 1, 89.99, 'processing');
@@ -181,7 +190,11 @@ fi
 # Step 10: Update an order (test UPDATE operation)
 test_step "Step 10: Updating order status (testing UPDATE CDC)..."
 
-docker exec ${CONTAINER_PREFIX}-postgresql psql -U nessie -d nessie << 'EOF'
+PRIMARY_NODE=$(get_postgres_primary); if [ -n "$PRIMARY_NODE" ]; then
+    docker exec "$PRIMARY_NODE" psql -h localhost -U nessie -d nessie << 'EOF'
+else
+    docker exec "$PRIMARY_NODE" psql -h localhost -U nessie -d nessie << 'EOF'
+fi
 UPDATE ecommerce.orders 
 SET status = 'shipped', updated_at = CURRENT_TIMESTAMP 
 WHERE order_id = 1;
@@ -194,7 +207,11 @@ test_info "✓ Order updated (should create CDC event)"
 # Step 11: Delete an order (test DELETE operation)
 test_step "Step 11: Deleting an order (testing DELETE CDC)..."
 
-docker exec ${CONTAINER_PREFIX}-postgresql psql -U nessie -d nessie << 'EOF'
+PRIMARY_NODE=$(get_postgres_primary); if [ -n "$PRIMARY_NODE" ]; then
+    docker exec "$PRIMARY_NODE" psql -h localhost -U nessie -d nessie << 'EOF'
+else
+    docker exec "$PRIMARY_NODE" psql -h localhost -U nessie -d nessie << 'EOF'
+fi
 DELETE FROM ecommerce.orders WHERE order_id = 2;
 
 \echo '✓ Order #2 deleted'
@@ -223,8 +240,13 @@ test_step "Step 13: Verifying current database state..."
 
 echo ""
 echo "=== Current Orders in Database ==="
-docker exec ${CONTAINER_PREFIX}-postgresql psql -U nessie -d nessie -c \
-    "SELECT order_id, customer_name, product, status FROM ecommerce.orders ORDER BY order_id;" 2>/dev/null
+PRIMARY_NODE=$(get_postgres_primary); if [ -n "$PRIMARY_NODE" ]; then
+    docker exec "$PRIMARY_NODE" psql -h localhost -U nessie -d nessie -c \
+        "SELECT order_id, customer_name, product, status FROM ecommerce.orders ORDER BY order_id;" 2>/dev/null
+else
+    docker exec "$PRIMARY_NODE" psql -h localhost -U nessie -d nessie -c \
+        "SELECT order_id, customer_name, product, status FROM ecommerce.orders ORDER BY order_id;" 2>/dev/null
+fi
 echo "=================================="
 echo ""
 

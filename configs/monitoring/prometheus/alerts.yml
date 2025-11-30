@@ -68,6 +68,122 @@ groups:
           description: "Disk {{ $labels.device }} has only {{ $value | humanizePercentage }} space remaining. Immediate cleanup required."
           runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#disk-space-critical"
 
+  # PostgreSQL High Availability Alerts (Patroni)
+  - name: patroni_ha_alerts
+    interval: 15s
+    rules:
+      - alert: PatroniClusterNoLeader
+        expr: count(patroni_is_leader == 1) == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: high-availability
+        annotations:
+          summary: "Patroni cluster has no leader"
+          description: "No PostgreSQL node is elected as primary. Cluster is unavailable."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#patroni-no-leader"
+
+      - alert: PatroniClusterMultipleLeaders
+        expr: count(patroni_is_leader == 1) > 1
+        for: 30s
+        labels:
+          severity: critical
+          category: high-availability
+        annotations:
+          summary: "Patroni cluster split-brain detected"
+          description: "Multiple nodes think they are primary. IMMEDIATE ACTION REQUIRED."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#patroni-split-brain"
+
+      - alert: PatroniReplicaDown
+        expr: patroni_is_running{role="replica"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          category: high-availability
+        annotations:
+          summary: "Patroni replica {{ $labels.instance }} is down"
+          description: "PostgreSQL replica is not running. HA degraded."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#patroni-replica-down"
+
+      - alert: PatroniReplicationLagHigh
+        expr: patroni_replication_lag > 10485760
+        for: 5m
+        labels:
+          severity: warning
+          category: replication
+        annotations:
+          summary: "High replication lag on {{ $labels.instance }}"
+          description: "Replication lag is {{ $value | humanize }}B (>10MB). Replica falling behind."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#replication-lag"
+
+      - alert: PatroniReplicationLagCritical
+        expr: patroni_replication_lag > 104857600
+        for: 2m
+        labels:
+          severity: critical
+          category: replication
+        annotations:
+          summary: "Critical replication lag on {{ $labels.instance }}"
+          description: "Replication lag is {{ $value | humanize }}B (>100MB). CRITICAL."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#replication-lag-critical"
+
+      - alert: PatroniFailoverInProgress
+        expr: rate(patroni_leader_changes_total[5m]) > 0
+        labels:
+          severity: warning
+          category: high-availability
+        annotations:
+          summary: "Patroni failover detected"
+          description: "Leader change detected. Cluster is failing over."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#patroni-failover"
+
+  # etcd Cluster Alerts
+  - name: etcd_cluster_alerts
+    interval: 15s
+    rules:
+      - alert: EtcdClusterNoLeader
+        expr: etcd_server_has_leader == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: consensus
+        annotations:
+          summary: "etcd cluster has no leader"
+          description: "etcd cluster cannot elect a leader. Patroni failover disabled."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#etcd-no-leader"
+
+      - alert: EtcdInsufficientMembers
+        expr: count(up{job="etcd"} == 1) < 2
+        for: 2m
+        labels:
+          severity: critical
+          category: consensus
+        annotations:
+          summary: "etcd cluster has insufficient members"
+          description: "Only {{ $value }} etcd members available. Quorum lost."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#etcd-quorum-lost"
+
+      - alert: EtcdHighNumberOfLeaderChanges
+        expr: rate(etcd_server_leader_changes_seen_total[1h]) > 3
+        labels:
+          severity: warning
+          category: stability
+        annotations:
+          summary: "etcd experiencing frequent leader changes"
+          description: "etcd has changed leaders {{ $value }} times in the last hour."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#etcd-leader-changes"
+
+      - alert: EtcdDatabaseSizeLarge
+        expr: etcd_mvcc_db_total_size_in_bytes > 8589934592
+        for: 10m
+        labels:
+          severity: warning
+          category: storage
+        annotations:
+          summary: "etcd database size is large"
+          description: "etcd database is {{ $value | humanize }}B. Consider compaction."
+          runbook: "https://github.com/Shugur-Network/shudl/docs/operations/troubleshooting.md#etcd-compaction"
+
   # PostgreSQL Alerts
   - name: postgresql_alerts
     interval: 30s

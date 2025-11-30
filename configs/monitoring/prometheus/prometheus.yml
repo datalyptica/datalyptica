@@ -55,3 +55,33 @@ scrape_configs:
       - targets: ["docker-spark-worker:8081"]
     metrics_path: "/metrics/json"
     scrape_interval: 30s
+
+  # PostgreSQL HA - Patroni Node 1 (Primary)
+  - job_name: "patroni-1"
+    static_configs:
+      - targets: ["docker-postgresql-patroni-1:8008"]
+    metrics_path: "/metrics"
+    scrape_interval: 10s
+    basic_auth:
+      username: "patroni"
+      password: "patroni123"
+
+  # PostgreSQL HA - Patroni Node 2 (Replica)
+  - job_name: "patroni-2"
+    static_configs:
+      - targets: ["docker-postgresql-patroni-2:8008"]
+    metrics_path: "/metrics"
+    scrape_interval: 10s
+    basic_auth:
+      username: "patroni"
+      password: "patroni123"
+
+  # etcd Cluster Metrics
+  - job_name: "etcd"
+    static_configs:
+      - targets:
+          - "docker-etcd-1:2379"
+          - "docker-etcd-2:2379"
+          - "docker-etcd-3:2379"
+    metrics_path: "/metrics"
+    scrape_interval: 15s
