@@ -45,23 +45,23 @@ secrets/passwords/<service_name>_password
 
 ## Service Credential Matrix
 
-| Service            | Database Name    | DB User            | Password Secret          | Port | Purpose                      |
-| ------------------ | ---------------- | ------------------ | ------------------------ | ---- | ---------------------------- |
+| Service            | Database Name | DB User           | Password Secret          | Port | Purpose                      |
+| ------------------ | ------------- | ----------------- | ------------------------ | ---- | ---------------------------- |
 | **Core Platform**  |
-| Datalyptica        | `datalyptica`    | `datalyptica`      | `datalyptica_password`   | 5432 | Main platform database       |
-| Nessie             | `nessie`         | `nessie`           | `nessie_password`        | 5432 | Catalog metadata             |
-| Keycloak           | `keycloak`       | `keycloak`         | `keycloak_db_password`   | 5432 | Identity & access management |
+| Datalyptica        | `datalyptica` | `datalyptica`     | `datalyptica_password`   | 5432 | Main platform database       |
+| Nessie             | `nessie`      | `nessie`          | `nessie_password`        | 5432 | Catalog metadata             |
+| Keycloak           | `keycloak`    | `keycloak`        | `keycloak_db_password`   | 5432 | Identity & access management |
 | **Analytics & ML** |
-| Airflow            | `airflow`        | `airflow`          | `airflow_password`       | 5432 | Workflow metadata            |
-| JupyterHub         | `jupyterhub`     | `jupyterhub`       | `jupyterhub_password`    | 5432 | Notebook server state        |
-| MLflow             | `mlflow`         | `mlflow`           | `mlflow_password`        | 5432 | ML tracking & registry       |
-| Superset           | `superset`       | `superset`         | `superset_password`      | 5432 | BI metadata                  |
+| Airflow            | `airflow`     | `airflow`         | `airflow_password`       | 5432 | Workflow metadata            |
+| JupyterHub         | `jupyterhub`  | `jupyterhub`      | `jupyterhub_password`    | 5432 | Notebook server state        |
+| MLflow             | `mlflow`      | `mlflow`          | `mlflow_password`        | 5432 | ML tracking & registry       |
+| Superset           | `superset`    | `superset`        | `superset_password`      | 5432 | BI metadata                  |
 | **Data Storage**   |
-| MinIO              | N/A              | `minio_admin`      | `minio_root_password`    | 9000 | Object storage admin         |
-| ClickHouse         | `default`        | `clickhouse_user`  | `clickhouse_password`    | 9000 | OLAP queries                 |
+| MinIO              | N/A           | `minio_admin`     | `minio_root_password`    | 9000 | Object storage admin         |
+| ClickHouse         | `default`     | `clickhouse_user` | `clickhouse_password`    | 9000 | OLAP queries                 |
 | **Infrastructure** |
-| Postgres           | `postgres`       | `postgres`         | `postgres_password`      | 5432 | System database              |
-| Grafana            | N/A              | `grafana_admin`    | `grafana_admin_password` | 3000 | Monitoring dashboards        |
+| Postgres           | `postgres`    | `postgres`        | `postgres_password`      | 5432 | System database              |
+| Grafana            | N/A           | `grafana_admin`   | `grafana_admin_password` | 3000 | Monitoring dashboards        |
 
 ## Environment Variable Standards
 

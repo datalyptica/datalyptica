@@ -625,7 +625,7 @@ services:
 
   # Kafka UI (Management Interface)
   kafka-ui:
-    image: provectuslabs/kafka-ui:${KAFKA_UI_VERSION:-v0.7.2}
+    image: ghcr.io/datalyptica/datalyptica/kafka-ui:${DATALYPTICA_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-kafka-ui
     ports:
       - "${KAFKA_UI_PORT:-8090}:8080"
@@ -982,7 +982,7 @@ services:
 
   # Prometheus Monitoring
   prometheus:
-    image: prom/prometheus:${PROMETHEUS_VERSION:-v2.48.0}
+    image: ghcr.io/datalyptica/datalyptica/prometheus:${DATALYPTICA_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-prometheus
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
@@ -1032,7 +1032,7 @@ services:
 
   # Grafana Dashboards
   grafana:
-    image: grafana/grafana:${GRAFANA_VERSION:-10.2.2}
+    image: ghcr.io/datalyptica/datalyptica/grafana:${DATALYPTICA_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-grafana
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
@@ -1089,7 +1089,7 @@ services:
 
   # Loki Log Aggregation
   loki:
-    image: grafana/loki:${LOKI_VERSION:-2.9.3}
+    image: ghcr.io/datalyptica/datalyptica/loki:${DATALYPTICA_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-loki
     ports:
       - "${LOKI_PORT:-3100}:3100"
@@ -1130,7 +1130,7 @@ services:
 
   # Grafana Alloy Log Collector (Promtail successor)
   alloy:
-    image: grafana/alloy:${ALLOY_VERSION:-v1.0.0}
+    image: ghcr.io/datalyptica/datalyptica/alloy:${DATALYPTICA_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-alloy
     volumes:
       - ../configs/monitoring/loki/alloy-config.alloy:/etc/alloy/config.alloy:ro
@@ -1172,7 +1172,7 @@ services:
 
   # Alertmanager for Alert Routing and Notifications
   alertmanager:
-    image: prom/alertmanager:${ALERTMANAGER_VERSION:-v0.27.0}
+    image: ghcr.io/datalyptica/datalyptica/alertmanager:${DATALYPTICA_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-alertmanager
     ports:
       - "${ALERTMANAGER_PORT:-9095}:9093"
@@ -1219,7 +1219,7 @@ services:
 
   # Keycloak Identity and Access Management
   keycloak:
-    image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION:-23.0}
+    image: ghcr.io/datalyptica/datalyptica/keycloak:${DATALYPTICA_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-keycloak
     ports:
       - "${KEYCLOAK_PORT:-8180}:8080"
@@ -1293,7 +1293,7 @@ services:
 
   # Redis Cache
   redis:
-    image: redis:7.2-alpine
+    image: ghcr.io/datalyptica/datalyptica/redis:${DATALYPTICA_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-redis
     ports:
       - "${REDIS_PORT:-6379}:6379"

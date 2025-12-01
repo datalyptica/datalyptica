@@ -1,0 +1,32 @@
+# Grafana Alloy Configuration for Datalyptica
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+prometheus.scrape "default" {
+  targets = [{
+    __address__ = "localhost:12345",
+  }]
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+loki.source.file "logs" {
+  targets = [{
+    __path__ = "/var/log/*.log",
+    job      = "alloy",
+  }]
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

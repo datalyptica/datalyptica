@@ -1,0 +1,43 @@
+{{ define "email.default.html" }}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Datalyptica Alert</title>
+</head>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+    <h2 style="color: #d32f2f;">Datalyptica Alert Notification</h2>
+    
+    <h3>Alert Details:</h3>
+    <table style="border-collapse: collapse; width: 100%;">
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;"><strong>Alert Name:</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ .GroupLabels.alertname }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;"><strong>Severity:</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ .GroupLabels.severity }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;"><strong>Cluster:</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ .GroupLabels.cluster }}</td>
+        </tr>
+    </table>
+
+    <h3>Firing Alerts:</h3>
+    <ul>
+    {{ range .Alerts.Firing }}
+        <li>
+            <strong>{{ .Labels.alertname }}</strong><br>
+            {{ .Annotations.summary }}<br>
+            <em>{{ .Annotations.description }}</em>
+        </li>
+    {{ end }}
+    </ul>
+
+    <p style="margin-top: 20px; color: #666;">
+        This is an automated alert from Datalyptica monitoring system.
+    </p>
+</body>
+</html>
+{{ end }}

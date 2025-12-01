@@ -17,6 +17,7 @@ Password File: secrets/passwords/<service>_password
 ```
 
 ### Examples:
+
 - **Airflow:** database=`airflow`, user=`airflow`, password=`/run/secrets/airflow_password`
 - **Nessie:** database=`nessie`, user=`nessie`, password=`/run/secrets/nessie_password`
 - **MLflow:** database=`mlflow`, user=`mlflow`, password=`/run/secrets/mlflow_password`
@@ -24,11 +25,13 @@ Password File: secrets/passwords/<service>_password
 ## Services with Dedicated Databases
 
 ### Core Platform (3)
+
 1. **Datalyptica** - Main platform database
 2. **Nessie** - Catalog metadata
 3. **Keycloak** - Identity & access management
 
 ### Analytics & ML (4)
+
 4. **Airflow** - Workflow orchestration metadata
 5. **JupyterHub** - Notebook server state
 6. **MLflow** - ML experiment tracking & model registry
@@ -37,6 +40,7 @@ Password File: secrets/passwords/<service>_password
 ## Files Created/Updated
 
 ### ✅ Password Files Created (5 new)
+
 Located in: `secrets/passwords/`
 
 ```bash
@@ -48,9 +52,11 @@ superset_password     # 24-char secure password (newly created)
 ```
 
 ### ✅ Password File Renamed
+
 - `aether_password` → `datalyptica_password`
 
 ### ✅ All 15 Password Files
+
 ```
 secrets/passwords/
 ├── postgres_password              # PostgreSQL superuser
@@ -74,7 +80,8 @@ All files have secure permissions: `chmod 600`
 
 ### ✅ docker/.env Updates
 
-**Database Names (removed _db suffix):**
+**Database Names (removed \_db suffix):**
+
 ```bash
 DATALYPTICA_DB_NAME=datalyptica    # was: datalyptica_db
 JUPYTERHUB_DB_NAME=jupyterhub      # was: jupyterhub_db
@@ -83,7 +90,8 @@ SUPERSET_DB_NAME=superset          # was: superset_db
 AIRFLOW_DB_NAME=airflow            # was: airflow_db
 ```
 
-**Database Users (removed _user suffix):**
+**Database Users (removed \_user suffix):**
+
 ```bash
 DATALYPTICA_DB_USER=datalyptica    # was: datalyptica_user
 JUPYTERHUB_DB_USER=jupyterhub      # was: jupyterhub_user
@@ -93,6 +101,7 @@ AIRFLOW_DB_USER=airflow            # was: airflow_user
 ```
 
 **Password Files (switched to Docker secrets):**
+
 ```bash
 DATALYPTICA_DB_PASSWORD_FILE=/run/secrets/datalyptica_password
 JUPYTERHUB_DB_PASSWORD_FILE=/run/secrets/jupyterhub_password
@@ -102,11 +111,13 @@ AIRFLOW_DB_PASSWORD_FILE=/run/secrets/airflow_password
 ```
 
 **Email Addresses:**
+
 - Updated all `@shudl.local` → `@datalyptica.local`
 
 ### ✅ docker-compose.yml Updates
 
 **Secrets Section Expanded:**
+
 - Before: 10 secrets
 - After: 15 secrets
 - Added organization with comments:
@@ -118,6 +129,7 @@ AIRFLOW_DB_PASSWORD_FILE=/run/secrets/airflow_password
   - Monitoring
 
 **New Secrets Added:**
+
 ```yaml
 secrets:
   datalyptica_password:
@@ -137,6 +149,7 @@ secrets:
 ### ✅ scripts/init-databases.sh Updates
 
 **User Creation (7 users):**
+
 ```sql
 CREATE USER datalyptica WITH PASSWORD '${DATALYPTICA_PASSWORD}';
 CREATE USER nessie WITH PASSWORD '${NESSIE_PASSWORD}';
@@ -148,6 +161,7 @@ CREATE USER superset WITH PASSWORD '${SUPERSET_PASSWORD}';
 ```
 
 **Database Creation (7 databases):**
+
 ```sql
 CREATE DATABASE datalyptica OWNER datalyptica;
 CREATE DATABASE nessie OWNER nessie;
@@ -159,10 +173,12 @@ CREATE DATABASE superset OWNER superset;
 ```
 
 **Privileges:**
+
 - Each user has full ownership of their database
 - All privileges granted via `GRANT ALL PRIVILEGES ON DATABASE`
 
 **Script Features:**
+
 - Loads passwords from Docker secrets (`/run/secrets/`)
 - Colored output with status indicators
 - Comprehensive summary at completion
@@ -171,6 +187,7 @@ CREATE DATABASE superset OWNER superset;
 ### ✅ CREDENTIALS_STANDARDIZATION.md
 
 **Complete documentation including:**
+
 - Naming convention standards
 - Service credential matrix (all 7 services)
 - Environment variable patterns
@@ -182,22 +199,26 @@ CREATE DATABASE superset OWNER superset;
 ## Security Improvements
 
 ### 1. Docker Secrets (vs Environment Variables)
+
 ✅ All passwords now use Docker secrets mounted at `/run/secrets/`
 ✅ Passwords not exposed in process lists or `docker inspect`
 ✅ Secure file permissions (600) on all password files
 
 ### 2. Unique Credentials Per Service
+
 ✅ Each service has dedicated database, user, and password
 ✅ No shared credentials between services
 ✅ Principle of least privilege applied
 
 ### 3. Password Strength
+
 ✅ All passwords generated with `openssl rand -base64 24`
 ✅ 24-character secure random passwords
 ✅ Development: 12 chars minimum
 ✅ Production: 16 chars minimum
 
 ### 4. Simplified Naming = Better Security
+
 ✅ Clearer credential mapping
 ✅ Reduced configuration errors
 ✅ Easier to audit and rotate credentials
@@ -205,6 +226,7 @@ CREATE DATABASE superset OWNER superset;
 ## Testing Checklist
 
 ### ⏳ Database Initialization
+
 ```bash
 # 1. Start PostgreSQL container
 docker compose -f docker/docker-compose.yml up -d postgresql
@@ -226,6 +248,7 @@ docker exec datalyptica-postgresql psql -U postgres -c "\l"
 ```
 
 ### ⏳ Service Connection Tests
+
 ```bash
 # Test each service can connect to its database
 docker exec datalyptica-postgresql psql -U airflow -d airflow -c "SELECT version();"
@@ -238,6 +261,7 @@ docker exec datalyptica-postgresql psql -U keycloak -d keycloak -c "SELECT versi
 ```
 
 ### ⏳ Service Startup Tests
+
 ```bash
 # Start services one by one and verify database connectivity
 docker compose -f docker/docker-compose.yml up -d nessie
@@ -250,6 +274,7 @@ docker compose -f docker/docker-compose.yml logs airflow-webserver | grep -i "da
 ## Connection String Examples
 
 ### PostgreSQL Services
+
 ```bash
 # Airflow
 postgresql+psycopg2://airflow:${AIRFLOW_PASSWORD}@postgresql:5432/airflow
@@ -276,22 +301,26 @@ jdbc:postgresql://postgresql:5432/keycloak?user=keycloak&password=${KEYCLOAK_DB_
 ## Migration Notes
 
 ### What Changed
+
 - **Database Names:** Removed `_db` suffix (e.g., `airflow_db` → `airflow`)
 - **Usernames:** Removed `_user` suffix (e.g., `airflow_user` → `airflow`)
 - **Passwords:** Switched from env vars to Docker secrets
 - **Email Domains:** `@shudl.local` → `@datalyptica.local`
 
 ### Backward Compatibility
+
 ⚠️ **Breaking Change:** Services using old database names will fail to connect.
 ✅ **Solution:** All configuration files updated to use simple names.
 
 ### Deployment Impact
+
 - Fresh deployments: ✅ Ready to use
 - Existing deployments: ⚠️ Requires database migration or recreation
 
 ## Next Steps
 
 ### Immediate (Before Docker Build)
+
 1. ✅ All password files created
 2. ✅ Configuration files updated
 3. ✅ Documentation complete
@@ -299,11 +328,13 @@ jdbc:postgresql://postgresql:5432/keycloak?user=keycloak&password=${KEYCLOAK_DB_
 5. ⏳ Verify service startup with new credentials
 
 ### Docker Image Build (45-60 minutes)
+
 ```bash
 ./scripts/build/build-all-images.sh
 ```
 
 ### Docker Image Push (10-20 minutes)
+
 ```bash
 # Requires GitHub Personal Access Token
 export GITHUB_TOKEN=your_token_here
@@ -312,6 +343,7 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u datalyptica --password-stdin
 ```
 
 ### Production Deployment
+
 1. Review CREDENTIALS_STANDARDIZATION.md
 2. Generate production-strength passwords (16+ chars)
 3. Rotate all default passwords
@@ -322,23 +354,27 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u datalyptica --password-stdin
 ## Benefits Achieved
 
 ### ✅ Simplicity
+
 - Simple names: `airflow`, `nessie`, `mlflow` (no decorative suffixes)
 - Clear ownership: each service owns its database
 - Intuitive connection strings
 
 ### ✅ Security
+
 - 15 unique passwords (no shared credentials)
 - Docker secrets (not environment variables)
 - Secure permissions (600) on all password files
 - 24-character random passwords
 
 ### ✅ Maintainability
+
 - Consistent naming across all services
 - Comprehensive documentation
 - Easy to audit credentials
 - Simple to rotate passwords
 
 ### ✅ Compliance
+
 - Follows Data Lakehouse Architectural Standards
 - Aligns with least privilege principle
 - Supports credential rotation
