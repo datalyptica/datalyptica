@@ -17,9 +17,9 @@ RUN apt-get update && \
 RUN mkdir -p /var/lib/clickhouse /var/log/clickhouse-server && \
     chown -R clickhouse:clickhouse /var/lib/clickhouse /var/log/clickhouse-server
 
-# Copy custom configuration
-COPY ../../configs/clickhouse/users.xml /etc/clickhouse-server/users.d/
-COPY ../../configs/clickhouse/config.xml /etc/clickhouse-server/config.d/
+# Configuration will be mounted at runtime
+# COPY ../../configs/clickhouse/users.xml /etc/clickhouse-server/users.d/
+# COPY ../../configs/clickhouse/config.xml /etc/clickhouse-server/config.d/
 
 USER clickhouse
 

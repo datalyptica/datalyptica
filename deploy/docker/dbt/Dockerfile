@@ -25,8 +25,8 @@ RUN useradd -m -u 1000 dbt && \
     mkdir -p /dbt /root/.dbt && \
     chown -R dbt:dbt /dbt /root/.dbt
 
-# Copy profiles template
-COPY ../../configs/dbt/profiles.yml /root/.dbt/profiles.yml
+# Configuration will be mounted at runtime
+# COPY ../../configs/dbt/profiles.yml /root/.dbt/profiles.yml
 
 WORKDIR /dbt
 

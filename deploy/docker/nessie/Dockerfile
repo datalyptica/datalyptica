@@ -25,8 +25,8 @@ RUN apk add --no-cache \
     && cd ${NESSIE_HOME} \
     && wget -q https://github.com/projectnessie/nessie/releases/download/nessie-${NESSIE_VERSION}/nessie-quarkus-${NESSIE_VERSION}-runner.jar -O nessie-server.jar
 
-# Copy configuration template
-COPY ../../configs/nessie/application.properties.template ${NESSIE_HOME}/config/application.properties.template
+# Configuration will be mounted at runtime
+# COPY ../../configs/nessie/application.properties.template ${NESSIE_HOME}/config/application.properties.template
 
 # Copy entrypoint script
 COPY scripts/entrypoint.sh ${NESSIE_HOME}/entrypoint.sh

@@ -58,11 +58,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && useradd -u 185 -g spark -m -d /opt/spark -s /bin/sh spark \
     && mkdir -p /tmp/spark-events
 
-# Copy Spark configuration files
+# Configuration will be mounted at runtime
 # Static spark-defaults.conf removed - using template-based configuration only
-COPY ../../configs/spark/spark-defaults.conf.template ${SPARK_HOME}/conf/spark-defaults.conf.template
-COPY ../../configs/spark/spark-env.sh ${SPARK_HOME}/conf/spark-env.sh
-RUN chmod +x ${SPARK_HOME}/conf/spark-env.sh
+# COPY ../../configs/spark/spark-defaults.conf.template ${SPARK_HOME}/conf/spark-defaults.conf.template
+# COPY ../../configs/spark/spark-env.sh ${SPARK_HOME}/conf/spark-env.sh
+# RUN chmod +x ${SPARK_HOME}/conf/spark-env.sh
 
 # Set ownership for spark user
 RUN chown -R spark:spark ${SPARK_HOME} \

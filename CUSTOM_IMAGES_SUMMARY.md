@@ -11,6 +11,7 @@ All services in the Datalyptica platform now use custom-built Docker images inst
 ## Custom Dockerfiles Created
 
 ### ✅ Core Data Lakehouse Services (19 images - Previously Created)
+
 1. **minio** - Object storage (S3-compatible)
 2. **postgresql** - Relational database
 3. **patroni** - PostgreSQL HA management
@@ -32,6 +33,7 @@ All services in the Datalyptica platform now use custom-built Docker images inst
 19. **superset** - Business intelligence platform
 
 ### 🆕 Monitoring & Management Services (6 images - Newly Created)
+
 20. **prometheus** - Metrics collection and monitoring
 21. **grafana** - Visualization and dashboards
 22. **loki** - Log aggregation system
@@ -40,6 +42,7 @@ All services in the Datalyptica platform now use custom-built Docker images inst
 25. **kafka-ui** - Kafka management interface
 
 ### 🆕 Infrastructure Services (2 images - Newly Created)
+
 26. **keycloak** - Identity and Access Management
 27. **redis** - In-memory caching
 
@@ -48,6 +51,7 @@ All services in the Datalyptica platform now use custom-built Docker images inst
 ### Monitoring Stack Dockerfiles
 
 #### Prometheus (`deploy/docker/prometheus/`)
+
 ```dockerfile
 FROM prom/prometheus:v2.48.0
 - Custom prometheus.yml configuration
@@ -57,12 +61,14 @@ FROM prom/prometheus:v2.48.0
 ```
 
 **Features:**
+
 - Pre-configured scrape configs for all services
 - Alert rules for service health, memory, CPU
 - 15-day retention (configurable)
 - Integrated with Alertmanager
 
 #### Grafana (`deploy/docker/grafana/`)
+
 ```dockerfile
 FROM grafana/grafana:10.2.2
 - Pre-installed plugins (piechart, clock, simple-json)
@@ -72,12 +78,14 @@ FROM grafana/grafana:10.2.2
 ```
 
 **Features:**
+
 - Automated plugin installation
 - Custom dashboard provisioning
 - SSL/TLS support
 - Prometheus and Loki data sources
 
 #### Loki (`deploy/docker/loki/`)
+
 ```dockerfile
 FROM grafana/loki:2.9.3
 - Custom loki-config.yaml
@@ -87,12 +95,14 @@ FROM grafana/loki:2.9.3
 ```
 
 **Features:**
+
 - 168-hour retention period
 - 10MB/s ingestion rate
 - BoltDB shipper for storage
 - Alert rule support
 
 #### Alloy (`deploy/docker/alloy/`)
+
 ```dockerfile
 FROM grafana/alloy:v1.0.0
 - Custom alloy-config.alloy
@@ -102,12 +112,14 @@ FROM grafana/alloy:v1.0.0
 ```
 
 **Features:**
+
 - Replaces Promtail
 - Collects logs from /var/log/
 - Forwards to Prometheus and Loki
 - HTTP API on port 12345
 
 #### Alertmanager (`deploy/docker/alertmanager/`)
+
 ```dockerfile
 FROM prom/alertmanager:v0.27.0
 - Custom alertmanager.yml
@@ -117,12 +129,14 @@ FROM prom/alertmanager:v0.27.0
 ```
 
 **Features:**
+
 - Multi-receiver support (email, webhook)
 - Critical/warning severity routing
 - Alert grouping and inhibition
 - Custom email templates
 
 #### Kafka UI (`deploy/docker/kafka-ui/`)
+
 ```dockerfile
 FROM provectuslabs/kafka-ui:v0.7.2
 - Custom labels for Datalyptica
@@ -131,6 +145,7 @@ FROM provectuslabs/kafka-ui:v0.7.2
 ```
 
 **Features:**
+
 - Web interface for Kafka management
 - Topic, consumer group, message browsing
 - Schema registry integration
@@ -139,6 +154,7 @@ FROM provectuslabs/kafka-ui:v0.7.2
 ### Infrastructure Stack Dockerfiles
 
 #### Keycloak (`deploy/docker/keycloak/`)
+
 ```dockerfile
 FROM quay.io/keycloak/keycloak:23.0
 - Custom Datalyptica theme
@@ -148,6 +164,7 @@ FROM quay.io/keycloak/keycloak:23.0
 ```
 
 **Features:**
+
 - Realm: `datalyptica`
 - Roles: admin, data_engineer, data_scientist, analyst, viewer
 - Clients: trino, airflow, superset, jupyterhub, grafana
@@ -155,6 +172,7 @@ FROM quay.io/keycloak/keycloak:23.0
 - SSL/TLS support
 
 **Realm Configuration:**
+
 ```json
 {
   "realm": "datalyptica",
@@ -164,6 +182,7 @@ FROM quay.io/keycloak/keycloak:23.0
 ```
 
 #### Redis (`deploy/docker/redis/`)
+
 ```dockerfile
 FROM redis:7.2-alpine
 - Custom redis.conf
@@ -173,6 +192,7 @@ FROM redis:7.2-alpine
 ```
 
 **Features:**
+
 - Append-only file (AOF) disabled by default
 - RDB snapshots (save 900 1, 300 10, 60 10000)
 - maxmemory: 256MB
@@ -182,7 +202,9 @@ FROM redis:7.2-alpine
 ## Configuration Files Created
 
 ### Prometheus Configuration
+
 **File:** `deploy/docker/prometheus/config/prometheus.yml`
+
 ```yaml
 scrape_configs:
   - prometheus (self)
@@ -202,38 +224,48 @@ scrape_configs:
 ```
 
 **Alert Rules:** `deploy/docker/prometheus/config/alerts/datalyptica.yml`
+
 - ServiceDown (5m threshold)
 - HighMemoryUsage (>90% for 10m)
 - HighCPUUsage (>80% for 10m)
 
 ### Loki Configuration
+
 **File:** `deploy/docker/loki/config/loki-config.yaml`
+
 - Storage: BoltDB shipper with filesystem
 - Retention: 168 hours (7 days)
 - Ingestion rate: 10MB/s
 - Burst size: 20MB
 
 ### Alertmanager Configuration
+
 **File:** `deploy/docker/alertmanager/config/alertmanager.yml`
+
 - Route: Group by alertname, cluster, service
 - Receivers: default, critical, warning
 - Email notifications to admin@datalyptica.local
 - Webhook support
 
 **Email Template:** `deploy/docker/alertmanager/config/templates/default.tmpl`
+
 - HTML formatted alerts
 - Alert details table
 - Firing alerts list
 
 ### Redis Configuration
+
 **File:** `deploy/docker/redis/config/redis.conf`
+
 - Persistence: RDB snapshots
 - Memory: 256MB limit with LRU eviction
 - Network: Bind 0.0.0.0
 - Security: Protected mode disabled (for internal use)
 
 ### Keycloak Realm
+
 **File:** `deploy/docker/keycloak/config/realms/datalyptica-realm.json`
+
 - Realm: datalyptica
 - Default role: viewer
 - 5 realm roles
@@ -244,6 +276,7 @@ scrape_configs:
 ### Images Updated to Custom Registry
 
 **Before:**
+
 ```yaml
 prometheus:
   image: prom/prometheus:v2.48.0
@@ -271,6 +304,7 @@ redis:
 ```
 
 **After:**
+
 ```yaml
 prometheus:
   image: ghcr.io/datalyptica/datalyptica/prometheus:${DATALYPTICA_VERSION:-v1.0.0}
@@ -300,7 +334,9 @@ redis:
 ## Build Scripts Updated
 
 ### build-all-images.sh
+
 **Added sections:**
+
 ```bash
 echo "📡 Building monitoring & management services..."
 - prometheus
@@ -316,7 +352,9 @@ echo "🔐 Building infrastructure services..."
 ```
 
 ### push-all-images.sh
+
 **Added to SERVICES array:**
+
 ```bash
 SERVICES=(
     # ... existing 19 services ...
@@ -398,36 +436,42 @@ deploy/docker/
 ## Benefits of Custom Images
 
 ### 1. **Security**
+
 - ✅ Single source of truth for all images
 - ✅ Controlled base images and dependencies
 - ✅ Consistent security scanning
 - ✅ Custom SSL/TLS configurations
 
 ### 2. **Configuration Management**
+
 - ✅ Pre-baked configurations
 - ✅ Environment-specific settings
 - ✅ No runtime config injection needed
 - ✅ Faster startup times
 
 ### 3. **Branding & Customization**
+
 - ✅ Datalyptica labels on all images
 - ✅ Custom themes (Keycloak)
 - ✅ Pre-installed plugins (Grafana)
 - ✅ Tailored settings for data lakehouse use
 
 ### 4. **Version Control**
+
 - ✅ All images tagged with DATALYPTICA_VERSION
 - ✅ Consistent versioning across stack
 - ✅ Easy rollback capabilities
 - ✅ Git-tracked Dockerfiles and configs
 
 ### 5. **Compliance**
+
 - ✅ Follows architectural standards (no tutorial code)
 - ✅ Configs in `./configs/<service>/` pattern
 - ✅ Dockerfiles in `./deploy/docker/` pattern
 - ✅ Multi-stage builds where applicable
 
 ### 6. **Performance**
+
 - ✅ Optimized layer caching
 - ✅ Minimal image sizes
 - ✅ Pre-installed dependencies
@@ -436,6 +480,7 @@ deploy/docker/
 ## Build & Push Process
 
 ### Building All Images
+
 ```bash
 # Set version
 export DATALYPTICA_VERSION=v1.0.0
@@ -445,6 +490,7 @@ export DATALYPTICA_VERSION=v1.0.0
 ```
 
 **Expected output:**
+
 ```
 🔨 Building all Datalyptica Docker images...
 Registry: ghcr.io/datalyptica/datalyptica
@@ -477,6 +523,7 @@ Version: v1.0.0
 ```
 
 ### Pushing to Registry
+
 ```bash
 # Login to GitHub Container Registry
 export GITHUB_TOKEN=your_token_here
@@ -489,6 +536,7 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u datalyptica --password-stdin
 ## Testing & Validation
 
 ### Image Build Validation
+
 ```bash
 # List all built images
 docker images | grep ghcr.io/datalyptica/datalyptica
@@ -497,6 +545,7 @@ docker images | grep ghcr.io/datalyptica/datalyptica
 ```
 
 ### Container Startup Tests
+
 ```bash
 # Test each custom image
 docker run --rm ghcr.io/datalyptica/datalyptica/prometheus:v1.0.0 --version
@@ -506,6 +555,7 @@ docker run --rm ghcr.io/datalyptica/datalyptica/redis:v1.0.0 redis-server --vers
 ```
 
 ### Full Stack Test
+
 ```bash
 # Start all services with custom images
 docker compose -f docker/docker-compose.yml up -d
@@ -520,6 +570,7 @@ docker compose -f docker/docker-compose.yml logs --tail=50
 ## Next Steps
 
 ### Immediate
+
 1. ✅ All Dockerfiles created
 2. ✅ Configuration files in place
 3. ✅ Build scripts updated
@@ -528,6 +579,7 @@ docker compose -f docker/docker-compose.yml logs --tail=50
 6. ⏳ Push to ghcr.io/datalyptica/datalyptica
 
 ### Post-Deployment
+
 1. 🔄 Test Prometheus scraping all services
 2. 🔄 Configure Grafana dashboards
 3. 🔄 Set up Keycloak realms and users
@@ -535,6 +587,7 @@ docker compose -f docker/docker-compose.yml logs --tail=50
 5. 🔄 Test alert routing via Alertmanager
 
 ### Production Readiness
+
 1. 📋 Generate production SSL/TLS certificates
 2. 📋 Configure SMTP for Alertmanager emails
 3. 📋 Set up Redis password authentication
@@ -546,6 +599,7 @@ docker compose -f docker/docker-compose.yml logs --tail=50
 ## Files Modified/Created
 
 ### Created (40+ files)
+
 ```
 ✅ deploy/docker/prometheus/Dockerfile
 ✅ deploy/docker/prometheus/config/prometheus.yml
@@ -568,6 +622,7 @@ docker compose -f docker/docker-compose.yml logs --tail=50
 ```
 
 ### Modified
+
 ```
 ✅ scripts/build/build-all-images.sh (added 8 services)
 ✅ scripts/build/push-all-images.sh (added 8 services)
@@ -589,7 +644,7 @@ docker compose -f docker/docker-compose.yml logs --tail=50
 
 - **Source:** https://github.com/datalyptica/datalyptica
 - **Registry:** https://github.com/orgs/datalyptica/packages
-- **Images:** ghcr.io/datalyptica/datalyptica/*
+- **Images:** ghcr.io/datalyptica/datalyptica/\*
 
 ---
 
