@@ -45,14 +45,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz \
     && mkdir -p ${SPARK_HOME}/jars/iceberg \
     && cd ${SPARK_HOME}/jars/iceberg \
-    && wget --tries=3 --timeout=30 -q https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/${ICEBERG_VERSION}/iceberg-spark-runtime-3.5_2.12-${ICEBERG_VERSION}.jar \
-    && wget --tries=3 --timeout=30 -q https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-nessie/${ICEBERG_VERSION}/iceberg-nessie-${ICEBERG_VERSION}.jar \
-    && wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar -P ${SPARK_HOME}/jars/ \
-    && wget -q https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar -P ${SPARK_HOME}/jars/ \
-    && wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.3.4/hadoop-common-3.3.4.jar -P ${SPARK_HOME}/jars/ \
-    && wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client/3.3.4/hadoop-client-3.3.4.jar -P ${SPARK_HOME}/jars/ \
-    && wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.20.162/bundle-2.20.162.jar -P ${SPARK_HOME}/jars/ \
-    && wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/url-connection-client/2.20.162/url-connection-client-2.20.162.jar -P ${SPARK_HOME}/jars/ \
+    && wget --tries=3 --timeout=30 https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/${ICEBERG_VERSION}/iceberg-spark-runtime-3.5_2.12-${ICEBERG_VERSION}.jar || exit 1 \
+    && wget --tries=3 --timeout=30 https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-nessie/${ICEBERG_VERSION}/iceberg-nessie-${ICEBERG_VERSION}.jar || exit 1 \
+    && wget --tries=3 --timeout=30 https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar -P ${SPARK_HOME}/jars/ || exit 1 \
+    && wget --tries=3 --timeout=30 https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar -P ${SPARK_HOME}/jars/ || exit 1 \
+    && wget --tries=3 --timeout=30 https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.3.4/hadoop-common-3.3.4.jar -P ${SPARK_HOME}/jars/ || exit 1 \
+    && wget --tries=3 --timeout=30 https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client/3.3.4/hadoop-client-3.3.4.jar -P ${SPARK_HOME}/jars/ || exit 1 \
+    && wget --tries=3 --timeout=30 https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.20.162/bundle-2.20.162.jar -P ${SPARK_HOME}/jars/ || exit 1 \
+    && wget --tries=3 --timeout=30 https://repo1.maven.org/maven2/software/amazon/awssdk/url-connection-client/2.20.162/url-connection-client-2.20.162.jar -P ${SPARK_HOME}/jars/ || exit 1 \
     && cp ${SPARK_HOME}/jars/iceberg/*.jar ${SPARK_HOME}/jars/ \
     && groupadd -g 185 spark \
     && useradd -u 185 -g spark -m -d /opt/spark -s /bin/sh spark \
