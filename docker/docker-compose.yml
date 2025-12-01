@@ -1,23 +1,44 @@
 # Docker Secrets Configuration
 secrets:
+  # Core Infrastructure
   postgres_password:
     file: ../secrets/passwords/postgres_password
-  datalyptica_password:
-    file: ../secrets/passwords/datalyptica_password
   postgres_replication_password:
     file: ../secrets/passwords/postgres_replication_password
+
+  # Platform Services
+  datalyptica_password:
+    file: ../secrets/passwords/datalyptica_password
+  nessie_password:
+    file: ../secrets/passwords/nessie_password
+
+  # Identity & Access
+  keycloak_admin_password:
+    file: ../secrets/passwords/keycloak_admin_password
+  keycloak_db_password:
+    file: ../secrets/passwords/keycloak_db_password
+
+  # Storage
   minio_root_password:
     file: ../secrets/passwords/minio_root_password
   s3_access_key:
     file: ../secrets/passwords/s3_access_key
   s3_secret_key:
     file: ../secrets/passwords/s3_secret_key
+
+  # Analytics & ML
+  airflow_password:
+    file: ../secrets/passwords/airflow_password
+  jupyterhub_password:
+    file: ../secrets/passwords/jupyterhub_password
+  mlflow_password:
+    file: ../secrets/passwords/mlflow_password
+  superset_password:
+    file: ../secrets/passwords/superset_password
+
+  # Monitoring
   grafana_admin_password:
     file: ../secrets/passwords/grafana_admin_password
-  keycloak_admin_password:
-    file: ../secrets/passwords/keycloak_admin_password
-  keycloak_db_password:
-    file: ../secrets/passwords/keycloak_db_password
   clickhouse_password:
     file: ../secrets/passwords/clickhouse_password
 
