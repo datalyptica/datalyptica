@@ -19,14 +19,14 @@ TESTS_PASSED=0
 TESTS_FAILED=0
 TESTS_TOTAL=0
 
-# Auto-detect container prefix (shudl- or docker-)
+# Auto-detect container prefix (datalyptica- or docker-)
 detect_container_prefix() {
-    if docker ps --format '{{.Names}}' | grep -q '^shudl-'; then
-        echo "shudl"
+    if docker ps --format '{{.Names}}' | grep -q '^datalyptica-'; then
+        echo "datalyptica"
     elif docker ps --format '{{.Names}}' | grep -q '^docker-'; then
         echo "docker"
     else
-        echo "shudl"  # default
+        echo "datalyptica"  # default
     fi
 }
 
@@ -207,7 +207,7 @@ import sys
 
 spark = SparkSession.builder \\
     .appName("QueryTest") \\
-    .master("spark://shudl-spark-master:7077") \\
+    .master("spark://datalyptica-spark-master:7077") \\
     .getOrCreate()
 
 try:

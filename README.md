@@ -1,4 +1,4 @@
-# ShuDL - Shugur Data Lakehouse Platform
+# Datalyptica - Datalyptica Data Lakehouse Platform
 
 **Version:** v1.0.0  
 **Status:** Development  
@@ -8,7 +8,7 @@
 
 ## 🌟 Overview
 
-ShuDL (Shugur Data Lakehouse) is a comprehensive on-premises data lakehouse platform built on **Apache Iceberg** table format with **Project Nessie** catalog. The platform provides ACID transactions, schema evolution, time-travel queries, and git-like data versioning across a complete data engineering stack.
+Datalyptica (Datalyptica Data Lakehouse) is a comprehensive on-premises data lakehouse platform built on **Apache Iceberg** table format with **Project Nessie** catalog. The platform provides ACID transactions, schema evolution, time-travel queries, and git-like data versioning across a complete data engineering stack.
 
 ### Key Features
 
@@ -130,7 +130,7 @@ ShuDL (Shugur Data Lakehouse) is a comprehensive on-premises data lakehouse plat
 
 ```bash
 git clone <repository-url>
-cd shudl
+cd datalyptica
 ```
 
 2. **Set up environment**
@@ -178,7 +178,7 @@ open http://localhost:8090
 
 ```bash
 # 1. Create a test table in Iceberg via Trino
-docker exec shudl-trino trino --execute "
+docker exec datalyptica-trino trino --execute "
 CREATE SCHEMA IF NOT EXISTS iceberg.demo;
 CREATE TABLE iceberg.demo.users (
     id BIGINT,
@@ -188,13 +188,13 @@ CREATE TABLE iceberg.demo.users (
 ) WITH (format = 'PARQUET');"
 
 # 2. Insert some data
-docker exec shudl-trino trino --execute "
+docker exec datalyptica-trino trino --execute "
 INSERT INTO iceberg.demo.users VALUES
 (1, 'Alice', 'alice@example.com', CURRENT_TIMESTAMP),
 (2, 'Bob', 'bob@example.com', CURRENT_TIMESTAMP);"
 
 # 3. Query the data
-docker exec shudl-trino trino --execute "
+docker exec datalyptica-trino trino --execute "
 SELECT * FROM iceberg.demo.users;"
 
 # 4. Check Nessie versioning
@@ -252,16 +252,16 @@ cd tests
 curl http://localhost:9000/minio/health/live
 
 # Test PostgreSQL
-docker exec shudl-postgresql pg_isready -U postgres
+docker exec datalyptica-postgresql pg_isready -U postgres
 
 # Test Nessie
 curl http://localhost:19120/api/v2/config
 
 # Test Trino
-docker exec shudl-trino trino --execute "SHOW CATALOGS"
+docker exec datalyptica-trino trino --execute "SHOW CATALOGS"
 
 # Test Kafka
-docker exec shudl-kafka kafka-topics --bootstrap-server localhost:9092 --list
+docker exec datalyptica-kafka kafka-topics --bootstrap-server localhost:9092 --list
 ```
 
 ---
@@ -287,8 +287,8 @@ open http://localhost:9095
 
 ### Pre-configured Dashboards
 
-1. **ShuDL Overview** - Platform-wide metrics and health
-2. **ShuDL Logs** - Centralized log analysis
+1. **Datalyptica Overview** - Platform-wide metrics and health
+2. **Datalyptica Logs** - Centralized log analysis
 
 ### Adding Custom Dashboards
 
@@ -434,13 +434,13 @@ docker compose up -d --scale flink-taskmanager=3
 
 ```bash
 # Backup PostgreSQL
-docker exec shudl-postgresql pg_dump -U postgres > backup.sql
+docker exec datalyptica-postgresql pg_dump -U postgres > backup.sql
 
 # Backup MinIO buckets
-docker exec shudl-minio mc mirror local/lakehouse /backup/lakehouse
+docker exec datalyptica-minio mc mirror local/lakehouse /backup/lakehouse
 
 # Restore PostgreSQL
-docker exec -i shudl-postgresql psql -U postgres < backup.sql
+docker exec -i datalyptica-postgresql psql -U postgres < backup.sql
 ```
 
 ---
@@ -468,7 +468,7 @@ docker compose up -d
 
 ```bash
 # Test network connectivity
-docker network inspect shudl_data
+docker network inspect datalyptica_data
 
 # Test service health
 docker compose ps
@@ -547,8 +547,8 @@ cd tests
 
 ### Contact
 
-- **Technical Support:** support@shugur.com
-- **GitHub Issues:** [Project Issues](https://github.com/Shugur-Network/shudl/issues)
+- **Technical Support:** support@datalyptica.com
+- **GitHub Issues:** [Project Issues](https://github.com/datalyptica/datalyptica/issues)
 - **Documentation:** This repository
 
 ---
@@ -556,7 +556,7 @@ cd tests
 ## 📜 License
 
 Proprietary - All Rights Reserved  
-Copyright © 2025 Shugur Network
+Copyright © 2025 Datalyptica
 
 ---
 
@@ -576,5 +576,4 @@ Built with:
 
 ---
 
-**Made with ❤️ by the Shugur Network Team**
-
+**Made with ❤️ by the Datalyptica Team**

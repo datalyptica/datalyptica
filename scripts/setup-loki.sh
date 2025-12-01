@@ -107,13 +107,13 @@ scrape_configs:
           __path__: /var/log/postgresql/*.log
 
   # Application logs
-  - job_name: shudl
+  - job_name: datalyptica
     static_configs:
       - targets:
           - localhost
         labels:
-          job: shudl
-          __path__: /var/log/shudl/*.log
+          job: datalyptica
+          __path__: /var/log/datalyptica/*.log
 EOF
 
 echo "✅ Loki configuration files created"
@@ -132,5 +132,5 @@ echo ""
 echo "🔍 Useful queries:"
 echo '  {container="docker-postgresql"}'
 echo '  {service="trino"} |= "error"'
-echo '  {project="shudl"} | json | level="ERROR"'
+echo '  {project="datalyptica"} | json | level="ERROR"'
 echo '  rate({job="postgresql"}[5m])'

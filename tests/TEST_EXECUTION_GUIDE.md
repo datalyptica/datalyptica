@@ -1,8 +1,8 @@
-# ShuDL Comprehensive Test Suite - Execution Guide
+# Datalyptica Comprehensive Test Suite - Execution Guide
 
 ## 🎯 What Was Created
 
-A complete testing framework for all **21 components** of the ShuDL Data Lakehouse platform:
+A complete testing framework for all **21 components** of the Datalyptica Data Lakehouse platform:
 
 ### Test Files Created
 
@@ -120,7 +120,7 @@ watch -n 2 'docker compose ps'
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║          ShuDL Component Test Summary                         ║
+║          Datalyptica Component Test Summary                         ║
 ║          Testing All 21 Platform Components                   ║
 ╚═══════════════════════════════════════════════════════════════╝
 
@@ -329,13 +329,13 @@ IoT Sensors → Kafka → Flink → Iceberg → Trino → ClickHouse → Power B
 
 ```bash
 # Check service status
-docker ps -a | grep shudl-postgresql
+docker ps -a | grep datalyptica-postgresql
 
 # Restart service
-docker restart shudl-postgresql
+docker restart datalyptica-postgresql
 
 # Check logs
-docker logs shudl-postgresql
+docker logs datalyptica-postgresql
 ```
 
 #### 2. Port Already in Use
@@ -378,7 +378,7 @@ lsof -i :9092  # Example for Kafka port
 
 ```bash
 # Check dependencies
-docker logs shudl-nessie | grep -i error
+docker logs datalyptica-nessie | grep -i error
 
 # Restart with dependencies
 docker compose up -d postgresql
@@ -398,13 +398,13 @@ curl http://localhost:9000/minio/health/live
 curl http://localhost:19120/api/v2/config
 
 # Example: Test Trino
-docker exec shudl-trino trino --execute "SHOW CATALOGS"
+docker exec datalyptica-trino trino --execute "SHOW CATALOGS"
 
 # Example: Test Kafka
-docker exec shudl-kafka kafka-topics --bootstrap-server localhost:9092 --list
+docker exec datalyptica-kafka kafka-topics --bootstrap-server localhost:9092 --list
 
 # Example: Test ClickHouse
-docker exec shudl-clickhouse clickhouse-client --query "SELECT 1"
+docker exec datalyptica-clickhouse clickhouse-client --query "SELECT 1"
 ```
 
 ## 📈 CI/CD Integration
@@ -412,7 +412,7 @@ docker exec shudl-clickhouse clickhouse-client --query "SELECT 1"
 ### GitHub Actions Workflow
 
 ```yaml
-name: ShuDL Tests
+name: Datalyptica Tests
 on: [push, pull_request]
 
 jobs:
@@ -519,8 +519,8 @@ test_step "Testing New Component..."
 
 If tests fail:
 
-1. ✅ Check service logs: `docker logs shudl-<component>`
-2. ✅ Verify services running: `docker ps | grep shudl-`
+1. ✅ Check service logs: `docker logs datalyptica-<component>`
+2. ✅ Verify services running: `docker ps | grep datalyptica-`
 3. ✅ Check resource usage: `docker stats`
 4. ✅ Review test output for specific errors
 5. ✅ Check GitHub Issues for known problems

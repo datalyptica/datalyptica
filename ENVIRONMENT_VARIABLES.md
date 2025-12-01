@@ -1,4 +1,4 @@
-# ShuDL Platform - Environment Variables Reference
+# Datalyptica Platform - Environment Variables Reference
 
 **Version:** v1.0.0  
 **Last Updated:** November 26, 2025
@@ -7,7 +7,7 @@
 
 ## Overview
 
-This document provides a complete reference for all environment variables used in the ShuDL platform. Variables are organized by service layer.
+This document provides a complete reference for all environment variables used in the Datalyptica platform. Variables are organized by service layer.
 
 **Configuration File:** `docker/.env`
 
@@ -30,12 +30,12 @@ This document provides a complete reference for all environment variables used i
 ## Project Configuration
 
 ### `COMPOSE_PROJECT_NAME`
-- **Default:** `shudl`
+- **Default:** `datalyptica`
 - **Description:** Docker Compose project name prefix for all containers
-- **Example:** `shudl-minio`, `shudl-postgresql`
+- **Example:** `datalyptica-minio`, `datalyptica-postgresql`
 - **Production:** Keep default or use environment-specific name
 
-### `SHUDL_VERSION`
+### `DATALYPTICA_VERSION`
 - **Default:** `v1.0.0`
 - **Description:** Platform version for Docker image tags
 - **Production:** Update when deploying new version
@@ -290,11 +290,11 @@ sed -i "s/GRAFANA_ADMIN_PASSWORD=.*/GRAFANA_ADMIN_PASSWORD=${GRAFANA_PASS}/" doc
 sed -i "s/KEYCLOAK_ADMIN_PASSWORD=.*/KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_PASS}/" docker/.env
 
 # Store passwords securely
-echo "MinIO: ${MINIO_PASS}" >> ~/.shudl_prod_secrets
-echo "PostgreSQL: ${POSTGRES_PASS}" >> ~/.shudl_prod_secrets
-echo "Grafana: ${GRAFANA_PASS}" >> ~/.shudl_prod_secrets
-echo "Keycloak: ${KEYCLOAK_PASS}" >> ~/.shudl_prod_secrets
-chmod 600 ~/.shudl_prod_secrets
+echo "MinIO: ${MINIO_PASS}" >> ~/.datalyptica_prod_secrets
+echo "PostgreSQL: ${POSTGRES_PASS}" >> ~/.datalyptica_prod_secrets
+echo "Grafana: ${GRAFANA_PASS}" >> ~/.datalyptica_prod_secrets
+echo "Keycloak: ${KEYCLOAK_PASS}" >> ~/.datalyptica_prod_secrets
+chmod 600 ~/.datalyptica_prod_secrets
 ```
 
 ---

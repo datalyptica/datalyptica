@@ -1,8 +1,8 @@
-# ShuDL Comprehensive Test Suite
+# Datalyptica Comprehensive Test Suite
 
 ## Overview
 
-Comprehensive testing framework for all 21 components of the ShuDL Data Lakehouse platform.
+Comprehensive testing framework for all 21 components of the Datalyptica Data Lakehouse platform.
 
 ## Test Structure
 
@@ -252,26 +252,26 @@ Steps:
 
 ```bash
 # View logs for specific service
-docker logs shudl-<component-name>
+docker logs datalyptica-<component-name>
 
 # Follow logs in real-time
-docker logs -f shudl-<component-name>
+docker logs -f datalyptica-<component-name>
 
 # View last 100 lines
-docker logs --tail 100 shudl-<component-name>
+docker logs --tail 100 datalyptica-<component-name>
 ```
 
 ### Check Service Health
 
 ```bash
 # Check container status
-docker ps -a | grep shudl-
+docker ps -a | grep datalyptica-
 
 # Inspect container health
-docker inspect --format='{{.State.Health.Status}}' shudl-<component-name>
+docker inspect --format='{{.State.Health.Status}}' datalyptica-<component-name>
 
 # Check resource usage
-docker stats --no-stream | grep shudl-
+docker stats --no-stream | grep datalyptica-
 ```
 
 ### Manual Component Testing
@@ -284,13 +284,13 @@ curl http://localhost:9000/minio/health/live
 curl http://localhost:19120/api/v2/config
 
 # Test Trino
-docker exec shudl-trino trino --execute "SHOW CATALOGS"
+docker exec datalyptica-trino trino --execute "SHOW CATALOGS"
 
 # Test Kafka
-docker exec shudl-kafka kafka-topics --bootstrap-server localhost:9092 --list
+docker exec datalyptica-kafka kafka-topics --bootstrap-server localhost:9092 --list
 
 # Test ClickHouse
-docker exec shudl-clickhouse clickhouse-client --query "SELECT 1"
+docker exec datalyptica-clickhouse clickhouse-client --query "SELECT 1"
 ```
 
 ## Test Development
@@ -323,7 +323,7 @@ docker exec shudl-clickhouse clickhouse-client --query "SELECT 1"
 ### GitHub Actions Example
 
 ```yaml
-name: ShuDL Tests
+name: Datalyptica Tests
 on: [push, pull_request]
 jobs:
   test:
@@ -365,7 +365,7 @@ jobs:
 
 ## Contributing
 
-When adding new components to ShuDL:
+When adding new components to Datalyptica:
 
 1. Add health check to `test-all-health.sh`
 2. Add integration test to `test-data-flow.sh`
@@ -377,7 +377,7 @@ When adding new components to ShuDL:
 
 For issues with tests:
 
-1. Check service logs: `docker logs shudl-<component>`
-2. Verify all services are running: `docker ps | grep shudl-`
+1. Check service logs: `docker logs datalyptica-<component>`
+2. Verify all services are running: `docker ps | grep datalyptica-`
 3. Review test output for specific errors
 4. Check GitHub Issues for known problems

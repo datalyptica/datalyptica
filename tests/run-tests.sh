@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ShuDL Test Runner
+# Datalyptica Test Runner
 # Orchestrates all test suites
 
 set -e
@@ -14,7 +14,7 @@ MODE="${1:-full}"  # full, quick, health, integration, e2e
 echo -e "${PURPLE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║                                                               ║"
-echo "║                   ShuDL Test Runner                           ║"
+echo "║                   Datalyptica Test Runner                           ║"
 echo "║                                                               ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
@@ -27,8 +27,30 @@ case "$MODE" in
         echo "Running FULL test suite (all tests)..."
         echo ""
         
-        # Run comprehensive test
-        "${SCRIPT_DIR}/comprehensive-test-all-21-components.sh"
+        # 1. Run health checks
+        echo "Phase 1: Health Checks"
+        if ! "${SCRIPT_DIR}/health/test-all-health.sh"; then
+            echo -e "${RED}Health checks failed. Aborting full test suite.${NC}"
+            exit 1
+        fi
+        echo ""
+
+        # 2. Run integration tests
+        echo "Phase 2: Integration Tests"
+        if ! "${SCRIPT_DIR}/integration/test-data-flow.sh"; then
+            echo -e "${RED}Integration tests failed. Aborting full test suite.${NC}"
+            exit 1
+        fi
+        echo ""
+
+        # 3. Run end-to-end tests
+        echo "Phase 3: End-to-End Tests"
+        if ! "${SCRIPT_DIR}/e2e/test-complete-pipeline.sh"; then
+             echo -e "${RED}E2E tests failed.${NC}"
+             exit 1
+        fi
+        
+        echo -e "${GREEN}All tests passed!${NC}"
         ;;
         
     "quick")

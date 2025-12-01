@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to set up Loki log aggregation for ShuDL with Grafana Alloy
+# Script to set up Loki log aggregation for Datalyptica with Grafana Alloy
 # Grafana Alloy is the successor to Promtail and offers better performance
 # and more features for log collection and processing.
 
@@ -90,7 +90,7 @@ echo "This configuration includes:"
 echo "  • Docker container log collection via Docker API"
 echo "  • Automatic service discovery and labeling"
 echo "  • JSON log parsing with level extraction"
-echo "  • PostgreSQL and ShuDL application log file collection"
+echo "  • PostgreSQL and Datalyptica application log file collection"
 echo "  • Metrics export to Prometheus for Alloy monitoring"
 echo "  • Advanced log processing pipelines"
 echo ""
@@ -121,7 +121,7 @@ echo "   • Go to Explore"
 echo "   • Select 'Loki' datasource"
 echo "   • Try queries like:"
 echo "     - {container=\"docker-postgresql\"}"
-echo "     - {project=\"shudl\"} |= \"error\""
+echo "     - {project=\"datalyptica\"} |= \"error\""
 echo "     - {service=\"trino\"} | json"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -132,13 +132,13 @@ echo "# All logs from a specific container"
 echo '{container="docker-postgresql"}'
 echo ""
 echo "# Error logs across all services"
-echo '{project="shudl"} |= "error"'
+echo '{project="datalyptica"} |= "error"'
 echo ""
 echo "# JSON parsing with filtering"
 echo '{service="nessie"} | json | level="ERROR"'
 echo ""
 echo "# Rate of log entries"
-echo 'rate({project="shudl"}[5m])'
+echo 'rate({project="datalyptica"}[5m])'
 echo ""
 echo "# Pattern matching"
 echo '{container=~"docker-spark.*"} |~ "Exception.*"'

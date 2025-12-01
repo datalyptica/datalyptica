@@ -11,7 +11,7 @@ source "${SCRIPT_DIR}/helpers/test_helpers.sh"
 echo -e "${PURPLE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║                                                               ║"
-echo "║          ShuDL Component Test Summary                         ║"
+echo "║          Datalyptica Component Test Summary                         ║"
 echo "║          Testing All 21 Platform Components                   ║"
 echo "║                                                               ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
@@ -34,7 +34,7 @@ UNHEALTHY=0
 # Check all components
 check_component() {
     local component=$1
-    local container="shudl-${component}"
+    local container="datalyptica-${component}"
     
     TOTAL=$((TOTAL + 1))
     

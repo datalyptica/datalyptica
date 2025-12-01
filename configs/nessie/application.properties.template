@@ -1,0 +1,61 @@
+# Nessie Catalog Configuration Template
+# This file contains the configuration for Nessie catalog server with JDBC backend and REST catalog
+# Environment variables are substituted at runtime
+
+# Server Configuration
+quarkus.http.port=19120
+quarkus.http.host=0.0.0.0
+quarkus.http.cors=true
+quarkus.http.cors.origins=*
+quarkus.http.cors.methods=GET,POST,PUT,DELETE,OPTIONS
+quarkus.http.cors.headers=accept,authorization,content-type,x-requested-with
+quarkus.http.cors.exposed-headers=Content-Disposition
+quarkus.http.cors.access-control-max-age=24H
+
+# JDBC Backend Configuration (PostgreSQL)
+# Credentials provided via environment variables
+# NOTE: Using default datasource (no name) to match docker-compose environment variables
+nessie.version.store.type=${NESSIE_VERSION_STORE_TYPE}
+quarkus.datasource.db-kind=postgresql
+quarkus.datasource.jdbc.url=jdbc:postgresql://postgresql:5432/${POSTGRES_DB}
+quarkus.datasource.username=${QUARKUS_DATASOURCE_USERNAME}
+quarkus.datasource.password=${QUARKUS_DATASOURCE_PASSWORD}
+quarkus.datasource.jdbc.initial-size=2
+quarkus.datasource.jdbc.min-size=2
+quarkus.datasource.jdbc.max-size=10
+
+# Catalog Configuration
+nessie.catalog.default-warehouse=warehouse
+nessie.catalog.warehouses.warehouse.location=${WAREHOUSE_LOCATION}
+
+# S3/MinIO Configuration
+# Credentials provided via Quarkus configuration with URN notation
+nessie.catalog.service.s3.default-options.endpoint=${S3_ENDPOINT}
+nessie.catalog.service.s3.default-options.auth-type=STATIC
+nessie.catalog.service.s3.default-options.access-key=urn:nessie-secret:quarkus:s3-default
+nessie.catalog.service.s3.default-options.path-style-access=true
+nessie.catalog.service.s3.default-options.region=${MINIO_REGION}
+
+# S3 credentials via Quarkus secret configuration
+s3-default.name=${S3_ACCESS_KEY}
+s3-default.secret=${S3_SECRET_KEY}
+
+# Authentication (disabled for development)
+nessie.server.authentication.enabled=false
+
+# Logging Configuration
+quarkus.log.level=INFO
+quarkus.log.category."org.projectnessie".level=DEBUG
+quarkus.log.console.enable=true
+quarkus.log.console.format=%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n
+
+# Health Check Configuration
+quarkus.smallrye-health.root-path=/health
+
+# OpenAPI Configuration
+quarkus.swagger-ui.always-include=true
+quarkus.swagger-ui.path=/swagger-ui
+
+# Metrics Configuration
+quarkus.micrometer.enabled=true
+quarkus.micrometer.export.prometheus.enabled=true

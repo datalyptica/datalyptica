@@ -1,6 +1,6 @@
 #!/bin/bash
 # configure-keycloak.sh
-# Automated Keycloak configuration for ShuDL platform
+# Automated Keycloak configuration for Datalyptica platform
 
 set -e
 
@@ -10,7 +10,7 @@ ADMIN_PASSWORD=$(cat ../secrets/passwords/keycloak_admin_password 2>/dev/null ||
 
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║                                                              ║"
-echo "║        🔐 KEYCLOAK CONFIGURATION FOR SHUDL 🔐               ║"
+echo "║        🔐 KEYCLOAK CONFIGURATION FOR DATALYPTICA 🔐               ║"
 echo "║                                                              ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
@@ -35,14 +35,14 @@ get_admin_token() {
 # Function to create realm
 create_realm() {
     echo ""
-    echo "🏛️  Creating ShuDL realm..."
+    echo "🏛️  Creating Datalyptica realm..."
     
     REALM_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
         -H "Authorization: Bearer $TOKEN" \
-        "$KEYCLOAK_URL/admin/realms/shudl")
+        "$KEYCLOAK_URL/admin/realms/datalyptica")
     
     if [ "$REALM_EXISTS" == "200" ]; then
-        echo "ℹ️  Realm 'shudl' already exists"
+        echo "ℹ️  Realm 'datalyptica' already exists"
         return
     fi
     
@@ -50,10 +50,10 @@ create_realm() {
         -H "Authorization: Bearer $TOKEN" \
         -H "Content-Type: application/json" \
         -d '{
-            "realm": "shudl",
+            "realm": "datalyptica",
             "enabled": true,
-            "displayName": "ShuDL Platform",
-            "displayNameHtml": "<b>ShuDL</b> Data Lakehouse",
+            "displayName": "Datalyptica Platform",
+            "displayNameHtml": "<b>Datalyptica</b> Data Lakehouse",
             "registrationAllowed": false,
             "loginWithEmailAllowed": true,
             "duplicateEmailsAllowed": false,
@@ -66,7 +66,7 @@ create_realm() {
             "ssoSessionMaxLifespan": 36000
         }'
     
-    echo "✅ Realm 'shudl' created"
+    echo "✅ Realm 'datalyptica' created"
 }
 
 # Function to create roles
@@ -75,12 +75,12 @@ create_roles() {
     echo "👥 Creating roles..."
     
     for role in "admin" "developer" "analyst" "viewer"; do
-        curl -s -X POST "$KEYCLOAK_URL/admin/realms/shudl/roles" \
+        curl -s -X POST "$KEYCLOAK_URL/admin/realms/datalyptica/roles" \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
             -d "{
                 \"name\": \"$role\",
-                \"description\": \"${role^} role for ShuDL platform\"
+                \"description\": \"${role^} role for Datalyptica platform\"
             }" 2>/dev/null || echo "  ℹ️  Role '$role' may already exist"
     done
     
@@ -96,13 +96,13 @@ create_client() {
     echo ""
     echo "🔧 Creating client: $CLIENT_NAME..."
     
-    curl -s -X POST "$KEYCLOAK_URL/admin/realms/shudl/clients" \
+    curl -s -X POST "$KEYCLOAK_URL/admin/realms/datalyptica/clients" \
         -H "Authorization: Bearer $TOKEN" \
         -H "Content-Type: application/json" \
         -d "{
             \"clientId\": \"$CLIENT_ID\",
             \"name\": \"$CLIENT_NAME\",
-            \"description\": \"$CLIENT_NAME for ShuDL platform\",
+            \"description\": \"$CLIENT_NAME for Datalyptica platform\",
             \"enabled\": true,
             \"clientAuthenticatorType\": \"client-secret\",
             \"redirectUris\": $REDIRECT_URIS,
@@ -133,7 +133,7 @@ create_user() {
     echo "👤 Creating user: $USERNAME..."
     
     # Create user
-    curl -s -X POST "$KEYCLOAK_URL/admin/realms/shudl/users" \
+    curl -s -X POST "$KEYCLOAK_URL/admin/realms/datalyptica/users" \
         -H "Authorization: Bearer $TOKEN" \
         -H "Content-Type: application/json" \
         -d "{
@@ -172,12 +172,12 @@ main() {
     create_client "nessie-client" "Nessie Catalog" '["http://localhost:19120/*", "https://localhost:19443/*"]'
     create_client "trino-client" "Trino Query Engine" '["http://localhost:8080/*", "https://localhost:8443/*"]'
     create_client "prometheus-client" "Prometheus Monitoring" '["http://localhost:9090/*", "https://localhost:9443/*"]'
-    create_client "shudl-api" "ShuDL API" '["http://localhost:8000/*", "https://localhost:8443/*"]'
+    create_client "datalyptica-api" "Datalyptica API" '["http://localhost:8000/*", "https://localhost:8443/*"]'
     
     # Create test users
-    create_user "admin" "admin@shudl.local" "Admin" "User" "admin123" "admin"
-    create_user "developer" "dev@shudl.local" "Developer" "User" "dev123" "developer"
-    create_user "analyst" "analyst@shudl.local" "Analyst" "User" "analyst123" "analyst"
+    create_user "admin" "admin@datalyptica.local" "Admin" "User" "admin123" "admin"
+    create_user "developer" "dev@datalyptica.local" "Developer" "User" "dev123" "developer"
+    create_user "analyst" "analyst@datalyptica.local" "Analyst" "User" "analyst123" "analyst"
     
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -185,9 +185,9 @@ main() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     echo "📋 Summary:"
-    echo "  • Realm: shudl"
+    echo "  • Realm: datalyptica"
     echo "  • Roles: admin, developer, analyst, viewer"
-    echo "  • Clients: grafana-client, nessie-client, trino-client, prometheus-client, shudl-api"
+    echo "  • Clients: grafana-client, nessie-client, trino-client, prometheus-client, datalyptica-api"
     echo "  • Users: admin, developer, analyst"
     echo ""
     echo "🔐 Access Keycloak Admin Console:"

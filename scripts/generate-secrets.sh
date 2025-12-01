@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #
-# ShuDL Secrets Generation Script
+# Datalyptica Secrets Generation Script
 # Generates secure passwords and creates Docker secret files
 #
 
@@ -63,7 +63,7 @@ main() {
     echo ""
     echo "╔══════════════════════════════════════════════════════════════╗"
     echo "║                                                              ║"
-    echo "║           🔐 ShuDL Secrets Generation 🔐                     ║"
+    echo "║           🔐 Datalyptica Secrets Generation 🔐                     ║"
     echo "║                                                              ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo ""
@@ -80,7 +80,7 @@ main() {
     # Storage Layer Secrets
     log_info "=== Storage Layer ==="
     create_secret_file "postgres_password" "$(generate_password)"
-    create_secret_file "shudl_password" "$(generate_password)"
+    create_secret_file "datalyptica_password" "$(generate_password)"
     create_secret_file "minio_root_password" "$(generate_password)"
     create_secret_file "s3_access_key" "$(generate_password)"
     create_secret_file "s3_secret_key" "$(generate_password)"

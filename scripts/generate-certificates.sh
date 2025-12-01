@@ -1,13 +1,13 @@
 #!/bin/bash
 # generate-certificates.sh
-# Generate self-signed certificates for ShuDL services
+# Generate self-signed certificates for Datalyptica services
 
 set -e
 
 CERT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../secrets/certificates" && pwd)"
 DAYS_VALID=825  # ~2 years
 
-echo "🔐 Generating TLS/SSL Certificates for ShuDL Services"
+echo "🔐 Generating TLS/SSL Certificates for Datalyptica Services"
 echo "=================================================="
 echo "Certificate directory: $CERT_DIR"
 echo ""
@@ -26,7 +26,7 @@ generate_ca() {
     openssl req -new -x509 -days $DAYS_VALID \
         -key "$CERT_DIR/ca/ca-key.pem" \
         -out "$CERT_DIR/ca/ca-cert.pem" \
-        -subj "/C=US/ST=State/L=City/O=ShuDL/OU=Engineering/CN=ShuDL-CA"
+        -subj "/C=US/ST=State/L=City/O=Datalyptica/OU=Engineering/CN=Datalyptica-CA"
     
     echo "✅ CA certificate generated"
 }
@@ -55,7 +55,7 @@ prompt = no
 C = US
 ST = State
 L = City
-O = ShuDL
+O = Datalyptica
 OU = Engineering
 CN = $common_name
 
@@ -107,7 +107,7 @@ generate_ca
 # Generate service certificates for all 20 services
 
 echo ""
-echo "📦 Generating certificates for all ShuDL services..."
+echo "📦 Generating certificates for all Datalyptica services..."
 echo ""
 
 # Consensus Layer (etcd for Patroni)

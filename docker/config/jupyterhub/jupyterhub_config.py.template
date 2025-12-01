@@ -1,0 +1,80 @@
+# JupyterHub Configuration for ShuDL Platform
+import os
+
+# Basic Configuration
+c.JupyterHub.hub_ip = '0.0.0.0'
+c.JupyterHub.hub_port = 8081
+c.JupyterHub.port = 8000
+c.JupyterHub.bind_url = 'http://0.0.0.0:8000'
+
+# Database Configuration (PostgreSQL)
+c.JupyterHub.db_url = 'postgresql://${JUPYTERHUB_DB_USER}:${JUPYTERHUB_DB_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${JUPYTERHUB_DB_NAME}'
+
+# Docker Spawner Configuration
+c.JupyterHub.spawner_class = 'dockerspawner.DockerSpawner'
+c.DockerSpawner.image = 'ghcr.io/datalyptica-platform/datalyptica/jupyterlab-notebook:${DATALYPTICA_VERSION}'
+c.DockerSpawner.network_name = '${COMPOSE_PROJECT_NAME}_data_network'
+c.DockerSpawner.remove = True
+c.DockerSpawner.debug = True
+
+# Volume mounts for persistent user data
+c.DockerSpawner.volumes = {
+    'jupyterhub-user-{username}': '/home/jovyan/work',
+}
+
+# Environment variables for spawned containers
+c.DockerSpawner.environment = {
+    'POSTGRES_HOST': '${POSTGRES_HOST}',
+    'POSTGRES_PORT': '${POSTGRES_PORT}',
+    'POSTGRES_DB': '${SHUDL_DB}',
+    'POSTGRES_USER': '${SHUDL_USER}',
+    'POSTGRES_PASSWORD': '${SHUDL_PASSWORD}',
+    'TRINO_HOST': 'trino',
+    'TRINO_PORT': '8080',
+    'MINIO_ENDPOINT': '${S3_ENDPOINT}',
+    'AWS_ACCESS_KEY_ID': '${S3_ACCESS_KEY}',
+    'AWS_SECRET_ACCESS_KEY': '${S3_SECRET_KEY}',
+    'NESSIE_URI': '${NESSIE_URI}',
+    'MLFLOW_TRACKING_URI': 'http://mlflow:5000',
+}
+
+# Resource limits
+c.DockerSpawner.cpu_limit = 2.0
+c.DockerSpawner.mem_limit = '4G'
+
+# Authentication Configuration
+c.JupyterHub.authenticator_class = 'nativeauthenticator.NativeAuthenticator'
+c.Authenticator.admin_users = {'admin', '${JUPYTERHUB_ADMIN_USER}'}
+c.Authenticator.allowed_users = set()
+c.NativeAuthenticator.open_signup = ${JUPYTERHUB_OPEN_SIGNUP:-False}
+c.NativeAuthenticator.enable_signup = True
+c.NativeAuthenticator.minimum_password_length = 8
+c.NativeAuthenticator.check_common_password = True
+
+# Idle Culler Service
+c.JupyterHub.services = [
+    {
+        'name': 'idle-culler',
+        'admin': True,
+        'command': [
+            'python3', '-m', 'jupyterhub_idle_culler',
+            '--timeout=${JUPYTERHUB_IDLE_TIMEOUT:-3600}',
+            '--cull-every=300',
+            '--remove-named-servers'
+        ],
+    }
+]
+
+# Logging
+c.JupyterHub.log_level = '${JUPYTERHUB_LOG_LEVEL:-INFO}'
+c.Spawner.debug = ${JUPYTERHUB_DEBUG:-False}
+
+# Security
+c.JupyterHub.cookie_secret_file = '/srv/jupyterhub/data/jupyterhub_cookie_secret'
+c.ConfigurableHTTPProxy.auth_token = '${JUPYTERHUB_PROXY_AUTH_TOKEN}'
+
+# Allow named servers (multiple notebooks per user)
+c.JupyterHub.allow_named_servers = True
+c.JupyterHub.named_server_limit_per_user = 5
+
+print("✅ JupyterHub configuration loaded successfully")

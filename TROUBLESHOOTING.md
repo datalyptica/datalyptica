@@ -1,4 +1,4 @@
-# ShuDL Platform - Troubleshooting Guide
+# Datalyptica Platform - Troubleshooting Guide
 
 **Version:** v1.0.0  
 **Last Updated:** November 26, 2025
@@ -21,7 +21,7 @@ docker system df
 cd tests && ./run-tests.sh health
 
 # Check network connectivity
-docker network inspect shudl_data
+docker network inspect datalyptica_data
 ```
 
 ---
@@ -115,10 +115,10 @@ docker compose ps
 
 ```bash
 # Check health check command
-docker inspect shudl-<service> | jq '.[0].State.Health'
+docker inspect datalyptica-<service> | jq '.[0].State.Health'
 
 # View health check logs
-docker inspect shudl-<service> | jq '.[0].State.Health.Log'
+docker inspect datalyptica-<service> | jq '.[0].State.Health.Log'
 ```
 
 **Solutions:**
@@ -178,12 +178,12 @@ Error: No route to host
 
 ```bash
 # Check if both services are on same network
-docker inspect shudl-service-a | jq '.[0].NetworkSettings.Networks'
-docker inspect shudl-service-b | jq '.[0].NetworkSettings.Networks'
+docker inspect datalyptica-service-a | jq '.[0].NetworkSettings.Networks'
+docker inspect datalyptica-service-b | jq '.[0].NetworkSettings.Networks'
 
 # Test connectivity
-docker exec shudl-service-a ping service-b
-docker exec shudl-service-a curl http://service-b:port/health
+docker exec datalyptica-service-a ping service-b
+docker exec datalyptica-service-a curl http://service-b:port/health
 ```
 
 **Solutions:**
@@ -202,7 +202,7 @@ docker compose up -d
 ```bash
 # Use Docker service names, not container names
 # ✅ Correct: http://nessie:19120
-# ❌ Wrong: http://shudl-nessie:19120
+# ❌ Wrong: http://datalyptica-nessie:19120
 
 # Verify service names in docker-compose.yml
 grep "services:" docker/docker-compose.yml -A 1
@@ -212,7 +212,7 @@ grep "services:" docker/docker-compose.yml -A 1
 
 ```bash
 # Check Docker network
-docker network inspect shudl_data
+docker network inspect datalyptica_data
 
 # Verify service is on correct network
 # Update docker-compose.yml if needed
@@ -239,7 +239,7 @@ Connection timeout
 curl http://localhost:8080/v1/info
 
 # Check catalogs
-docker exec shudl-trino trino --execute "SHOW CATALOGS"
+docker exec datalyptica-trino trino --execute "SHOW CATALOGS"
 
 # Check Trino logs
 docker compose logs trino | tail -100
@@ -254,7 +254,7 @@ docker compose logs trino | tail -100
 curl http://localhost:19120/api/v2/config
 
 # Check Nessie catalog in Trino
-docker exec shudl-trino trino --execute "SHOW SCHEMAS IN iceberg"
+docker exec datalyptica-trino trino --execute "SHOW SCHEMAS IN iceberg"
 
 # If failing, restart both services
 docker compose restart nessie
@@ -283,7 +283,7 @@ curl http://localhost:9000/minio/health/live
 grep -E "(S3_ACCESS_KEY|MINIO_ROOT_USER)" docker/.env
 
 # Check bucket exists
-docker exec shudl-minio mc ls local/lakehouse
+docker exec datalyptica-minio mc ls local/lakehouse
 ```
 
 ---
@@ -304,15 +304,15 @@ Consumer group not found
 
 ```bash
 # Check Kafka status
-docker exec shudl-kafka kafka-broker-api-versions \
+docker exec datalyptica-kafka kafka-broker-api-versions \
     --bootstrap-server localhost:9092
 
 # List topics
-docker exec shudl-kafka kafka-topics \
+docker exec datalyptica-kafka kafka-topics \
     --bootstrap-server localhost:9092 --list
 
 # Check Zookeeper
-docker exec shudl-zookeeper zkServer.sh status
+docker exec datalyptica-zookeeper zkServer.sh status
 ```
 
 **Solutions:**
@@ -327,7 +327,7 @@ docker compose restart kafka
 sleep 30
 
 # Verify
-docker exec shudl-kafka kafka-topics \
+docker exec datalyptica-kafka kafka-topics \
     --bootstrap-server localhost:9092 --list
 ```
 
@@ -335,16 +335,16 @@ docker exec shudl-kafka kafka-topics \
 
 ```bash
 # Describe topic to see errors
-docker exec shudl-kafka kafka-topics \
+docker exec datalyptica-kafka kafka-topics \
     --bootstrap-server localhost:9092 \
     --describe --topic <topic-name>
 
 # Delete and recreate topic
-docker exec shudl-kafka kafka-topics \
+docker exec datalyptica-kafka kafka-topics \
     --bootstrap-server localhost:9092 \
     --delete --topic <topic-name>
 
-docker exec shudl-kafka kafka-topics \
+docker exec datalyptica-kafka kafka-topics \
     --bootstrap-server localhost:9092 \
     --create --topic <topic-name> \
     --partitions 3 --replication-factor 1
@@ -381,13 +381,13 @@ could not connect to server
 
 ```bash
 # Test PostgreSQL
-docker exec shudl-postgresql pg_isready -U postgres
+docker exec datalyptica-postgresql pg_isready -U postgres
 
 # Check logs
 docker compose logs postgresql | tail -50
 
 # Try connecting
-docker exec -it shudl-postgresql psql -U postgres
+docker exec -it datalyptica-postgresql psql -U postgres
 ```
 
 **Solutions:**
@@ -399,7 +399,7 @@ docker exec -it shudl-postgresql psql -U postgres
 grep POSTGRES docker/.env
 
 # Reset password
-docker exec -it shudl-postgresql psql -U postgres -c \
+docker exec -it datalyptica-postgresql psql -U postgres -c \
     "ALTER USER postgres WITH PASSWORD 'newpassword';"
 
 # Update .env
@@ -411,10 +411,10 @@ vim docker/.env
 
 ```bash
 # List databases
-docker exec shudl-postgresql psql -U postgres -c "\l"
+docker exec datalyptica-postgresql psql -U postgres -c "\l"
 
 # Create missing database
-docker exec shudl-postgresql psql -U postgres -c \
+docker exec datalyptica-postgresql psql -U postgres -c \
     "CREATE DATABASE nessie;"
 ```
 
@@ -422,7 +422,7 @@ docker exec shudl-postgresql psql -U postgres -c \
 
 ```bash
 # Check connections
-docker exec shudl-postgresql psql -U postgres -c \
+docker exec datalyptica-postgresql psql -U postgres -c \
     "SELECT count(*) FROM pg_stat_activity;"
 
 # Increase max connections in .env
@@ -456,7 +456,7 @@ curl http://localhost:9000/minio/health/live
 open http://localhost:9001
 
 # List buckets
-docker exec shudl-minio mc ls local/
+docker exec datalyptica-minio mc ls local/
 ```
 
 **Solutions:**
@@ -479,20 +479,20 @@ docker compose restart minio nessie trino spark-master
 
 ```bash
 # Create bucket
-docker exec shudl-minio mc mb local/lakehouse
+docker exec datalyptica-minio mc mb local/lakehouse
 
 # Verify
-docker exec shudl-minio mc ls local/
+docker exec datalyptica-minio mc ls local/
 ```
 
 **C. Permission Issues**
 
 ```bash
 # Check bucket policy
-docker exec shudl-minio mc policy get local/lakehouse
+docker exec datalyptica-minio mc policy get local/lakehouse
 
 # Set public policy (development only)
-docker exec shudl-minio mc policy set public local/lakehouse
+docker exec datalyptica-minio mc policy set public local/lakehouse
 ```
 
 ---
@@ -528,13 +528,13 @@ curl http://localhost:3100/ready
 
 ```bash
 # Check Prometheus config
-docker exec shudl-prometheus cat /etc/prometheus/prometheus.yml
+docker exec datalyptica-prometheus cat /etc/prometheus/prometheus.yml
 
 # Verify target services are healthy
 docker compose ps
 
 # Check network connectivity
-docker exec shudl-prometheus wget -O- http://nessie:19120/q/metrics
+docker exec datalyptica-prometheus wget -O- http://nessie:19120/q/metrics
 ```
 
 **B. Grafana Datasource Issues**
@@ -544,7 +544,7 @@ docker exec shudl-prometheus wget -O- http://nessie:19120/q/metrics
 docker compose restart grafana
 
 # Check provisioning
-docker exec shudl-grafana ls /etc/grafana/provisioning/datasources/
+docker exec datalyptica-grafana ls /etc/grafana/provisioning/datasources/
 
 # Manually add datasource if needed
 # Login to Grafana UI → Configuration → Data Sources
@@ -581,7 +581,7 @@ Docker sluggish
 docker stats --no-stream
 
 # Check individual services
-docker stats shudl-trino shudl-spark-master
+docker stats datalyptica-trino datalyptica-spark-master
 
 # Check system resources
 df -h  # Disk space
@@ -648,11 +648,11 @@ Missing records
 curl http://localhost:19120/api/v2/trees/tree/main/log | jq
 
 # Check table metadata
-docker exec shudl-trino trino --execute \
+docker exec datalyptica-trino trino --execute \
     "SELECT * FROM iceberg.information_schema.tables"
 
 # Check MinIO files
-docker exec shudl-minio mc ls --recursive local/lakehouse/
+docker exec datalyptica-minio mc ls --recursive local/lakehouse/
 ```
 
 **Solutions:**
@@ -681,11 +681,11 @@ docker compose restart spark-master spark-worker
 
 ```bash
 # Check table schema
-docker exec shudl-trino trino --execute \
+docker exec datalyptica-trino trino --execute \
     "DESCRIBE iceberg.schema.table"
 
 # Update schema if needed
-docker exec shudl-trino trino --execute \
+docker exec datalyptica-trino trino --execute \
     "ALTER TABLE iceberg.schema.table ADD COLUMN new_col VARCHAR"
 ```
 
@@ -699,7 +699,7 @@ docker exec shudl-trino trino --execute \
 #!/bin/bash
 # Save as: diagnostic.sh
 
-echo "=== ShuDL Platform Diagnostics ==="
+echo "=== Datalyptica Platform Diagnostics ==="
 echo
 
 echo "1. Docker Info"
@@ -717,11 +717,11 @@ docker compose ps
 echo
 
 echo "4. Network Status"
-docker network ls | grep shudl
+docker network ls | grep datalyptica
 echo
 
 echo "5. Volume Usage"
-docker volume ls | grep shudl
+docker volume ls | grep datalyptica
 echo
 
 echo "6. Recent Errors (last 50 lines per service)"
@@ -752,7 +752,7 @@ done
 echo "Collecting system info..."
 docker version > "$OUTPUT_DIR/docker-version.txt"
 docker compose ps > "$OUTPUT_DIR/services-status.txt"
-docker network inspect shudl_data > "$OUTPUT_DIR/network-data.json"
+docker network inspect datalyptica_data > "$OUTPUT_DIR/network-data.json"
 
 echo "Logs collected in: $OUTPUT_DIR"
 tar -czf "${OUTPUT_DIR}.tar.gz" $OUTPUT_DIR
@@ -785,7 +785,7 @@ Include in your report:
 
 - **GitHub Issues:** For bugs and feature requests
 - **Documentation:** Check all docs in repository
-- **Email Support:** support@shugur.com
+- **Email Support:** support@datalyptica.com
 
 ---
 
@@ -798,11 +798,11 @@ Include in your report:
 cd docker
 docker compose down -v
 
-# Remove all ShuDL volumes
-docker volume ls | grep shudl | awk '{print $2}' | xargs docker volume rm
+# Remove all Datalyptica volumes
+docker volume ls | grep datalyptica | awk '{print $2}' | xargs docker volume rm
 
-# Remove all ShuDL networks
-docker network ls | grep shudl | awk '{print $2}' | xargs docker network rm
+# Remove all Datalyptica networks
+docker network ls | grep datalyptica | awk '{print $2}' | xargs docker network rm
 
 # Restart from clean state
 docker compose up -d

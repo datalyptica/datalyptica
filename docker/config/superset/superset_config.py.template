@@ -1,0 +1,134 @@
+# Superset Configuration for ShuDL Platform
+import os
+from celery.schedules import crontab
+from flask_appbuilder.security.manager import AUTH_DB
+
+# Flask App Builder Configuration
+SECRET_KEY = '${SUPERSET_SECRET_KEY}'
+SQLALCHEMY_DATABASE_URI = 'postgresql://${SUPERSET_DB_USER}:${SUPERSET_DB_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${SUPERSET_DB_NAME}'
+
+# Flask-WTF flag for CSRF
+WTF_CSRF_ENABLED = True
+WTF_CSRF_TIME_LIMIT = None
+
+# Cache Configuration (Redis)
+CACHE_CONFIG = {
+    'CACHE_TYPE': 'RedisCache',
+    'CACHE_DEFAULT_TIMEOUT': 86400,
+    'CACHE_KEY_PREFIX': 'superset_',
+    'CACHE_REDIS_HOST': '${REDIS_HOST}',
+    'CACHE_REDIS_PORT': ${REDIS_PORT},
+    'CACHE_REDIS_DB': ${REDIS_DB:-1},
+}
+
+# Celery Configuration for async queries
+class CeleryConfig:
+    broker_url = 'redis://${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB:-0}'
+    result_backend = 'redis://${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB:-0}'
+    task_serializer = 'json'
+    result_serializer = 'json'
+    accept_content = ['json']
+    timezone = '${TIMEZONE:-UTC}'
+    enable_utc = True
+    
+    # Task annotations for async queries
+    task_annotations = {
+        'sql_lab.get_sql_results': {
+            'rate_limit': '100/s',
+        },
+    }
+    
+    # Beat schedule for periodic tasks
+    beat_schedule = {
+        'cache-warmup': {
+            'task': 'cache-warmup',
+            'schedule': crontab(hour=1, minute=0),
+            'kwargs': {},
+        },
+    }
+
+CELERY_CONFIG = CeleryConfig
+
+# Authentication Configuration
+AUTH_TYPE = AUTH_DB
+AUTH_USER_REGISTRATION = ${SUPERSET_USER_REGISTRATION:-False}
+AUTH_USER_REGISTRATION_ROLE = 'Gamma'
+
+# Feature Flags
+FEATURE_FLAGS = {
+    'ENABLE_TEMPLATE_PROCESSING': True,
+    'ENABLE_TEMPLATE_REMOVE_FILTERS': True,
+    'DASHBOARD_NATIVE_FILTERS': True,
+    'DASHBOARD_CROSS_FILTERS': True,
+    'DASHBOARD_NATIVE_FILTERS_SET': True,
+    'EMBEDDABLE_CHARTS': True,
+    'SCHEDULED_QUERIES': True,
+    'SQL_VALIDATORS_BY_ENGINE': True,
+    'ALERT_REPORTS': True,
+    'DYNAMIC_PLUGINS': True,
+}
+
+# Database Connections
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+SQLALCHEMY_ENGINE_OPTIONS = {
+    'pool_size': 20,
+    'pool_recycle': 3600,
+    'pool_pre_ping': True,
+}
+
+# Row limit for SQL Lab
+SQL_MAX_ROW = 100000
+SQLLAB_ASYNC_TIME_LIMIT_SEC = 3600
+SQLLAB_TIMEOUT = 300
+
+# Map Mapbox API Key (optional, for map visualizations)
+MAPBOX_API_KEY = '${MAPBOX_API_KEY:-}'
+
+# CORS Configuration
+ENABLE_CORS = True
+CORS_OPTIONS = {
+    'supports_credentials': True,
+    'allow_headers': ['*'],
+    'resources': ['*'],
+    'origins': ['*']
+}
+
+# Results Backend Configuration
+RESULTS_BACKEND = {
+    'type': 'redis',
+    'host': '${REDIS_HOST}',
+    'port': ${REDIS_PORT},
+    'db': ${REDIS_DB:-2},
+    'key_prefix': 'superset_results_',
+}
+
+# Thumbnail Cache Configuration
+THUMBNAIL_CACHE_CONFIG = {
+    'CACHE_TYPE': 'RedisCache',
+    'CACHE_DEFAULT_TIMEOUT': 86400 * 7,  # 7 days
+    'CACHE_KEY_PREFIX': 'thumbnail_',
+    'CACHE_REDIS_HOST': '${REDIS_HOST}',
+    'CACHE_REDIS_PORT': ${REDIS_PORT},
+    'CACHE_REDIS_DB': ${REDIS_DB:-3},
+}
+
+# Data Cache Configuration
+DATA_CACHE_CONFIG = {
+    'CACHE_TYPE': 'RedisCache',
+    'CACHE_DEFAULT_TIMEOUT': 86400,
+    'CACHE_KEY_PREFIX': 'superset_data_',
+    'CACHE_REDIS_HOST': '${REDIS_HOST}',
+    'CACHE_REDIS_PORT': ${REDIS_PORT},
+    'CACHE_REDIS_DB': ${REDIS_DB:-4},
+}
+
+# Alert & Report Configuration
+ALERT_REPORTS_NOTIFICATION_DRY_RUN = False
+WEBDRIVER_BASEURL = 'http://superset:8088/'
+
+# Logging
+LOG_LEVEL = '${SUPERSET_LOG_LEVEL:-INFO}'
+ENABLE_TIME_ROTATE = True
+LOG_FORMAT = '%(asctime)s:%(levelname)s:%(name)s:%(message)s'
+
+print("✅ Superset configuration loaded successfully")
