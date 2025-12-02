@@ -1051,8 +1051,6 @@ services:
       - grafana_data:/var/lib/grafana
       - ../../configs/grafana/provisioning:/etc/grafana/provisioning:ro
       - ../../configs/grafana/dashboards:/var/lib/grafana/dashboards:ro
-      - ../secrets/certificates/grafana:/etc/grafana/certs:ro
-      - ../secrets/certificates/ca:/etc/grafana/ca:ro
     secrets:
       - grafana_admin_password
     networks:
