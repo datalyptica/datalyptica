@@ -2,45 +2,45 @@
 secrets:
   # Core Infrastructure
   postgres_password:
-    file: ../secrets/passwords/postgres_password
+    file: ../../secrets/passwords/postgres_password
   postgres_replication_password:
-    file: ../secrets/passwords/postgres_replication_password
+    file: ../../secrets/passwords/postgres_replication_password
 
   # Platform Services
   datalyptica_password:
-    file: ../secrets/passwords/datalyptica_password
+    file: ../../secrets/passwords/datalyptica_password
   nessie_password:
-    file: ../secrets/passwords/nessie_password
+    file: ../../secrets/passwords/nessie_password
 
   # Identity & Access
   keycloak_admin_password:
-    file: ../secrets/passwords/keycloak_admin_password
+    file: ../../secrets/passwords/keycloak_admin_password
   keycloak_db_password:
-    file: ../secrets/passwords/keycloak_db_password
+    file: ../../secrets/passwords/keycloak_db_password
 
   # Storage
   minio_root_password:
-    file: ../secrets/passwords/minio_root_password
+    file: ../../secrets/passwords/minio_root_password
   s3_access_key:
-    file: ../secrets/passwords/s3_access_key
+    file: ../../secrets/passwords/s3_access_key
   s3_secret_key:
-    file: ../secrets/passwords/s3_secret_key
+    file: ../../secrets/passwords/s3_secret_key
 
   # Analytics & ML
   airflow_password:
-    file: ../secrets/passwords/airflow_password
+    file: ../../secrets/passwords/airflow_password
   jupyterhub_password:
-    file: ../secrets/passwords/jupyterhub_password
+    file: ../../secrets/passwords/jupyterhub_password
   mlflow_password:
-    file: ../secrets/passwords/mlflow_password
+    file: ../../secrets/passwords/mlflow_password
   superset_password:
-    file: ../secrets/passwords/superset_password
+    file: ../../secrets/passwords/superset_password
 
   # Monitoring
   grafana_admin_password:
-    file: ../secrets/passwords/grafana_admin_password
+    file: ../../secrets/passwords/grafana_admin_password
   clickhouse_password:
-    file: ../secrets/passwords/clickhouse_password
+    file: ../../secrets/passwords/clickhouse_password
 
 services:
   # MinIO Object Storage
@@ -945,7 +945,7 @@ services:
     volumes:
       - ge_data:/opt/great_expectations
       - ge_notebooks:/opt/notebooks
-      - ../configs/great-expectations:/opt/great_expectations/config:ro
+      - ../../../configs/great-expectations:/opt/great_expectations/config:ro
     networks:
       - data_network
       - storage_network
@@ -989,8 +989,8 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
     volumes:
-      - ../configs/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ../configs/monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ../../../configs/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../../configs/monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - ../secrets/certificates/prometheus:/etc/prometheus/certs:ro
       - ../secrets/certificates/ca:/etc/prometheus/ca:ro
       - prometheus_data:/prometheus
@@ -1051,8 +1051,8 @@ services:
       - TZ=${TIMEZONE:-UTC}
     volumes:
       - grafana_data:/var/lib/grafana
-      - ../configs/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ../configs/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ../../../configs/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../../../configs/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ../secrets/certificates/grafana:/etc/grafana/certs:ro
       - ../secrets/certificates/ca:/etc/grafana/ca:ro
     secrets:
@@ -1097,7 +1097,7 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
     volumes:
-      - ../configs/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - ../../../configs/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
       - ../secrets/certificates/loki:/etc/loki/certs:ro
       - ../secrets/certificates/ca:/etc/loki/ca:ro
       - loki_data:/loki
@@ -1133,7 +1133,7 @@ services:
     image: ghcr.io/datalyptica/datalyptica/alloy:${DATALYPTICA_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-alloy
     volumes:
-      - ../configs/monitoring/loki/alloy-config.alloy:/etc/alloy/config.alloy:ro
+      - ../../../configs/monitoring/loki/alloy-config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - alloy_data:/var/lib/alloy
@@ -1179,8 +1179,8 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
     volumes:
-      - ../configs/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - ../configs/monitoring/alertmanager/templates:/etc/alertmanager/templates:ro
+      - ../../../configs/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ../../../configs/monitoring/alertmanager/templates:/etc/alertmanager/templates:ro
       - ../secrets/certificates/alertmanager:/etc/alertmanager/certs:ro
       - ../secrets/certificates/ca:/etc/alertmanager/ca:ro
       - alertmanager_data:/alertmanager
@@ -1355,7 +1355,7 @@ services:
       - TZ=${TIMEZONE:-UTC}
     volumes:
       - jupyterhub_data:/srv/jupyterhub/data
-      - ../configs/jupyterhub:/srv/jupyterhub/config:ro
+      - ../../../configs/jupyterhub:/srv/jupyterhub/config:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - data_network
@@ -1462,7 +1462,7 @@ services:
       - TZ=${TIMEZONE:-UTC}
     volumes:
       - superset_data:/app/superset_home
-      - ../configs/superset:/app/superset_home/config:ro
+      - ../../../configs/superset:/app/superset_home/config:ro
     networks:
       - data_network
       - storage_network
@@ -1532,7 +1532,7 @@ services:
       - airflow_dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - airflow_plugins:/opt/airflow/plugins
-      - ../configs/airflow:/opt/airflow/config:ro
+      - ../../../configs/airflow:/opt/airflow/config:ro
     networks:
       - data_network
       - storage_network
@@ -1576,7 +1576,7 @@ services:
       - airflow_dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - airflow_plugins:/opt/airflow/plugins
-      - ../configs/airflow:/opt/airflow/config:ro
+      - ../../../configs/airflow:/opt/airflow/config:ro
     networks:
       - data_network
       - storage_network
@@ -1610,7 +1610,7 @@ services:
       - airflow_dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - airflow_plugins:/opt/airflow/plugins
-      - ../configs/airflow:/opt/airflow/config:ro
+      - ../../../configs/airflow:/opt/airflow/config:ro
     networks:
       - data_network
       - storage_network
