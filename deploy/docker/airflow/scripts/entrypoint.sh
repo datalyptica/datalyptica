@@ -5,6 +5,9 @@ echo "========================================"
 echo "Apache Airflow Initialization Starting..."
 echo "========================================"
 
+# Ensure airflow is in PATH (should be available in apache/airflow base image)
+export PATH="/home/airflow/.local/bin:$PATH"
+
 # Wait for PostgreSQL
 echo "Waiting for PostgreSQL..."
 until pg_isready -h ${POSTGRES_HOST:-postgresql} -p ${POSTGRES_PORT:-5432} -U ${POSTGRES_USER:-postgres}; do
