@@ -989,8 +989,8 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
     volumes:
-      - ../../../configs/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ../../../configs/monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ../../../configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../../configs/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - ../secrets/certificates/prometheus:/etc/prometheus/certs:ro
       - ../secrets/certificates/ca:/etc/prometheus/ca:ro
       - prometheus_data:/prometheus
@@ -1051,8 +1051,8 @@ services:
       - TZ=${TIMEZONE:-UTC}
     volumes:
       - grafana_data:/var/lib/grafana
-      - ../../../configs/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ../../../configs/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ../../../configs/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../../../configs/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ../secrets/certificates/grafana:/etc/grafana/certs:ro
       - ../secrets/certificates/ca:/etc/grafana/ca:ro
     secrets:
@@ -1097,7 +1097,7 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
     volumes:
-      - ../../../configs/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - ../../../configs/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
       - ../secrets/certificates/loki:/etc/loki/certs:ro
       - ../secrets/certificates/ca:/etc/loki/ca:ro
       - loki_data:/loki
@@ -1133,7 +1133,7 @@ services:
     image: ghcr.io/datalyptica/datalyptica/alloy:${DATALYPTICA_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-alloy
     volumes:
-      - ../../../configs/monitoring/loki/alloy-config.alloy:/etc/alloy/config.alloy:ro
+      - ../../../configs/loki/alloy-config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - alloy_data:/var/lib/alloy
@@ -1179,8 +1179,8 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
     volumes:
-      - ../../../configs/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - ../../../configs/monitoring/alertmanager/templates:/etc/alertmanager/templates:ro
+      - ../../../configs/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ../../../configs/alertmanager/templates:/etc/alertmanager/templates:ro
       - ../secrets/certificates/alertmanager:/etc/alertmanager/certs:ro
       - ../secrets/certificates/ca:/etc/alertmanager/ca:ro
       - alertmanager_data:/alertmanager
