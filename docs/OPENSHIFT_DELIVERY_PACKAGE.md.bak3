@@ -9,7 +9,7 @@
 
 ## 📦 Executive Summary
 
-This package contains a **complete, production-ready deployment solution** for the Datalyptica Data Platform platform on Red Hat OpenShift, configured for **High Availability (HA)** deployment on a clean OpenShift environment.
+This package contains a **complete, production-ready deployment solution** for the Datalyptica Data Lakehouse platform on Red Hat OpenShift, configured for **High Availability (HA)** deployment on a clean OpenShift environment.
 
 ### What's Included
 

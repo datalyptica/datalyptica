@@ -46,7 +46,7 @@ The Datalyptica platform has been comprehensively validated through:
 
 ### Use Case 0: SQL Analytics with Trino + Iceberg ✅
 
-**Scenario:** Product catalog management using SQL on Iceberg data platform
+**Scenario:** Product catalog management using SQL on Iceberg lakehouse
 
 **Stack Validated:**
 
@@ -368,7 +368,7 @@ Snapshot 3: 2025-11-30 10:19:12 UTC - overwrite operation
 ## 🚀 What's Working Perfectly
 
 1. ✅ **All 21 services are healthy and operational**
-2. ✅ **Iceberg data platform fully functional**
+2. ✅ **Iceberg lakehouse fully functional**
 3. ✅ **SQL analytics working flawlessly**
 4. ✅ **ACID transactions confirmed**
 5. ✅ **Time-travel queries operational**

@@ -36,7 +36,7 @@ RUN pip install --no-cache-dir \
     # Cloud storage
     boto3 \
     s3fs \
-    # Data platform
+    # Data lakehouse
     trino \
     pyspark \
     # Data manipulation

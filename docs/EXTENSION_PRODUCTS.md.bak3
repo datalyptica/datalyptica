@@ -316,7 +316,7 @@ import great_expectations as gx
 # Connect to Trino
 context = gx.get_context()
 datasource = context.sources.add_trino(
-    name="trino_dataplatform",
+    name="trino_lakehouse",
     connection_string="trino://trino:8080/iceberg"
 )
 

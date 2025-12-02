@@ -131,7 +131,7 @@ docker exec -it docker-etcd-1 etcdctl member list
 | postgresql-patroni-2  | 5433           | 8009        | patroni2_data  | Replica (auto-follows)  |
 
 **Key Configuration**:
-- Scope: `datalyptica` (cluster name)
+- Scope: `lakehouse` (cluster name)
 - Replication: Asynchronous streaming
 - WAL Archive: Enabled (`/var/lib/postgresql/archive`)
 - pg_rewind: Enabled (for timeline divergence recovery)
@@ -356,7 +356,7 @@ docker ps --filter "name=etcd" --filter "name=patroni" --filter "name=pgbouncer"
 docker exec -it docker-postgresql-patroni-1 patronictl -c /etc/patroni/patroni.yml list
 
 # Expected output:
-# + Cluster: datalyptica (7XXX) ------+----+-----------+
+# + Cluster: lakehouse (7XXX) ------+----+-----------+
 # | Member                | Host    | Role    | State   | TL | Lag in MB |
 # +-----------------------+---------+---------+---------+----+-----------+
 # | postgresql-patroni-1  | x.x.x.x | Leader  | running |  1 |           |
@@ -677,7 +677,7 @@ docker exec -it docker-etcd-1 etcdctl member list
 3. **Manual intervention**: Force one node to reinitialize:
    ```bash
    docker exec -it docker-postgresql-patroni-2 \
-     patronictl -c /etc/patroni/patroni.yml reinit datalyptica postgresql-patroni-2
+     patronictl -c /etc/patroni/patroni.yml reinit lakehouse postgresql-patroni-2
    ```
 
 ### Issue 4: Failover Not Happening
@@ -696,7 +696,7 @@ docker logs docker-postgresql-patroni-2
 docker exec -it docker-postgresql-patroni-2 curl http://etcd-1:2379/health
 
 # Check Patroni leader lock in etcd
-docker exec -it docker-etcd-1 etcdctl get /db/datalyptica/leader
+docker exec -it docker-etcd-1 etcdctl get /db/lakehouse/leader
 ```
 
 **Solutions**:

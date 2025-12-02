@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install comprehensive database drivers for all supported sources
 RUN pip install --no-cache-dir \
-    # Query engines & data platform
+    # Query engines & lakehouse
     trino \
     sqlalchemy-trino \
     pyhive \

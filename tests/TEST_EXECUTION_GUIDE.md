@@ -2,7 +2,7 @@
 
 ## 🎯 What Was Created
 
-A complete testing framework for all **21 components** of the Datalyptica Data Lakehouse platform:
+A complete testing framework for all **21 components** of the Datalyptica Data Platform platform:
 
 ### Test Files Created
 
