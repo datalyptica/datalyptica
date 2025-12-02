@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-worker
+  namespace: datalyptica-management
+  labels:
+    app: airflow
+    component: worker
+    layer: analytics
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: airflow
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: airflow
+        component: worker
+        layer: analytics
+    spec:
+      serviceAccountName: airflow
+      securityContext:
+        fsGroup: 50000
+        runAsNonRoot: true
+        runAsUser: 50000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: airflow
+                    component: worker
+                topologyKey: kubernetes.io/hostname
+      initContainers:
+        - name: wait-for-db
+          image: ghcr.io/datalyptica/datalyptica/airflow:v1.0.0
+          command:
+            - /bin/bash
+            - -c
+            - |
+              until airflow db check; do
+                echo "Waiting for database..."
+                sleep 5
+              done
+          envFrom:
+            - configMapRef:
+                name: airflow-config
+            - secretRef:
+                name: airflow-secrets
+      containers:
+        - name: worker
+          image: ghcr.io/datalyptica/datalyptica/airflow:v1.0.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - airflow
+            - celery
+            - worker
+          envFrom:
+            - configMapRef:
+                name: airflow-config
+            - secretRef:
+                name: airflow-secrets
+          resources:
+            requests:
+              cpu: 2000m
+              memory: 4Gi
+            limits:
+              cpu: 4000m
+              memory: 8Gi
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  celery -A airflow.executors.celery_executor inspect ping -d celery@$(hostname)
+            initialDelaySeconds: 120
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  celery -A airflow.executors.celery_executor inspect active -d celery@$(hostname) > /dev/null
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          volumeMounts:
+            - name: dags
+              mountPath: /opt/airflow/dags
+            - name: logs
+              mountPath: /opt/airflow/logs
+            - name: worker-data
+              mountPath: /opt/airflow/worker
+      volumes:
+        - name: dags
+          emptyDir: {}
+        - name: logs
+          emptyDir:
+            sizeLimit: 20Gi
+        - name: worker-data
+          emptyDir:
+            sizeLimit: 10Gi

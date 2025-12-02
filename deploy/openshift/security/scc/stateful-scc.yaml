@@ -1,0 +1,161 @@
+---
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: datalyptica-stateful-scc
+  annotations:
+    kubernetes.io/description: |
+      SecurityContextConstraints for Datalyptica StatefulSet workloads that require
+      specific fsGroup settings for persistent volume access. Used by PostgreSQL,
+      MinIO, Kafka, Redis, and other stateful services.
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegedContainer: false
+allowPrivilegeEscalation: false
+defaultAddCapabilities: []
+fsGroup:
+  type: MustRunAs
+  ranges:
+    - min: 999 # PostgreSQL
+      max: 999
+    - min: 1000 # MinIO, Kafka, most services
+      max: 1000
+    - min: 26 # Redis
+      max: 26
+    - min: 101 # ClickHouse
+      max: 101
+    - min: 472 # Prometheus
+      max: 472
+readOnlyRootFilesystem: false
+requiredDropCapabilities:
+  - KILL
+  - MKNOD
+  - SETUID
+  - SETGID
+runAsUser:
+  type: MustRunAsRange
+  uidRangeMin: 26
+  uidRangeMax: 65535
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+volumes:
+  - configMap
+  - downwardAPI
+  - emptyDir
+  - persistentVolumeClaim
+  - projected
+  - secret
+priority: 10
+---
+# Binding for Storage namespace (PostgreSQL, MinIO)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: datalyptica-stateful-scc-storage
+  namespace: datalyptica-storage
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:datalyptica-stateful-scc
+subjects:
+  - kind: ServiceAccount
+    name: postgresql
+    namespace: datalyptica-storage
+  - kind: ServiceAccount
+    name: minio
+    namespace: datalyptica-storage
+---
+# Binding for Control namespace (Kafka, Schema Registry, Kafka Connect)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: datalyptica-stateful-scc-control
+  namespace: datalyptica-control
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:datalyptica-stateful-scc
+subjects:
+  - kind: ServiceAccount
+    name: kafka
+    namespace: datalyptica-control
+  - kind: ServiceAccount
+    name: schema-registry
+    namespace: datalyptica-control
+  - kind: ServiceAccount
+    name: kafka-connect
+    namespace: datalyptica-control
+---
+# Binding for Data namespace (Nessie, Trino, Spark, Flink, ClickHouse)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: datalyptica-stateful-scc-data
+  namespace: datalyptica-data
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:datalyptica-stateful-scc
+subjects:
+  - kind: ServiceAccount
+    name: nessie
+    namespace: datalyptica-data
+  - kind: ServiceAccount
+    name: trino
+    namespace: datalyptica-data
+  - kind: ServiceAccount
+    name: spark
+    namespace: datalyptica-data
+  - kind: ServiceAccount
+    name: flink
+    namespace: datalyptica-data
+  - kind: ServiceAccount
+    name: clickhouse
+    namespace: datalyptica-data
+---
+# Binding for Management namespace (Prometheus, Loki, Alertmanager)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: datalyptica-stateful-scc-management
+  namespace: datalyptica-management
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:datalyptica-stateful-scc
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: datalyptica-management
+  - kind: ServiceAccount
+    name: loki
+    namespace: datalyptica-management
+  - kind: ServiceAccount
+    name: alertmanager
+    namespace: datalyptica-management
+  - kind: ServiceAccount
+    name: airflow
+    namespace: datalyptica-management
+  - kind: ServiceAccount
+    name: jupyterhub
+    namespace: datalyptica-management
+---
+# Binding for Infrastructure namespace (Redis)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: datalyptica-stateful-scc-infrastructure
+  namespace: datalyptica-infrastructure
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:datalyptica-stateful-scc
+subjects:
+  - kind: ServiceAccount
+    name: redis
+    namespace: datalyptica-infrastructure

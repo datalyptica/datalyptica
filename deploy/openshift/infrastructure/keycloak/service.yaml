@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-headless
+  namespace: datalyptica-management
+  labels:
+    app: keycloak
+    component: auth
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+    - name: https
+      port: 8443
+      targetPort: https
+      protocol: TCP
+    - name: jgroups
+      port: 7600
+      targetPort: 7600
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: datalyptica-management
+  labels:
+    app: keycloak
+    component: auth
+spec:
+  type: ClusterIP
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+    - name: https
+      port: 8443
+      targetPort: https
+      protocol: TCP

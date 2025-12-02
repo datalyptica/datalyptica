@@ -1,0 +1,22 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: prometheus
+  namespace: datalyptica-management
+  labels:
+    app: prometheus
+    layer: management
+  annotations:
+    haproxy.router.openshift.io/timeout: 5m
+spec:
+  host: prometheus.apps.cluster.local
+  to:
+    kind: Service
+    name: prometheus
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

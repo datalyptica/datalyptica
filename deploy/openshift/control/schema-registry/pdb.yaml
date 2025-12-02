@@ -1,0 +1,13 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: schema-registry-pdb
+  namespace: datalyptica-control
+  labels:
+    app: schema-registry
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: schema-registry

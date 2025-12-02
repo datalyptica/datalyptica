@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jupyterhub
+  namespace: datalyptica-management
+  labels:
+    app: jupyterhub
+    layer: analytics
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: jupyterhub
+  template:
+    metadata:
+      labels:
+        app: jupyterhub
+        layer: analytics
+    spec:
+      serviceAccountName: jupyterhub
+      securityContext:
+        fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: jupyterhub
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: jupyterhub
+          image: ghcr.io/datalyptica/datalyptica/jupyterhub:v1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: JUPYTERHUB_CRYPT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jupyterhub-secrets
+                  key: crypt-key
+            - name: CONFIGPROXY_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: jupyterhub-secrets
+                  key: proxy-token
+            - name: POSTGRES_HOST
+              value: postgresql.datalyptica-storage.svc.cluster.local
+            - name: POSTGRES_DB
+              value: jupyterhub
+            - name: POSTGRES_USER
+              value: jupyterhub
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jupyterhub-secrets
+                  key: postgres-password
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+          livenessProbe:
+            httpGet:
+              path: /hub/health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /hub/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: config
+              mountPath: /etc/jupyterhub
+            - name: data
+              mountPath: /srv/jupyterhub
+      volumes:
+        - name: config
+          configMap:
+            name: jupyterhub-config
+        - name: data
+          emptyDir:
+            sizeLimit: 1Gi

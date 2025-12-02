@@ -6,11 +6,6 @@ LABEL org.opencontainers.image.description="Custom Redis for Datalyptica Data La
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 
-# Install additional tools
-RUN apk add --no-cache \
-    curl \
-    bash
-
 # Copy custom configuration
 COPY config/redis.conf /usr/local/etc/redis/redis.conf
 

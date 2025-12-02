@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-data-to-storage
+  namespace: datalyptica-storage
+  labels:
+    layer: security
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow from data namespace (Trino, Spark, Flink, ClickHouse, dbt)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: datalyptica-data
+      ports:
+        - protocol: TCP
+          port: 5432 # PostgreSQL
+        - protocol: TCP
+          port: 9000 # MinIO API
+        - protocol: TCP
+          port: 9001 # MinIO Console

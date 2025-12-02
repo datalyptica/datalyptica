@@ -10,8 +10,9 @@ LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptic
 USER root
 COPY config/alertmanager.yml /etc/alertmanager/alertmanager.yml
 COPY config/templates/ /etc/alertmanager/templates/
-RUN chown -R alertmanager:alertmanager /etc/alertmanager
-USER alertmanager
+# Set ownership (alertmanager image uses nobody user)
+RUN chown -R nobody:nobody /etc/alertmanager
+USER nobody
 
 # Expose Alertmanager ports
 EXPOSE 9093

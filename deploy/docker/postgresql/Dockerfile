@@ -1,40 +1,19 @@
-FROM alpine:3.21.3
+# Extend official PostgreSQL image - never rebuild from source
+FROM postgres:17-alpine
 
 # Metadata
 LABEL maintainer="devops@datalyptica.com"
-LABEL description="Standard PostgreSQL image for Datalyptica lakehouse"
+LABEL description="Extended PostgreSQL image for Datalyptica lakehouse"
 LABEL version="1.0.0"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.title="PostgreSQL"
-LABEL org.opencontainers.image.description="Standard PostgreSQL image for standalone and HA variants"
+LABEL org.opencontainers.image.description="Extended PostgreSQL image for standalone and HA variants"
 
-# Install PostgreSQL and setup directories in one layer
-RUN apk add --no-cache --update \
-        postgresql \
-        postgresql-contrib \
-        postgresql-client \
-        su-exec \
-        bash \
-        tzdata \
-    && rm -rf /var/cache/apk/* /tmp/* \
-    && mkdir -p /var/lib/postgresql/data /var/run/postgresql /docker-entrypoint-initdb.d /etc/postgresql \
-    && chown -R postgres:postgres /var/lib/postgresql /var/run/postgresql /etc/postgresql /docker-entrypoint-initdb.d \
-    && chmod 755 /var/run/postgresql /var/lib/postgresql /var/lib/postgresql/data /etc/postgresql /docker-entrypoint-initdb.d
-
-# Set standard PostgreSQL environment variables
-ENV POSTGRES_USER=postgres \
-    POSTGRES_DB=postgres \
-    PGDATA=/var/lib/postgresql/data \
-    POSTGRES_INITDB_ARGS="--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-
-# Copy entrypoint script and ShuDL initialization
-COPY scripts/docker-entrypoint.sh /usr/local/bin/
-COPY scripts/init-shudl-db.sh /docker-entrypoint-initdb.d/01-init-shudl-db.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
-    && chmod +x /docker-entrypoint-initdb.d/01-init-shudl-db.sh \
-    && chown postgres:postgres /usr/local/bin/docker-entrypoint.sh \
-    && chown postgres:postgres /docker-entrypoint-initdb.d/01-init-shudl-db.sh
+# Official postgres image already has all PostgreSQL components
+# Just add our custom initialization scripts
+COPY scripts/init-shudl-db.sh /docker-entrypoint-initdb.d/01-init-datalyptica-db.sh
+RUN chmod +x /docker-entrypoint-initdb.d/01-init-datalyptica-db.sh
 
 # Declare volumes for configuration and data
 VOLUME ["/var/lib/postgresql/data", "/etc/postgresql"]

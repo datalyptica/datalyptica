@@ -1,0 +1,49 @@
+---
+# Headless service for StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-headless
+  namespace: datalyptica-control
+  labels:
+    app: kafka
+    component: streaming
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092
+      protocol: TCP
+    - name: controller
+      port: 9093
+      targetPort: 9093
+      protocol: TCP
+  selector:
+    app: kafka
+  publishNotReadyAddresses: true
+---
+# Client service (load balanced)
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: datalyptica-control
+  labels:
+    app: kafka
+    component: streaming
+spec:
+  type: ClusterIP
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092
+      protocol: TCP
+    - name: jmx
+      port: 9999
+      targetPort: 9999
+      protocol: TCP
+  selector:
+    app: kafka
+  sessionAffinity: ClientIP

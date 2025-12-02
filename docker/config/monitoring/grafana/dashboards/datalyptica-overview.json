@@ -1,8 +1,8 @@
 {
   "dashboard": {
     "id": null,
-    "title": "ShuDL Data Lakehouse Overview",
-    "tags": ["shudl", "overview"],
+    "title": "Datalyptica Data Lakehouse Overview",
+    "tags": ["datalyptica", "overview"],
     "style": "dark",
     "timezone": "browser",
     "panels": [
@@ -12,7 +12,7 @@
         "type": "stat",
         "targets": [
           {
-            "expr": "up{job=~\"shudl-.*\"}",
+            "expr": "up{job=~\"datalyptica-.*\"}",
             "legendFormat": "{{job}}"
           }
         ],
@@ -150,4 +150,5 @@
     "refresh": "30s",
     "version": 1
   }
-} 
+}
+

@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-webserver
+  namespace: datalyptica-management
+  labels:
+    app: airflow
+    component: webserver
+    layer: analytics
+spec:
+  type: ClusterIP
+  selector:
+    app: airflow
+    component: webserver
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-scheduler-headless
+  namespace: datalyptica-management
+  labels:
+    app: airflow
+    component: scheduler
+    layer: analytics
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: airflow
+    component: scheduler
+  ports:
+    - name: scheduler
+      port: 8793
+      targetPort: 8793
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-worker
+  namespace: datalyptica-management
+  labels:
+    app: airflow
+    component: worker
+    layer: analytics
+spec:
+  type: ClusterIP
+  selector:
+    app: airflow
+    component: worker
+  ports:
+    - name: worker
+      port: 8793
+      targetPort: 8793
+      protocol: TCP

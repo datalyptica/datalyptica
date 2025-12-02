@@ -5,15 +5,30 @@ FROM apache/superset:3.0.3
 # Switch to root for installations
 USER root
 
-# Install additional dependencies
+# Install comprehensive database drivers for all supported sources
 RUN pip install --no-cache-dir \
-    trino==0.328.0 \
-    psycopg2-binary==2.9.9 \
-    redis==5.0.1 \
-    celery==5.3.4 \
-    authlib==1.3.0 \
-    pyhive==0.7.0 \
-    sqlalchemy-trino==0.5.0
+    # Query engines & lakehouse
+    trino \
+    sqlalchemy-trino \
+    pyhive \
+    pyspark \
+    # Relational databases
+    psycopg2-binary \
+    pymysql \
+    mysqlclient \
+    pyodbc \
+    cx-Oracle \
+    pymssql \
+    # NoSQL databases
+    pymongo \
+    cassandra-driver \
+    # Cloud storage
+    boto3 \
+    s3fs \
+    # Superset dependencies
+    redis \
+    celery \
+    authlib
 
 # Create configuration directory
 RUN mkdir -p /app/superset_home/config

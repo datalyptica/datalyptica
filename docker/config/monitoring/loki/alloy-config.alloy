@@ -1,4 +1,4 @@
-// Grafana Alloy Configuration for ShuDL
+// Grafana Alloy Configuration for Datalyptica
 // Replaces Promtail for log collection and forwarding to Loki
 
 // Logging configuration
@@ -150,21 +150,21 @@ loki.process "postgresql_pipeline" {
   }
 }
 
-// ShuDL application logs (if mounted)
-local.file_match "shudl_logs" {
+// Datalyptica application logs (if mounted)
+local.file_match "datalyptica_logs" {
   path_targets = [{
-    __path__ = "/var/log/shudl/*.log",
-    job      = "shudl",
-    service  = "shudl",
+    __path__ = "/var/log/datalyptica/*.log",
+    job      = "datalyptica",
+    service  = "datalyptica",
   }]
 }
 
-loki.source.file "shudl" {
-  targets    = local.file_match.shudl_logs.targets
-  forward_to = [loki.process.shudl_pipeline.receiver]
+loki.source.file "datalyptica" {
+  targets    = local.file_match.datalyptica_logs.targets
+  forward_to = [loki.process.datalyptica_pipeline.receiver]
 }
 
-loki.process "shudl_pipeline" {
+loki.process "datalyptica_pipeline" {
   forward_to = [loki.write.default.receiver]
 
   // Parse JSON logs
@@ -186,7 +186,7 @@ loki.process "shudl_pipeline" {
 
   stage.static_labels {
     values = {
-      source = "shudl_file",
+      source = "datalyptica_file",
     }
   }
 }

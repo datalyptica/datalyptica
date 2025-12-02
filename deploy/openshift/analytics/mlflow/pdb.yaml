@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mlflow
+  namespace: datalyptica-management
+  labels:
+    app: mlflow
+    layer: analytics
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: mlflow

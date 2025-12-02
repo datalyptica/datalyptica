@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - allow-storage-to-control.yaml
+  - allow-data-to-storage.yaml
+  - allow-control-to-data.yaml
+  - allow-management-scraping.yaml
+  - allow-analytics-to-data.yaml
+  - allow-analytics-to-storage.yaml
+  - allow-analytics-to-infrastructure.yaml
+  - allow-same-namespace.yaml
+
+commonLabels:
+  component: network-policy
+  managed-by: kustomize

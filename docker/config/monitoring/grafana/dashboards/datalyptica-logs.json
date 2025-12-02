@@ -1,7 +1,7 @@
 {
   "dashboard": {
-    "title": "ShuDL Log Analytics",
-    "tags": ["logs", "shudl", "monitoring"],
+    "title": "Datalyptica Log Analytics",
+    "tags": ["logs", "datalyptica", "monitoring"],
     "timezone": "browser",
     "panels": [
       {
@@ -10,7 +10,7 @@
         "type": "bargauge",
         "targets": [
           {
-            "expr": "sum by (service) (count_over_time({project=\"shudl\"}[1h]))",
+            "expr": "sum by (service) (count_over_time({project=\"datalyptica\"}[1h]))",
             "refId": "A",
             "datasource": {
               "type": "loki",
@@ -35,7 +35,7 @@
         "type": "bargauge",
         "targets": [
           {
-            "expr": "sum by (service) (count_over_time({project=\"shudl\"} |= \"error\" [1h]))",
+            "expr": "sum by (service) (count_over_time({project=\"datalyptica\"} |= \"error\" [1h]))",
             "refId": "A",
             "datasource": {
               "type": "loki",
@@ -84,7 +84,7 @@
         "type": "logs",
         "targets": [
           {
-            "expr": "{project=\"shudl\"}",
+            "expr": "{project=\"datalyptica\"}",
             "refId": "A",
             "datasource": {
               "type": "loki",
@@ -115,7 +115,7 @@
         "type": "logs",
         "targets": [
           {
-            "expr": "{container=\"docker-postgresql\"}",
+            "expr": "{container=\"datalyptica-postgresql\"}",
             "refId": "A",
             "datasource": {
               "type": "loki",
@@ -141,7 +141,7 @@
         "type": "logs",
         "targets": [
           {
-            "expr": "{container=\"docker-trino\"}",
+            "expr": "{container=\"datalyptica-trino\"}",
             "refId": "A",
             "datasource": {
               "type": "loki",
@@ -167,7 +167,7 @@
         "type": "logs",
         "targets": [
           {
-            "expr": "{project=\"shudl\"} |~ \"(?i)(error|exception|fail)\"",
+            "expr": "{project=\"datalyptica\"} |~ \"(?i)(error|exception|fail)\"",
             "refId": "A",
             "datasource": {
               "type": "loki",
@@ -202,7 +202,7 @@
         "type": "timeseries",
         "targets": [
           {
-            "expr": "sum by (service) (rate({project=\"shudl\"}[1m]))",
+            "expr": "sum by (service) (rate({project=\"datalyptica\"}[1m]))",
             "refId": "A",
             "datasource": {
               "type": "loki",
@@ -243,7 +243,7 @@
         "type": "piechart",
         "targets": [
           {
-            "expr": "topk(10, sum by (container) (count_over_time({project=\"shudl\"}[1h])))",
+            "expr": "topk(10, sum by (container) (count_over_time({project=\"datalyptica\"}[1h])))",
             "refId": "A",
             "datasource": {
               "type": "loki",
@@ -273,7 +273,7 @@
         "type": "stat",
         "targets": [
           {
-            "expr": "(sum by (service) (count_over_time({project=\"shudl\"} |~ \"(?i)error\" [5m])) / sum by (service) (count_over_time({project=\"shudl\"}[5m]))) * 100",
+            "expr": "(sum by (service) (count_over_time({project=\"datalyptica\"} |~ \"(?i)error\" [5m])) / sum by (service) (count_over_time({project=\"datalyptica\"}[5m]))) * 100",
             "refId": "A",
             "datasource": {
               "type": "loki",
@@ -337,3 +337,4 @@
     }
   ]
 }
+

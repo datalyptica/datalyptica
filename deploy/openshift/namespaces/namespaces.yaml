@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datalyptica-operators
+  labels:
+    name: datalyptica-operators
+    platform: datalyptica
+    tier: operators
+  annotations:
+    openshift.io/description: "Datalyptica Platform Operators"
+    openshift.io/display-name: "Datalyptica Operators"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datalyptica-storage
+  labels:
+    name: datalyptica-storage
+    platform: datalyptica
+    tier: storage
+  annotations:
+    openshift.io/description: "Datalyptica Storage Layer (PostgreSQL, MinIO)"
+    openshift.io/display-name: "Datalyptica Storage"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datalyptica-control
+  labels:
+    name: datalyptica-control
+    platform: datalyptica
+    tier: control
+  annotations:
+    openshift.io/description: "Datalyptica Control Plane (Kafka, Schema Registry)"
+    openshift.io/display-name: "Datalyptica Control"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datalyptica-data
+  labels:
+    name: datalyptica-data
+    platform: datalyptica
+    tier: data
+  annotations:
+    openshift.io/description: "Datalyptica Data Layer (Trino, Spark, Flink)"
+    openshift.io/display-name: "Datalyptica Data"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datalyptica-management
+  labels:
+    name: datalyptica-management
+    platform: datalyptica
+    tier: management
+  annotations:
+    openshift.io/description: "Datalyptica Management (Monitoring, IAM)"
+    openshift.io/display-name: "Datalyptica Management"

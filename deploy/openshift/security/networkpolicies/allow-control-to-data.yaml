@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-control-to-data
+  namespace: datalyptica-data
+  labels:
+    layer: security
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow from control namespace (Schema Registry validation)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: datalyptica-control
+      ports:
+        - protocol: TCP
+          port: 8080 # Trino, Spark, Flink
+        - protocol: TCP
+          port: 19120 # Nessie
+        - protocol: TCP
+          port: 8123 # ClickHouse HTTP
+        - protocol: TCP
+          port: 9000 # ClickHouse Native

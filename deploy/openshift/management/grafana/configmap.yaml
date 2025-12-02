@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: datalyptica-management
+  labels:
+    app: grafana
+data:
+  grafana.ini: |
+    [server]
+    protocol = http
+    http_port = 3000
+    root_url = https://grafana.apps.cluster.com
+
+    [database]
+    type = postgres
+
+    [security]
+    admin_user = admin
+
+    [users]
+    allow_sign_up = false
+
+    [auth.anonymous]
+    enabled = false
+
+    [analytics]
+    reporting_enabled = false
+    check_for_updates = false
+
+    [log]
+    mode = console
+    level = info
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: datalyptica-management
+  labels:
+    app: grafana
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus:9090
+      isDefault: true
+      editable: false
+      jsonData:
+        timeInterval: 30s
+
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki-read:3100
+      editable: false
+      jsonData:
+        maxLines: 1000
+
+    - name: PostgreSQL
+      type: postgres
+      access: proxy
+      url: postgresql.datalyptica-storage:5432
+      database: shudl
+      user: ${POSTGRES_USER}
+      secureJsonData:
+        password: ${POSTGRES_PASSWORD}
+      jsonData:
+        sslmode: require
+        postgresVersion: 1500
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-config
+  namespace: datalyptica-management
+  labels:
+    app: grafana
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards

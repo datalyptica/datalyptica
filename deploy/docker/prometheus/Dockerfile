@@ -10,10 +10,10 @@ LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptic
 COPY config/prometheus.yml /etc/prometheus/prometheus.yml
 COPY config/alerts/ /etc/prometheus/alerts/
 
-# Set ownership
+# Set ownership (prometheus image uses nobody user)
 USER root
-RUN chown -R prometheus:prometheus /etc/prometheus
-USER prometheus
+RUN chown -R nobody:nobody /etc/prometheus
+USER nobody
 
 # Expose Prometheus port
 EXPOSE 9090

@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: great-expectations-config
+  namespace: datalyptica-management
+  labels:
+    app: great-expectations
+    layer: analytics
+data:
+  great_expectations.yml: |
+    # Great Expectations configuration
+    config_version: 3.0
+
+    # Data context
+    config_variables_file_path: uncommitted/config_variables.yml
+
+    # Plugins directory
+    plugins_directory: plugins/
+
+    # Stores
+    stores:
+      expectations_store:
+        class_name: ExpectationsStore
+        store_backend:
+          class_name: TupleS3StoreBackend
+          bucket: datalyptica
+          prefix: great_expectations/expectations/
+          boto3_options:
+            endpoint_url: http://minio.datalyptica-storage.svc.cluster.local:9000
+      
+      validations_store:
+        class_name: ValidationsStore
+        store_backend:
+          class_name: TupleS3StoreBackend
+          bucket: datalyptica
+          prefix: great_expectations/validations/
+          boto3_options:
+            endpoint_url: http://minio.datalyptica-storage.svc.cluster.local:9000
+      
+      evaluation_parameter_store:
+        class_name: EvaluationParameterStore
+      
+      checkpoint_store:
+        class_name: CheckpointStore
+        store_backend:
+          class_name: TupleS3StoreBackend
+          bucket: datalyptica
+          prefix: great_expectations/checkpoints/
+          boto3_options:
+            endpoint_url: http://minio.datalyptica-storage.svc.cluster.local:9000
+
+    expectations_store_name: expectations_store
+    validations_store_name: validations_store
+    evaluation_parameter_store_name: evaluation_parameter_store
+    checkpoint_store_name: checkpoint_store
+
+    # Data docs
+    data_docs_sites:
+      s3_site:
+        class_name: SiteBuilder
+        show_how_to_buttons: true
+        store_backend:
+          class_name: TupleS3StoreBackend
+          bucket: datalyptica
+          prefix: great_expectations/data_docs/
+          boto3_options:
+            endpoint_url: http://minio.datalyptica-storage.svc.cluster.local:9000
+        site_index_builder:
+          class_name: DefaultSiteIndexBuilder
+
+    # Anonymous usage statistics
+    anonymous_usage_statistics:
+      enabled: false
+
+    # Notebooks
+    notebooks:
+
+  config_variables.yml: |
+    # Config variables for Great Expectations
+
+    # Trino connection
+    trino_host: trino.datalyptica-data.svc.cluster.local
+    trino_port: 8080
+    trino_catalog: nessie
+    trino_schema: default
+
+    # S3/MinIO
+    s3_endpoint: http://minio.datalyptica-storage.svc.cluster.local:9000
+    s3_bucket: datalyptica

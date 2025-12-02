@@ -1,0 +1,22 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: superset
+  namespace: datalyptica-management
+  labels:
+    app: superset
+    layer: analytics
+  annotations:
+    haproxy.router.openshift.io/timeout: 10m
+spec:
+  host: superset.apps.cluster.local
+  to:
+    kind: Service
+    name: superset
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

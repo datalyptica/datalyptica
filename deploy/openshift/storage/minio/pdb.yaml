@@ -1,0 +1,13 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: minio-pdb
+  namespace: datalyptica-storage
+  labels:
+    app: minio
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app: minio

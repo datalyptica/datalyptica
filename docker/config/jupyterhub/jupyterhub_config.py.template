@@ -1,4 +1,4 @@
-# JupyterHub Configuration for ShuDL Platform
+# JupyterHub Configuration for Datalyptica Platform
 import os
 
 # Basic Configuration
@@ -26,9 +26,9 @@ c.DockerSpawner.volumes = {
 c.DockerSpawner.environment = {
     'POSTGRES_HOST': '${POSTGRES_HOST}',
     'POSTGRES_PORT': '${POSTGRES_PORT}',
-    'POSTGRES_DB': '${SHUDL_DB}',
-    'POSTGRES_USER': '${SHUDL_USER}',
-    'POSTGRES_PASSWORD': '${SHUDL_PASSWORD}',
+    'POSTGRES_DB': '${DATALYPTICA_DB}',
+    'POSTGRES_USER': '${DATALYPTICA_USER}',
+    'POSTGRES_PASSWORD': '${DATALYPTICA_PASSWORD}',
     'TRINO_HOST': 'trino',
     'TRINO_PORT': '8080',
     'MINIO_ENDPOINT': '${S3_ENDPOINT}',

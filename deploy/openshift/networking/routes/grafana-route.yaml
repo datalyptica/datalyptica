@@ -1,0 +1,22 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: grafana
+  namespace: datalyptica-management
+  labels:
+    app: grafana
+    layer: management
+  annotations:
+    haproxy.router.openshift.io/timeout: 5m
+spec:
+  host: grafana.apps.cluster.local
+  to:
+    kind: Service
+    name: grafana
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

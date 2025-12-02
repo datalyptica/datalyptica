@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: superset
+  namespace: datalyptica-management
+  labels:
+    app: superset
+    layer: analytics
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: superset

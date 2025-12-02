@@ -1,4 +1,4 @@
-# Superset Configuration for ShuDL Platform
+# Superset Configuration for Datalyptica Platform
 import os
 from celery.schedules import crontab
 from flask_appbuilder.security.manager import AUTH_DB

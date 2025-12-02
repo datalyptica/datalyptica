@@ -1,0 +1,22 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: keycloak
+  namespace: datalyptica-infrastructure
+  labels:
+    app: keycloak
+    layer: infrastructure
+  annotations:
+    haproxy.router.openshift.io/timeout: 5m
+spec:
+  host: keycloak.apps.cluster.local
+  to:
+    kind: Service
+    name: keycloak
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

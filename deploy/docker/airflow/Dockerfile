@@ -1,54 +1,59 @@
 # Apache Airflow Workflow Orchestration
-# Multi-stage build to reduce final image size
+# Enhanced with comprehensive database connectivity
 
-# Build stage: Install dependencies
-FROM apache/airflow:2.8.0-python3.11 AS builder
-
-USER root
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-USER airflow
-
-# Install Python packages in builder stage
-RUN pip install --no-cache-dir --user \
-    apache-airflow-providers-postgres==5.10.0 \
-    apache-airflow-providers-amazon==8.16.0 \
-    apache-airflow-providers-apache-spark==4.6.0 \
-    apache-airflow-providers-trino==5.6.0 \
-    apache-airflow-providers-redis==3.5.0 \
-    apache-airflow-providers-docker==3.9.0 \
-    great-expectations==0.18.19 \
-    mlflow==2.9.2 \
-    psycopg2-binary==2.9.9 \
-    boto3==1.34.19 \
-    pyspark==3.5.0 \
-    trino==0.328.0 \
-    'redis>=4.5.2,<5.0.0'
-
-# Final stage: Runtime image
 FROM apache/airflow:2.8.0-python3.11
 
 USER root
 
-# Install only runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Fix GPG issues and install system dependencies with database clients
+RUN apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     postgresql-client \
-    && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /opt/airflow/dags /opt/airflow/logs /opt/airflow/plugins /opt/airflow/config \
-    && chown -R airflow:root /opt/airflow
+    mariadb-client \
+    vim \
+    gcc \
+    g++ \
+    libpq-dev \
+    libmariadb-dev \
+    unixodbc-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 USER airflow
 
-# Copy installed packages from builder
-COPY --from=builder --chown=airflow:root /home/airflow/.local /home/airflow/.local
+# Install comprehensive Airflow providers and database connectors
+RUN pip install --no-cache-dir \
+    # Airflow providers
+    apache-airflow-providers-postgres \
+    apache-airflow-providers-mysql \
+    apache-airflow-providers-mongo \
+    apache-airflow-providers-microsoft-mssql \
+    apache-airflow-providers-oracle \
+    apache-airflow-providers-amazon \
+    apache-airflow-providers-apache-spark \
+    apache-airflow-providers-trino \
+    apache-airflow-providers-redis \
+    apache-airflow-providers-docker \
+    apache-airflow-providers-apache-kafka \
+    # Database connectors
+    psycopg2-binary \
+    pymysql \
+    pymongo \
+    cx-Oracle \
+    pyodbc \
+    # Data tools
+    boto3 \
+    pyspark \
+    trino \
+    'redis>=4.5.2,<5.0.0'
+
+USER root
+RUN mkdir -p /opt/airflow/dags /opt/airflow/logs /opt/airflow/plugins /opt/airflow/config \
+    && chown -R airflow:root /opt/airflow
+
+USER airflow
 
 # Expose Airflow webserver port
 EXPOSE 8080

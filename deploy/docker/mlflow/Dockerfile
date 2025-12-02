@@ -15,16 +15,24 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install MLflow and dependencies
+# Install MLflow and comprehensive database drivers
 RUN pip install --no-cache-dir \
-    mlflow[extras]==2.9.2 \
-    psycopg2-binary==2.9.9 \
-    boto3==1.34.19 \
-    pyspark==3.5.0 \
-    scikit-learn==1.4.0 \
-    pandas==2.1.4 \
-    numpy==1.26.3 \
-    pyarrow==14.0.2
+    'mlflow[extras]' \
+    # Database backends
+    psycopg2-binary \
+    pymysql \
+    pymongo \
+    # Cloud storage
+    boto3 \
+    s3fs \
+    # Data manipulation
+    pandas \
+    numpy \
+    pyarrow \
+    # Lakehouse integration
+    trino \
+    pyspark \
+    scikit-learn
 
 # Create non-root user
 RUN groupadd -r -g 1000 shusr && \

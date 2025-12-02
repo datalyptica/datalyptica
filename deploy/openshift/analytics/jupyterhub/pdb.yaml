@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: jupyterhub
+  namespace: datalyptica-management
+  labels:
+    app: jupyterhub
+    layer: analytics
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: jupyterhub

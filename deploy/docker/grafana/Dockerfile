@@ -16,10 +16,10 @@ RUN grafana-cli plugins install grafana-piechart-panel && \
 COPY provisioning/ /etc/grafana/provisioning/
 COPY dashboards/ /var/lib/grafana/dashboards/
 
-# Set ownership
-RUN chown -R grafana:grafana /etc/grafana /var/lib/grafana
+# Set ownership (grafana image uses uid 472)
+RUN chown -R 472:472 /etc/grafana /var/lib/grafana
 
-USER grafana
+USER 472
 
 # Expose Grafana port
 EXPOSE 3000

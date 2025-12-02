@@ -1,0 +1,52 @@
+---
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: datalyptica-daemonset-scc
+  annotations:
+    kubernetes.io/description: |
+      SecurityContextConstraints for Datalyptica DaemonSet workloads that require
+      host-level access. Used by Alloy (log collection) which needs to read pod
+      logs from host filesystem and access host network.
+allowHostDirVolumePlugin: true
+allowHostIPC: false
+allowHostNetwork: true
+allowHostPID: false
+allowHostPorts: true
+allowPrivilegedContainer: true
+allowPrivilegeEscalation: true
+defaultAddCapabilities: []
+requiredDropCapabilities: []
+fsGroup:
+  type: RunAsAny
+readOnlyRootFilesystem: false
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+volumes:
+  - configMap
+  - downwardAPI
+  - emptyDir
+  - hostPath
+  - persistentVolumeClaim
+  - projected
+  - secret
+priority: 20
+---
+# Binding for Alloy DaemonSet in Management namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: datalyptica-daemonset-scc-management
+  namespace: datalyptica-management
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:datalyptica-daemonset-scc
+subjects:
+  - kind: ServiceAccount
+    name: alloy
+    namespace: datalyptica-management

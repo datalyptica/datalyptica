@@ -1,4 +1,4 @@
-# Airflow Configuration for ShuDL Platform
+# Airflow Configuration for Datalyptica Platform
 
 [core]
 dags_folder = /opt/airflow/dags

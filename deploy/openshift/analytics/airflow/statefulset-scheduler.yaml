@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: airflow-scheduler
+  namespace: datalyptica-management
+  labels:
+    app: airflow
+    component: scheduler
+    layer: analytics
+spec:
+  serviceName: airflow-scheduler-headless
+  replicas: 2
+  selector:
+    matchLabels:
+      app: airflow
+      component: scheduler
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: airflow
+        component: scheduler
+        layer: analytics
+    spec:
+      serviceAccountName: airflow
+      securityContext:
+        fsGroup: 50000
+        runAsNonRoot: true
+        runAsUser: 50000
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: airflow
+                  component: scheduler
+              topologyKey: kubernetes.io/hostname
+      initContainers:
+        - name: wait-for-db
+          image: ghcr.io/datalyptica/datalyptica/airflow:v1.0.0
+          command:
+            - /bin/bash
+            - -c
+            - |
+              until airflow db check; do
+                echo "Waiting for database..."
+                sleep 5
+              done
+          envFrom:
+            - configMapRef:
+                name: airflow-config
+            - secretRef:
+                name: airflow-secrets
+      containers:
+        - name: scheduler
+          image: ghcr.io/datalyptica/datalyptica/airflow:v1.0.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - airflow
+            - scheduler
+          envFrom:
+            - configMapRef:
+                name: airflow-config
+            - secretRef:
+                name: airflow-secrets
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 2Gi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  pgrep -f "airflow scheduler" > /dev/null
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  airflow jobs check --job-type SchedulerJob --hostname $(hostname)
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          volumeMounts:
+            - name: dags
+              mountPath: /opt/airflow/dags
+            - name: logs
+              mountPath: /opt/airflow/logs
+            - name: scheduler-data
+              mountPath: /opt/airflow/scheduler
+      volumes:
+        - name: dags
+          emptyDir: {}
+        - name: logs
+          emptyDir:
+            sizeLimit: 10Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: scheduler-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 10Gi

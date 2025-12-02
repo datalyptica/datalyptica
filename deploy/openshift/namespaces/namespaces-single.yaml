@@ -1,0 +1,54 @@
+---
+# Single Namespace Configuration for Datalyptica Platform
+# Use this instead of namespaces.yaml for simplified deployment
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datalyptica
+  labels:
+    name: datalyptica
+    platform: datalyptica
+  annotations:
+    openshift.io/description: "Datalyptica Platform (All Components)"
+    openshift.io/display-name: "Datalyptica"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: datalyptica-quota
+  namespace: datalyptica
+spec:
+  hard:
+    # Combined quotas from all tiers
+    requests.cpu: "136" # 32+24+64+16 = 136 cores
+    requests.memory: "512Gi" # 128+64+256+64 = 512 GiB
+    limits.cpu: "272" # 64+48+128+32 = 272 cores
+    limits.memory: "1024Gi" # 256+128+512+128 = 1024 GiB
+    persistentvolumeclaims: "120"
+    requests.storage: "9Ti" # 5+2+1+1 = 9 TiB
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: datalyptica-limits
+  namespace: datalyptica
+spec:
+  limits:
+    - max:
+        cpu: "16"
+        memory: "64Gi"
+      min:
+        cpu: "50m"
+        memory: "64Mi"
+      default:
+        cpu: "1"
+        memory: "2Gi"
+      defaultRequest:
+        cpu: "500m"
+        memory: "1Gi"
+      type: Container
+    - max:
+        storage: "1Ti"
+      min:
+        storage: "1Gi"
+      type: PersistentVolumeClaim
