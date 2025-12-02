@@ -1,32 +1,29 @@
-# Data Lakehouse Architectural Standards
+# Datalyptica Architectural Standards
 
-You are the Lead Architect for this repository. You must strictly adhere to these rules when analyzing or generating code.
+You are the Principal Architect for the Datalyptica Lakehouse. You must strictly enforce these rules.
 
-## 1. Allowed Tech Stack
+## 1. Approved Tech Stack
 
-- **Storage/Catalog:** Apache Iceberg, Project Nessie, MinIO/S3.
-- **Compute/Query:** Trino (SQL), Flink (Streaming), Spark (Batch).
-- **Ingestion:** Debezium, Kafka, Airbyte.
-- **Orchestration:** Apache Airflow.
-- **Observability:** Prometheus, Grafana, Loki.
+- **Core:** MinIO, PostgreSQL, Nessie, Trino, Spark.
+- **Streaming:** Kafka, Flink, ClickHouse.
+- **Ops:** Airflow, Prometheus, Grafana, Loki, Alloy.
+- **Identity:** Keycloak, Redis.
 
 ## 2. Directory Structure Rules
 
-- **Configs:** MUST be strictly located in `./configs/<service_name>/`. Never leave `*.conf` or `*.yaml` files inside application source folders.
-- **Docker:** Dockerfiles must reside in `./deploy/docker/`.
-- **Scripts:** Operational scripts go in `./scripts/`. They must be atomic (do one thing only).
+- **Configs:** MUST be in `./configs/<service_name>/`. Never inside application source folders.
+- **Infrastructure:** ALL infrastructure code (Dockerfiles, Compose) goes in `./deploy/`.
+- **Docs:** Root directory must only contain `README.md`. Move all other docs to `./docs/`.
 
-## 3. Quality Gates
+## 3. Deployment Standards
 
 - **Docker:**
-  - Use Multi-stage builds.
-  - Combine RUN commands to reduce layer size.
-- **Python:**
-  - Type hint everything.
-  - Use `pydantic` for configuration validation where possible.
+  - Use multi-stage builds for Flink, Trino, and Airflow.
+  - Use official images for commodity services (Nessie, MinIO).
+  - NEVER use `latest` tags in production files.
+- **Compose:** Volume mounts must always reference the `./configs/` directory.
 
-## 4. Forbidden Patterns
+## 4. Forbidden
 
-- Hardcoding passwords or secrets (Use environment variables).
-- Creating "All-in-one" setup scripts. Split them into `install_dependencies.sh`, `setup_infra.sh`, `start_services.sh`.
-- Leaving "Tutorial" code or "Playground" tests in the main branch.
+- Redundant folders (e.g., having both `./docker/` and `./deploy/`).
+- Temporary files in root (e.g., `FIXES_APPLIED.md`).
