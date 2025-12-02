@@ -112,7 +112,7 @@ AIRFLOW_DB_PASSWORD_FILE=/run/secrets/airflow_password
 
 **Email Addresses:**
 
-- Updated all `@shudl.local` → `@datalyptica.local`
+- Updated all `@datalyptica.local` → `@datalyptica.local`
 
 ### ✅ docker-compose.yml Updates
 
@@ -305,7 +305,7 @@ jdbc:postgresql://postgresql:5432/keycloak?user=keycloak&password=${KEYCLOAK_DB_
 - **Database Names:** Removed `_db` suffix (e.g., `airflow_db` → `airflow`)
 - **Usernames:** Removed `_user` suffix (e.g., `airflow_user` → `airflow`)
 - **Passwords:** Switched from env vars to Docker secrets
-- **Email Domains:** `@shudl.local` → `@datalyptica.local`
+- **Email Domains:** `@datalyptica.local` → `@datalyptica.local`
 
 ### Backward Compatibility
 

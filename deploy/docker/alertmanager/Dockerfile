@@ -2,7 +2,7 @@
 FROM prom/alertmanager:v0.27.0
 
 LABEL org.opencontainers.image.title="Datalyptica Alertmanager"
-LABEL org.opencontainers.image.description="Custom Alertmanager for Datalyptica Data Lakehouse alerts"
+LABEL org.opencontainers.image.description="Custom Alertmanager for Datalyptica Data Platform alerts"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 

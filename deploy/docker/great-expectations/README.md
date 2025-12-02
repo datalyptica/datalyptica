@@ -2,7 +2,7 @@
 
 ## Overview
 
-Great Expectations is integrated into the Datalyptica platform to provide comprehensive data quality validation and documentation for your data lakehouse.
+Great Expectations is integrated into the Datalyptica platform to provide comprehensive data quality validation and documentation for your data platform.
 
 ## Features
 

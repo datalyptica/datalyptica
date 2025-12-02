@@ -1,7 +1,7 @@
 {
   "realm": "datalyptica",
   "enabled": true,
-  "displayName": "Datalyptica Data Lakehouse",
+  "displayName": "Datalyptica Data Platform
   "displayNameHtml": "<div class=\"kc-logo-text\"><span>Datalyptica</span></div>",
   "sslRequired": "external",
   "registrationAllowed": false,

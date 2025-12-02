@@ -6,7 +6,7 @@ LABEL version="1.0.0"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.title="Great Expectations"
-LABEL org.opencontainers.image.description="Data quality and validation framework for Datalyptica lakehouse"
+LABEL org.opencontainers.image.description="Data quality and validation framework for Datalyptica data platform"
 
 # Set environment variables
 ENV GREAT_EXPECTATIONS_VERSION=0.18.19

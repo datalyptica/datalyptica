@@ -2,7 +2,7 @@
 FROM grafana/alloy:v1.0.0
 
 LABEL org.opencontainers.image.title="Datalyptica Alloy"
-LABEL org.opencontainers.image.description="Custom Grafana Alloy for Datalyptica Data Lakehouse telemetry"
+LABEL org.opencontainers.image.description="Custom Grafana Alloy for Datalyptica Data Platform telemetry"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 

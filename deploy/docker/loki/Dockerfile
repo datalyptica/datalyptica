@@ -2,7 +2,7 @@
 FROM grafana/loki:2.9.3
 
 LABEL org.opencontainers.image.title="Datalyptica Loki"
-LABEL org.opencontainers.image.description="Custom Loki for Datalyptica Data Lakehouse logging"
+LABEL org.opencontainers.image.description="Custom Loki for Datalyptica Data Platform logging"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 

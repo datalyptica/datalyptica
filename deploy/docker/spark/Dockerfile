@@ -7,7 +7,7 @@ LABEL version="1.0.0"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.title="Spark"
-LABEL org.opencontainers.image.description="Apache Spark with Iceberg support for Datalyptica lakehouse batch processing"
+LABEL org.opencontainers.image.description="Apache Spark with Iceberg support for Datalyptica data platform batch processing"
 
 # Set environment variables
 ENV ICEBERG_VERSION=1.9.1

@@ -2,7 +2,7 @@
 FROM grafana/grafana:10.2.2
 
 LABEL org.opencontainers.image.title="Datalyptica Grafana"
-LABEL org.opencontainers.image.description="Custom Grafana for Datalyptica Data Lakehouse visualization"
+LABEL org.opencontainers.image.description="Custom Grafana for Datalyptica Data Platform visualization"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 

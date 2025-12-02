@@ -2,7 +2,7 @@
 FROM prom/prometheus:v2.48.0
 
 LABEL org.opencontainers.image.title="Datalyptica Prometheus"
-LABEL org.opencontainers.image.description="Custom Prometheus for Datalyptica Data Lakehouse monitoring"
+LABEL org.opencontainers.image.description="Custom Prometheus for Datalyptica Data Platform monitoring"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 

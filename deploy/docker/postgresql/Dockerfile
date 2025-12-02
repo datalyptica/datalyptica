@@ -3,7 +3,7 @@ FROM postgres:17-alpine
 
 # Metadata
 LABEL maintainer="devops@datalyptica.com"
-LABEL description="Extended PostgreSQL image for Datalyptica lakehouse"
+LABEL description="Extended PostgreSQL image for Datalyptica data platform"
 LABEL version="1.0.0"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 LABEL org.opencontainers.image.vendor="Datalyptica"
@@ -12,7 +12,7 @@ LABEL org.opencontainers.image.description="Extended PostgreSQL image for standa
 
 # Official postgres image already has all PostgreSQL components
 # Just add our custom initialization scripts
-COPY scripts/init-shudl-db.sh /docker-entrypoint-initdb.d/01-init-datalyptica-db.sh
+COPY scripts/init-datalyptica-db.sh /docker-entrypoint-initdb.d/01-init-datalyptica-db.sh
 RUN chmod +x /docker-entrypoint-initdb.d/01-init-datalyptica-db.sh
 
 # Declare volumes for configuration and data

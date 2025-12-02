@@ -1,5 +1,5 @@
 # JupyterLab Notebook Image for JupyterHub Spawner
-# Optimized for data lakehouse with comprehensive database connectivity
+# Optimized for data platform with comprehensive database connectivity
 
 FROM jupyter/scipy-notebook:python-3.11
 

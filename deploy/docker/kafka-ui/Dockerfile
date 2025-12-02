@@ -2,7 +2,7 @@
 FROM provectuslabs/kafka-ui:v0.7.2
 
 LABEL org.opencontainers.image.title="Datalyptica Kafka UI"
-LABEL org.opencontainers.image.description="Custom Kafka UI for Datalyptica Data Lakehouse"
+LABEL org.opencontainers.image.description="Custom Kafka UI for Datalyptica Data Platform"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 

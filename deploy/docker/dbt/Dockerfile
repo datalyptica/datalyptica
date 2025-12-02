@@ -1,7 +1,7 @@
 FROM python:3.10-slim
 
 LABEL maintainer="Datalyptica Team <devops@datalyptica.com>"
-LABEL description="dbt for SQL transformations on data lakehouse"
+LABEL description="dbt for SQL transformations on data platform"
 LABEL version="1.7"
 
 USER root

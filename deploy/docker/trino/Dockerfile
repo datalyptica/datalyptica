@@ -7,7 +7,7 @@ LABEL version="1.0.0"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.title="Trino"
-LABEL org.opencontainers.image.description="Trino distributed SQL query engine for Datalyptica lakehouse analytics"
+LABEL org.opencontainers.image.description="Trino distributed SQL query engine for Datalyptica data platform analytics"
 
 # Switch to root to add custom configurations
 USER root

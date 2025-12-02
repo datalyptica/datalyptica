@@ -2,7 +2,7 @@
 FROM quay.io/keycloak/keycloak:23.0
 
 LABEL org.opencontainers.image.title="Datalyptica Keycloak"
-LABEL org.opencontainers.image.description="Custom Keycloak for Datalyptica Data Lakehouse IAM"
+LABEL org.opencontainers.image.description="Custom Keycloak for Datalyptica Data Platform IAM"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 

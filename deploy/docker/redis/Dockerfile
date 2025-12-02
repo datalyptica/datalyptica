@@ -2,7 +2,7 @@
 FROM redis:7.2-alpine
 
 LABEL org.opencontainers.image.title="Datalyptica Redis"
-LABEL org.opencontainers.image.description="Custom Redis for Datalyptica Data Lakehouse caching"
+LABEL org.opencontainers.image.description="Custom Redis for Datalyptica Data Platform caching"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 

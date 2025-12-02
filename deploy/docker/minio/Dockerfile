@@ -8,7 +8,7 @@ LABEL version="1.0.0"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.title="MinIO"
-LABEL org.opencontainers.image.description="MinIO object storage server for Datalyptica lakehouse data storage"
+LABEL org.opencontainers.image.description="MinIO object storage server for Datalyptica data platform data storage"
 
 # Official minio image already includes minio and mc binaries
 # Copy custom entrypoint if needed for initialization

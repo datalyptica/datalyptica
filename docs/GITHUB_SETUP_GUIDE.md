@@ -26,7 +26,7 @@ This guide walks you through pushing the Datalyptica codebase and Docker images 
 Once the repository is created, run:
 
 ```bash
-cd /Users/karimhassan/development/projects/shudl
+cd /Users/karimhassan/development/projects/datalyptica
 
 # Add the new remote (replace if already exists)
 git remote remove datalyptica 2>/dev/null || true
@@ -83,7 +83,7 @@ Login Succeeded
 Build all 19 Docker images for the Datalyptica platform:
 
 ```bash
-cd /Users/karimhassan/development/projects/shudl
+cd /Users/karimhassan/development/projects/datalyptica
 
 # Set the version (optional, defaults to v1.0.0)
 export DATALYPTICA_VERSION=v1.0.0
