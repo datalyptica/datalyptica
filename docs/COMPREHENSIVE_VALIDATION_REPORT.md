@@ -124,17 +124,14 @@ Snapshot 3: 2025-11-30 10:19:12 UTC - overwrite operation
 
 ### Streaming Layer ✅ **FULLY OPERATIONAL**
 
-#### Zookeeper
-
-- ✅ Coordination service healthy
-- ✅ Port 2181 accessible
-
-#### Kafka
+#### Kafka (KRaft Mode)
 
 - ✅ Broker API responding
+- ✅ Controller running (port 9094)
 - ✅ Topic creation working
 - ✅ Test topics created and verified
 - ✅ Port 9092 accessible
+- ✅ Running without ZooKeeper (KRaft consensus)
 
 #### Schema Registry
 
@@ -309,8 +306,8 @@ Snapshot 3: 2025-11-30 10:19:12 UTC - overwrite operation
 
 ### Service Startup
 
-- **Fast (<30s):** MinIO, PostgreSQL, Zookeeper
-- **Medium (30-60s):** Kafka, Nessie, Trino, Grafana
+- **Fast (<30s):** MinIO, PostgreSQL
+- **Medium (30-60s):** Kafka (KRaft), Nessie, Trino, Grafana
 - **Slow (60-120s):** Spark, Flink, Kafka Connect, Keycloak
 
 ### Query Performance

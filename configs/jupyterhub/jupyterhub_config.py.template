@@ -46,7 +46,7 @@ c.DockerSpawner.mem_limit = '4G'
 c.JupyterHub.authenticator_class = 'nativeauthenticator.NativeAuthenticator'
 c.Authenticator.admin_users = {'admin', '${JUPYTERHUB_ADMIN_USER}'}
 c.Authenticator.allowed_users = set()
-c.NativeAuthenticator.open_signup = ${JUPYTERHUB_OPEN_SIGNUP:-False}
+c.NativeAuthenticator.open_signup = os.getenv('JUPYTERHUB_OPEN_SIGNUP', 'False').lower() == 'true'
 c.NativeAuthenticator.enable_signup = True
 c.NativeAuthenticator.minimum_password_length = 8
 c.NativeAuthenticator.check_common_password = True
@@ -66,8 +66,8 @@ c.JupyterHub.services = [
 ]
 
 # Logging
-c.JupyterHub.log_level = '${JUPYTERHUB_LOG_LEVEL:-INFO}'
-c.Spawner.debug = ${JUPYTERHUB_DEBUG:-False}
+c.JupyterHub.log_level = os.getenv('JUPYTERHUB_LOG_LEVEL', 'INFO')
+c.Spawner.debug = os.getenv('JUPYTERHUB_DEBUG', 'False').lower() == 'true'
 
 # Security
 c.JupyterHub.cookie_secret_file = '/srv/jupyterhub/data/jupyterhub_cookie_secret'

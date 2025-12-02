@@ -1,19 +1,20 @@
-FROM confluentinc/cp-kafka:7.5.0
+FROM apache/kafka:4.1.1
 
 LABEL maintainer="Datalyptica Team <devops@datalyptica.com>"
 LABEL description="Apache Kafka distributed event streaming platform"
-LABEL version="7.5.0"
+LABEL version="4.1.1"
 
 USER root
 
+# Install netcat for healthchecks
+RUN microdnf install -y nc && microdnf clean all
+
 # Create necessary directories
 RUN mkdir -p /var/lib/kafka/data && \
-    chown -R appuser:appuser /var/lib/kafka
+    chown -R kafka:kafka /var/lib/kafka
 
-USER appuser
+USER kafka
 
-EXPOSE 9092 9093
+EXPOSE 9092 9094
 
-# Health check
-HEALTHCHECK --interval=10s --timeout=10s --retries=5 \
-    CMD kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1
+# Health check will be defined in docker-compose.yml

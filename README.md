@@ -302,6 +302,45 @@ docker compose restart grafana
 
 ---
 
+## 💻 System Requirements
+
+### Minimum Specifications
+
+- **CPU:** 4 cores (8+ cores recommended)
+- **RAM:** 8GB (16GB+ recommended for full platform)
+- **Disk:** 50GB free space (SSD recommended)
+- **Docker:** 20.10+ with Compose V2
+- **OS:** Linux, macOS 10.15+, Windows 10+ with WSL2
+
+### Docker Resource Allocation
+
+**Docker Desktop Settings:**
+
+```yaml
+Resources:
+  CPUs: 8 cores minimum
+  Memory: 16GB minimum
+  Swap: 2GB minimum
+  Disk image size: 100GB recommended
+```
+
+**Note:** Kafka (KRaft mode) and Spark require significant resources during initialization. Insufficient resources may cause restart loops or slow startup times.
+
+### Resource Monitoring
+
+```bash
+# Monitor real-time resource usage
+docker stats
+
+# Check platform resource consumption
+make stats
+
+# View service health
+make health
+```
+
+---
+
 ## 🔧 Configuration
 
 ### Environment Variables

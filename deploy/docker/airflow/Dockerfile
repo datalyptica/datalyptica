@@ -27,8 +27,9 @@ USER airflow
 # Install additional Airflow providers and database connectors
 # Do NOT reinstall airflow itself, just add providers
 RUN pip install --no-cache-dir \
-    # Core Auth Provider for Airflow 3.x
-    apache-airflow-providers-fab \
+    # Core Auth Provider for Airflow 3.x with all dependencies
+    'apache-airflow-providers-fab>=1.0.0' \
+    'Flask-AppBuilder>=4.3.0' \
     # Additional Airflow providers
     apache-airflow-providers-apache-spark \
     apache-airflow-providers-trino \

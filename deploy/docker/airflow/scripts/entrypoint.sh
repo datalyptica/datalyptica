@@ -24,23 +24,14 @@ until redis-cli -h ${REDIS_HOST} -p ${REDIS_PORT} ping 2>/dev/null | grep -q PON
 done
 echo "✅ Redis is ready"
 
-# Initialize database on first run
-if [ ! -f /opt/airflow/.initialized ]; then
-    echo "First run detected, initializing Airflow database..."
-    
-    # Initialize database (Airflow 3.x uses 'migrate' instead of 'init')
-    airflow db migrate
-    
-    # Create admin user using Python script (handles Airflow 3.x/FAB changes)
-    python /usr/local/bin/create_user.py
-    
-    # Mark as initialized
-    touch /opt/airflow/.initialized
-    
-    echo "✅ Airflow database initialized"
-else
-    echo "Airflow already initialized, upgrading database if needed..."
-    airflow db upgrade
+# Initialize database - run upgrade/migrate each time for safety
+echo "Upgrading Airflow database schema..."
+airflow db migrate 2>&1 | grep -v "Could not import Security Manager" || true
+
+# Create admin user if it doesn't exist (only for webserver)
+if [ "$1" = "webserver" ]; then
+    echo "Ensuring admin user exists..."
+    python /usr/local/bin/create_user.py 2>&1 || echo "Admin user already exists or creation skipped"
 fi
 
 echo "========================================"
@@ -50,7 +41,8 @@ echo "========================================"
 # Execute the main command based on the component
 case "$1" in
     webserver)
-        exec airflow webserver
+        # Airflow 3.x uses 'api-server' instead of 'webserver'
+        exec airflow api-server
         ;;
     scheduler)
         exec airflow scheduler

@@ -95,7 +95,7 @@ export DATALYPTICA_VERSION=v1.0.0
 The script will build images in this order:
 
 1. **Core Services:** minio, postgresql, patroni, nessie, trino, spark
-2. **Streaming:** zookeeper, kafka, schema-registry, flink, kafka-connect
+2. **Streaming:** kafka (KRaft mode), schema-registry, flink, kafka-connect
 3. **OLAP:** clickhouse
 4. **ETL:** dbt
 5. **Analytics & ML:** great-expectations, airflow, jupyterhub, jupyterlab-notebook, mlflow, superset

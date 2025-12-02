@@ -28,7 +28,58 @@ docker network inspect datalyptica_data
 
 ## Common Issues
 
-### 1. Services Won't Start
+### 1. Kafka Keeps Restarting
+
+#### Issue: Kafka container repeatedly restarts during initialization
+
+**Root Cause:** Insufficient host resources (CPU/RAM) during KRaft metadata initialization
+
+**Symptoms:**
+
+```bash
+docker compose ps
+# Shows kafka with high RestartCount
+
+docker compose logs kafka
+# May show:
+# - "DUPLICATE_BROKER_REGISTRATION" errors
+# - Slow startup times (>180s)
+# - Healthcheck timeouts
+```
+
+**Solution:**
+
+```bash
+# Check host resource usage
+docker stats
+
+# Increase Docker resource limits (Docker Desktop):
+# Settings → Resources:
+# - CPUs: Minimum 4 cores (8+ recommended for full platform)
+# - Memory: Minimum 8GB (16GB+ recommended)
+# - Swap: 2GB minimum
+
+# Stop other resource-intensive applications
+# Clear Docker cache if needed
+docker system prune -a --volumes
+
+# Restart with clean slate
+make down
+make up
+```
+
+**Prevention:**
+
+- Ensure adequate host resources before starting platform
+- Monitor resource usage: `docker stats`
+- Use `make ps` to check service health
+- Consider reducing parallel service startup with `--scale`
+
+**Note:** Kafka in KRaft mode requires significant CPU during first-time metadata formatting and initialization. Once running, resource usage normalizes.
+
+---
+
+### 2. Services Won't Start
 
 #### Issue: Container exits immediately
 
@@ -311,8 +362,9 @@ docker exec datalyptica-kafka kafka-broker-api-versions \
 docker exec datalyptica-kafka kafka-topics \
     --bootstrap-server localhost:9092 --list
 
-# Check Zookeeper
-docker exec datalyptica-zookeeper zkServer.sh status
+# Check Kafka cluster status (KRaft mode)
+docker exec datalyptica-kafka kafka-metadata.sh \
+    --snapshot /var/lib/kafka/data/__cluster_metadata-0/00000000000000000000.log --print
 ```
 
 **Solutions:**
@@ -320,11 +372,9 @@ docker exec datalyptica-zookeeper zkServer.sh status
 **A. Kafka Not Ready**
 
 ```bash
-# Kafka needs Zookeeper to be healthy first
-docker compose restart zookeeper
-sleep 30
+# Kafka runs in KRaft mode (no ZooKeeper needed)
 docker compose restart kafka
-sleep 30
+sleep 60
 
 # Verify
 docker exec datalyptica-kafka kafka-topics \

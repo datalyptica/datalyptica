@@ -17,11 +17,13 @@ echo "✅ PostgreSQL is ready"
 mkdir -p /srv/jupyterhub/data
 chown -R shusr:shusr /srv/jupyterhub/data
 
-# If config template exists, create config in data directory (not in mounted config)
+# If config template exists, create config from template
 if [ -f "/srv/jupyterhub/config/jupyterhub_config.py.template" ]; then
     echo "Creating JupyterHub configuration from template..."
+    # Create config in data directory since config dir is read-only
     envsubst < /srv/jupyterhub/config/jupyterhub_config.py.template > /srv/jupyterhub/data/jupyterhub_config.py
     chown shusr:shusr /srv/jupyterhub/data/jupyterhub_config.py
+    echo "✅ Configuration created at /srv/jupyterhub/data/jupyterhub_config.py"
 else
     echo "No config template found, using default configuration"
 fi
@@ -32,6 +34,3 @@ echo "========================================"
 
 # Execute command as shusr
 exec gosu shusr "$@"
-
-# Execute the main command
-exec "$@"

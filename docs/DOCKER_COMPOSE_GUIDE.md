@@ -22,9 +22,12 @@ docker compose down
 ```
 
 **Services**: 22 total
-**Startup Time**: ~2 minutes
-**RAM Usage**: ~8GB
+**Startup Time**: ~2-5 minutes (depending on host resources)
+**RAM Usage**: ~8-12GB (peak during Kafka/Spark initialization)
+**CPU Usage**: High during startup, normalizes after 5 minutes
 **Use Case**: Local development, integration testing, debugging
+
+⚠️ **Resource Warning:** Kafka (KRaft) and Spark require significant CPU during initialization. Ensure adequate resources or services may restart.
 
 ## High Availability Setup (Testing/Learning)
 
@@ -50,22 +53,26 @@ docker compose -f docker-compose.ha.yml down
 ```
 
 **Services**: 25 total (includes etcd, Patroni, HAProxy)
-**Startup Time**: ~5 minutes
-**RAM Usage**: ~16GB
+**Startup Time**: ~5-8 minutes (resource-dependent)
+**RAM Usage**: ~16-20GB (peak during initialization)
+**CPU Usage**: Very high during startup (requires 8+ cores)
 **Use Case**: Failover testing, HA learning, pre-production validation
+
+⚠️ **Not recommended for systems with <16GB RAM or <8 CPU cores**
 
 ## Key Differences
 
-| Feature | Development (docker-compose.yml) | HA (docker-compose.ha.yml) |
-|---------|----------------------------------|----------------------------|
-| PostgreSQL | Single instance | 2-node Patroni cluster |
-| Failover | Manual restart | Automatic (~15 seconds) |
-| Load Balancer | None | HAProxy with health checks |
-| Consensus | None | 3-node etcd cluster |
-| Services | 22 | 25 |
-| RAM Usage | ~8GB | ~16GB |
-| Startup Time | ~2 min | ~5 min |
-| Best For | Daily dev | HA testing |
+| Feature       | Development (docker-compose.yml) | HA (docker-compose.ha.yml) |
+| ------------- | -------------------------------- | -------------------------- |
+| PostgreSQL    | Single instance                  | 2-node Patroni cluster     |
+| Failover      | Manual restart                   | Automatic (~15 seconds)    |
+| Load Balancer | None                             | HAProxy with health checks |
+| Consensus     | None                             | 3-node etcd cluster        |
+| Services      | 22                               | 25                         |
+| RAM Usage     | ~8-12GB                          | ~16-20GB                   |
+| CPU Cores     | 4-8 recommended                  | 8+ required                |
+| Startup Time  | ~2-5 min                         | ~5-8 min                   |
+| Best For      | Daily dev                        | HA testing                 |
 
 ## Database Connection Differences
 
@@ -84,7 +91,7 @@ POSTGRES_PORT: 5432
 # Connection via HAProxy load balancer
 QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://haproxy:5000/nessie
 POSTGRES_HOST: haproxy
-POSTGRES_PORT: 5000  # Write endpoint
+POSTGRES_PORT: 5000 # Write endpoint
 # Read endpoint available on port 5001
 ```
 
@@ -166,11 +173,13 @@ See `../TROUBLESHOOTING.md` and `../docs/POSTGRESQL_HA.md` for detailed guides.
 ## Recommended Workflow
 
 1. **Daily Development**: Use `docker-compose.yml`
+
    - Fast startup
    - Lower resource usage
    - Easy debugging
 
 2. **Before PR/Deployment**: Test with `docker-compose.ha.yml`
+
    - Validate failover scenarios
    - Test under load
    - Verify HA configurations
@@ -203,4 +212,3 @@ docker/
 - **For Production**: Migrate to Kubernetes with Helm charts
 
 See `.github/copilot-instructions.md` for comprehensive platform documentation.
-
