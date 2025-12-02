@@ -1237,13 +1237,11 @@ services:
 
       # Keycloak Configuration
       - KC_HOSTNAME=${KEYCLOAK_HOSTNAME:-localhost}
-      - KC_HOSTNAME_PORT=${KEYCLOAK_HTTPS_PORT:-8543}
+      - KC_HOSTNAME_PORT=${KEYCLOAK_PORT:-8180}
       - KC_HOSTNAME_STRICT=false
       - KC_HOSTNAME_STRICT_HTTPS=false
       - KC_HTTP_ENABLED=true
-      - KC_HTTPS_ENABLED=true
-      - KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/certs/server-cert.pem
-      - KC_HTTPS_CERTIFICATE_KEY_FILE=/opt/keycloak/certs/server-key.pem
+      - KC_HTTPS_ENABLED=false
       - KC_HEALTH_ENABLED=true
       - KC_METRICS_ENABLED=true
 
@@ -1252,8 +1250,6 @@ services:
       - KC_HOSTNAME_STRICT_BACKCHANNEL=false
     volumes:
       - keycloak_data:/opt/keycloak/data
-      - ../secrets/certificates/keycloak:/opt/keycloak/certs:ro
-      - ../secrets/certificates/ca:/opt/keycloak/ca:ro
     secrets:
       - keycloak_admin_password
       - keycloak_db_password
