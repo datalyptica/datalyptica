@@ -75,13 +75,8 @@ start_worker() {
     # Process configuration templates
     process_config_templates
     
-    # Wait for master to be available
-    echo "Waiting for Spark master to be ready..."
-    while ! nc -z ${SPARK_MASTER_HOST:-spark-master} 7077; do
-        echo "Waiting for Spark master..."
-        sleep 2
-    done
-    echo "Spark master is ready!"
+    # Docker Compose handles dependency ordering via depends_on
+    echo "Starting Spark worker..."
     
     HADOOP_USER_NAME=spark \
     USER=spark \
