@@ -24,12 +24,12 @@ until redis-cli -h ${REDIS_HOST} -p ${REDIS_PORT} ping 2>/dev/null | grep -q PON
 done
 echo "✅ Redis is ready"
 
-# Initialize Airflow database on first run
+# Initialize database on first run
 if [ ! -f /opt/airflow/.initialized ]; then
     echo "First run detected, initializing Airflow database..."
     
-    # Initialize database
-    airflow db init
+    # Initialize database (Airflow 3.x uses 'migrate' instead of 'init')
+    airflow db migrate
     
     # Create admin user
     airflow users create \

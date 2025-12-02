@@ -1,7 +1,7 @@
 # Apache Airflow Workflow Orchestration
 # Enhanced with comprehensive database connectivity
 
-FROM apache/airflow:2.8.0-python3.11
+FROM apache/airflow:3.1.3-python3.13
 
 USER root
 
@@ -24,28 +24,15 @@ RUN apt-get clean && \
 
 USER airflow
 
-# Install comprehensive Airflow providers and database connectors
-RUN pip install --no-cache-dir \
-    # Airflow providers
-    apache-airflow-providers-postgres \
-    apache-airflow-providers-mysql \
-    apache-airflow-providers-mongo \
-    apache-airflow-providers-microsoft-mssql \
-    apache-airflow-providers-oracle \
-    apache-airflow-providers-amazon \
+# Install additional Airflow providers and database connectors
+# Do NOT reinstall airflow itself, just add providers
+RUN pip install --no-cache-dir --no-deps \
+    # Additional Airflow providers (dependencies already satisfied by base image)
     apache-airflow-providers-apache-spark \
     apache-airflow-providers-trino \
-    apache-airflow-providers-redis \
-    apache-airflow-providers-docker \
-    apache-airflow-providers-apache-kafka \
-    # Database connectors
-    psycopg2-binary \
-    pymysql \
-    pymongo \
+    # Database connectors not in base image  
     cx-Oracle \
-    pyodbc \
     # Data tools
-    boto3 \
     pyspark \
     trino \
     'redis>=4.5.2,<5.0.0'
