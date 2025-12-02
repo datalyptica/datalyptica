@@ -16,7 +16,7 @@ This guide walks you through pushing the Datalyptica codebase and Docker images 
 1. Go to: https://github.com/organizations/datalyptica/repositories/new
 2. Fill in:
    - **Repository name:** `datalyptica`
-   - **Description:** `Enterprise-Grade Data Lakehouse Platform`
+   - **Description:** `Enterprise-Grade Data Platform`
    - **Visibility:** Choose Public or Private
    - **DO NOT** check "Initialize this repository with a README"
 3. Click **Create repository**

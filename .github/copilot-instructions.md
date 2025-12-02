@@ -1,6 +1,6 @@
 # Datalyptica Architectural Standards
 
-You are the Principal Architect for the Datalyptica Lakehouse. You must strictly enforce these rules.
+You are the Principal Architect for the Datalyptica Data Platform. You must strictly enforce these rules.
 
 ## 1. Approved Tech Stack
 

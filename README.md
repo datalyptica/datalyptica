@@ -1,4 +1,4 @@
-# Datalyptica - Datalyptica Data Lakehouse Platform
+# Datalyptica - Unified Data Platform
 
 **Version:** v1.0.0  
 **Status:** Development  
@@ -8,11 +8,11 @@
 
 ## 🌟 Overview
 
-Datalyptica (Datalyptica Data Lakehouse) is a comprehensive on-premises data lakehouse platform built on **Apache Iceberg** table format with **Project Nessie** catalog. The platform provides ACID transactions, schema evolution, time-travel queries, and git-like data versioning across a complete data engineering stack.
+Datalyptica is a comprehensive on-premises unified data platform built on **Apache Iceberg** table format with **Project Nessie** catalog. The platform provides ACID transactions, schema evolution, time-travel queries, and git-like data versioning across a complete data engineering stack.
 
 ### Key Features
 
-✅ **Lakehouse Architecture** - Best of data lakes and data warehouses  
+✅ **Unified Data Architecture** - Best of data lakes and data warehouses  
 ✅ **ACID Transactions** - Full transactional support via Apache Iceberg  
 ✅ **Time Travel** - Query data as it existed at any point in time  
 ✅ **Data Versioning** - Git-like branching and tagging with Nessie  
@@ -44,7 +44,7 @@ Datalyptica (Datalyptica Data Lakehouse) is a comprehensive on-premises data lak
 └─────────────────────────────────────────────────────────────────┘
                               ▲
 ┌─────────────────────────────────────────────────────────────────┐
-│               Storage Layer (Lakehouse)                          │
+│               Storage Layer (Unified Data Platform)               │
 │  Apache Iceberg │ Nessie Catalog │ MinIO │ PostgreSQL          │
 └─────────────────────────────────────────────────────────────────┘
                               ▲
@@ -552,7 +552,7 @@ cd tests
 
 **Features:**
 
-- ✅ Complete 21-component data lakehouse platform
+- ✅ Complete 21-component unified data platform
 - ✅ Apache Iceberg + Nessie integration
 - ✅ Dual query engines (Trino + Spark)
 - ✅ Real-time streaming (Kafka + Flink)

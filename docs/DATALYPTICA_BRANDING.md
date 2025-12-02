@@ -2,15 +2,15 @@
 
 ## Overview
 
-This document defines the official branding standards for the **Datalyptica Data Lakehouse Platform**.
+This document defines the official branding standards for the **Datalyptica Data Platform**.
 
 ## Brand Identity
 
 ### Platform Name
 
-- **Official Name:** Datalyptica Data Lakehouse Platform
+- **Official Name:** Datalyptica Data Platform
 - **Short Name:** Datalyptica
-- **Tagline:** Enterprise-Grade Data Lakehouse Architecture
+- **Tagline:** Enterprise-Grade Unified Data Architecture
 
 ### Domain & Contact Information
 
@@ -98,7 +98,7 @@ LABEL maintainer="devops@datalyptica.com"
 LABEL org.opencontainers.image.source="https://github.com/datalyptica/datalyptica"
 LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.title="<Service Name>"
-LABEL org.opencontainers.image.description="<Service description for Datalyptica lakehouse>"
+LABEL org.opencontainers.image.description="<Service description for Datalyptica data platform>"
 ```
 
 ## File Naming Conventions

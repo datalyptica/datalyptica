@@ -1,7 +1,7 @@
 # OpenShift Deployment Completeness Report
 
 **Generated:** 2024
-**Repository:** Shudl Data Lakehouse Platform
+**Repository:** Datalyptica Data Platform
 **Target:** OpenShift 4.13+
 
 ---

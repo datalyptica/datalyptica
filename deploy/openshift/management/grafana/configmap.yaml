@@ -64,7 +64,7 @@ data:
       type: postgres
       access: proxy
       url: postgresql.datalyptica-storage:5432
-      database: shudl
+      database: datalyptica
       user: ${POSTGRES_USER}
       secureJsonData:
         password: ${POSTGRES_PASSWORD}

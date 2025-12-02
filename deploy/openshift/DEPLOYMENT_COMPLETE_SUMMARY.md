@@ -385,7 +385,7 @@ done
 
 ## Conclusion
 
-The Datalyptica data lakehouse platform is now fully deployed on OpenShift with:
+The Datalyptica data platform is now fully deployed on OpenShift with:
 
 ✅ 25 services in HA configuration
 ✅ Patroni-based PostgreSQL HA

@@ -53,7 +53,7 @@ create_realm() {
             "realm": "datalyptica",
             "enabled": true,
             "displayName": "Datalyptica Platform",
-            "displayNameHtml": "<b>Datalyptica</b> Data Lakehouse",
+            "displayNameHtml": "<b>Datalyptica</b> Data Platform",
             "registrationAllowed": false,
             "loginWithEmailAllowed": true,
             "duplicateEmailsAllowed": false,

@@ -34,7 +34,7 @@
 
 ### 1.1 Deployment Overview
 
-This guide provides step-by-step instructions for deploying the Datalyptica Data Lakehouse platform on Red Hat OpenShift Container Platform with High Availability (HA) configuration.
+This guide provides step-by-step instructions for deploying the Datalyptica Data Platform on Red Hat OpenShift Container Platform with High Availability (HA) configuration.
 
 **Platform Characteristics:**
 

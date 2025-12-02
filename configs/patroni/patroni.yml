@@ -1,4 +1,4 @@
-scope: lakehouse
+scope: datalyptica
 namespace: /db/
 name: ${PATRONI_NAME}
 

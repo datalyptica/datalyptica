@@ -2,7 +2,7 @@
 
 ## Overview
 
-Comprehensive testing framework for all 21 components of the Datalyptica Data Lakehouse platform.
+Comprehensive testing framework for all 21 components of the Datalyptica Data Platform.
 
 ## Test Structure
 

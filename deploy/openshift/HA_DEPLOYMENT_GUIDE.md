@@ -1,6 +1,6 @@
 # OpenShift HA Deployment Guide
 
-Complete guide for deploying the Datalyptica data lakehouse platform on OpenShift 4.13+ in High Availability (HA) mode.
+Complete guide for deploying the Datalyptica data platform on OpenShift 4.13+ in High Availability (HA) mode.
 
 ---
 
@@ -10,14 +10,14 @@ Complete guide for deploying the Datalyptica data lakehouse platform on OpenShif
 
 **Total Services: 25** (100% complete)
 
-| Layer | Services | Count | HA Strategy |
-|-------|----------|-------|-------------|
-| **Storage** | PostgreSQL (Patroni), MinIO | 2 | Cluster replication (3-4 replicas) |
-| **Control** | Kafka, Schema Registry, Kafka Connect | 3 | Leader election (2-3 replicas) |
-| **Data** | Nessie, Trino, Spark, Flink, ClickHouse, dbt | 6 | Multi-instance (1-3 replicas) |
-| **Management** | Prometheus, Grafana, Loki, Alertmanager, Alloy, Kafka-UI | 6 | Distributed (2-3+ replicas) |
-| **Infrastructure** | Keycloak, Redis | 2 | Cluster mode (2-3 replicas) |
-| **Analytics** | Airflow, JupyterHub, MLflow, Superset, Great Expectations | 6 | Multi-replica (2-3 replicas) |
+| Layer              | Services                                                  | Count | HA Strategy                        |
+| ------------------ | --------------------------------------------------------- | ----- | ---------------------------------- |
+| **Storage**        | PostgreSQL (Patroni), MinIO                               | 2     | Cluster replication (3-4 replicas) |
+| **Control**        | Kafka, Schema Registry, Kafka Connect                     | 3     | Leader election (2-3 replicas)     |
+| **Data**           | Nessie, Trino, Spark, Flink, ClickHouse, dbt              | 6     | Multi-instance (1-3 replicas)      |
+| **Management**     | Prometheus, Grafana, Loki, Alertmanager, Alloy, Kafka-UI  | 6     | Distributed (2-3+ replicas)        |
+| **Infrastructure** | Keycloak, Redis                                           | 2     | Cluster mode (2-3 replicas)        |
+| **Analytics**      | Airflow, JupyterHub, MLflow, Superset, Great Expectations | 6     | Multi-replica (2-3 replicas)       |
 
 ### Network & Security
 
@@ -77,6 +77,7 @@ oc create namespace datalyptica-infrastructure
 ### 1. Storage Layer
 
 **PostgreSQL with Patroni:**
+
 - 3-replica cluster with automatic failover
 - Kubernetes-based DCS
 - Sub-30s failover time
@@ -88,6 +89,7 @@ oc exec -it postgresql-0 -n datalyptica-storage -- patronictl list
 ```
 
 **MinIO:**
+
 - 4-node distributed object storage
 - EC:2 erasure coding
 
