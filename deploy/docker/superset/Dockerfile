@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     redis-tools \
     curl \
+    gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
 # Install comprehensive database drivers for all supported sources
@@ -41,7 +42,7 @@ RUN pip install --no-cache-dir \
 RUN mkdir -p /app/superset_home/config
 
 # Set environment
-ENV SUPERSET_CONFIG_PATH=/app/superset_home/config/superset_config.py
+ENV SUPERSET_CONFIG_PATH=/app/superset_home/superset_config.py
 ENV SUPERSET_HOME=/app/superset_home
 
 # Copy entrypoint

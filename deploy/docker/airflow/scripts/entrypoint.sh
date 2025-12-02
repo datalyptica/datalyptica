@@ -31,14 +31,8 @@ if [ ! -f /opt/airflow/.initialized ]; then
     # Initialize database (Airflow 3.x uses 'migrate' instead of 'init')
     airflow db migrate
     
-    # Create admin user
-    airflow users create \
-        --username ${AIRFLOW_ADMIN_USERNAME} \
-        --firstname Admin \
-        --lastname User \
-        --role Admin \
-        --email ${AIRFLOW_ADMIN_EMAIL} \
-        --password ${AIRFLOW_ADMIN_PASSWORD}
+    # Create admin user using Python script (handles Airflow 3.x/FAB changes)
+    python /usr/local/bin/create_user.py
     
     # Mark as initialized
     touch /opt/airflow/.initialized

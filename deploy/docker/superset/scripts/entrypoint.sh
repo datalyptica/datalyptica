@@ -23,7 +23,11 @@ echo "✅ Redis is ready"
 
 # Generate Superset configuration
 echo "Creating Superset configuration..."
-envsubst < /app/superset_home/config/superset_config.py.template > /app/superset_home/config/superset_config.py
+if [ -f "/app/superset_home/config/superset_config.py.template" ]; then
+    envsubst < /app/superset_home/config/superset_config.py.template > /app/superset_home/superset_config.py
+else
+    echo "Warning: No config template found!"
+fi
 
 # Initialize database on first run
 if [ ! -f /app/superset_home/.initialized ]; then

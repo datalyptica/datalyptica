@@ -26,8 +26,10 @@ USER airflow
 
 # Install additional Airflow providers and database connectors
 # Do NOT reinstall airflow itself, just add providers
-RUN pip install --no-cache-dir --no-deps \
-    # Additional Airflow providers (dependencies already satisfied by base image)
+RUN pip install --no-cache-dir \
+    # Core Auth Provider for Airflow 3.x
+    apache-airflow-providers-fab \
+    # Additional Airflow providers
     apache-airflow-providers-apache-spark \
     apache-airflow-providers-trino \
     # Database connectors not in base image  
@@ -52,6 +54,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
 
 # Copy entrypoint
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY scripts/create_user.py /usr/local/bin/create_user.py
 USER root
 RUN chmod +x /usr/local/bin/entrypoint.sh
 USER airflow

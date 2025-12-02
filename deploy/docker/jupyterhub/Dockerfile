@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y \
     git \
     postgresql-client \
     vim \
+    gosu \
+    gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages for spawner and authenticator
@@ -46,6 +48,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-USER shusr
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["jupyterhub", "-f", "/srv/jupyterhub/config/jupyterhub_config.py"]
