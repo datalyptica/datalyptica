@@ -50,9 +50,12 @@ wait_for_postgresql() {
     
     local max_attempts=30
     local attempt=1
+    local host="${POSTGRES_HOST:-postgresql}"
+    local port="${POSTGRES_PORT:-5432}"
     
     while [ $attempt -le $max_attempts ]; do
-        if pg_isready -h "${POSTGRES_HOST:-postgresql}" -p "${POSTGRES_PORT:-5432}" -U "$QUARKUS_DATASOURCE_USERNAME" -d "$POSTGRES_DB" >/dev/null 2>&1; then
+        # Use nc (netcat) or timeout+sh to check if port is open
+        if timeout 1 sh -c "echo > /dev/tcp/${host}/${port}" 2>/dev/null; then
             echo "PostgreSQL is ready!"
             return 0
         fi
@@ -74,13 +77,8 @@ start_nessie() {
     echo "S3 Endpoint: ${S3_ENDPOINT:-http://minio:9000}"
     echo "Warehouse: ${WAREHOUSE_LOCATION:-s3://lakehouse/}"
     
-    cd /opt/nessie
-    
-    # Start Nessie with proper configuration
-    exec java -jar nessie-server.jar \
-        -Dquarkus.config.locations=/opt/nessie/config/application.properties \
-        -Dquarkus.http.host=0.0.0.0 \
-        -Dquarkus.http.port=19120
+    # Use the official Nessie entrypoint
+    exec java -jar /deployments/quarkus-run.jar
 }
 
 # Main execution

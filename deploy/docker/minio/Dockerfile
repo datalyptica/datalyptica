@@ -10,15 +10,12 @@ LABEL org.opencontainers.image.vendor="Datalyptica"
 LABEL org.opencontainers.image.title="MinIO"
 LABEL org.opencontainers.image.description="MinIO object storage server for Datalyptica lakehouse data storage"
 
-# Official minio image already includes minio and mc binaries, user, and ports
+# Official minio image already includes minio and mc binaries
 # Copy custom entrypoint if needed for initialization
-USER root
 COPY scripts/entrypoint.sh /usr/local/bin/custom-entrypoint.sh
 RUN chmod +x /usr/local/bin/custom-entrypoint.sh
 
-# Switch to minio-user (official image user)
-USER minio-user
-
+# Official MinIO image runs as root by default
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:9000/minio/health/live || exit 1

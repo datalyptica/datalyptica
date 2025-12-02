@@ -326,8 +326,10 @@ services:
       - S3_PATH_STYLE_ACCESS=${S3_PATH_STYLE_ACCESS}
       - FS_NATIVE_S3_ENABLED=true
     volumes:
-      - ../secrets/certificates/trino:/etc/trino/certs:ro
-      - ../secrets/certificates/ca:/etc/trino/ca:ro
+      - trino_data:/data
+      - ../../configs/trino:/usr/lib/trino/etc:ro
+      - ../secrets/certificates/trino:/certs/trino:ro
+      - ../secrets/certificates/ca:/certs/ca:ro
     networks:
       - data_network
       - storage_network
@@ -1631,6 +1633,8 @@ volumes:
   minio_data:
     driver: local
   postgresql_data:
+    driver: local
+  trino_data:
     driver: local
   kafka_data:
     driver: local

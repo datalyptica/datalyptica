@@ -16,6 +16,9 @@ USER root
 COPY scripts/entrypoint.sh /opt/trino/bin/custom-entrypoint.sh
 RUN chmod +x /opt/trino/bin/custom-entrypoint.sh
 
+# Ensure /data directory has proper ownership for trino user
+RUN chown -R trino:trino /data
+
 # Switch back to trino user
 USER trino
 
