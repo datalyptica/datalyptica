@@ -947,7 +947,7 @@ services:
     volumes:
       - ge_data:/opt/great_expectations
       - ge_notebooks:/opt/notebooks
-      - ../../../configs/great-expectations:/opt/great_expectations/config:ro
+      - ../../configs/great-expectations:/opt/great_expectations/config:ro
     networks:
       - data_network
       - storage_network
@@ -991,8 +991,8 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
     volumes:
-      - ../../../configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ../../../configs/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ../../configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../configs/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - ../secrets/certificates/prometheus:/etc/prometheus/certs:ro
       - ../secrets/certificates/ca:/etc/prometheus/ca:ro
       - prometheus_data:/prometheus
@@ -1038,23 +1038,19 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-grafana
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
-      - "${GRAFANA_HTTPS_PORT:-3443}:3443"
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
       - GF_USERS_ALLOW_SIGN_UP=${GRAFANA_ALLOW_SIGN_UP:-false}
-      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-https://localhost:3443}
-      - GF_SERVER_PROTOCOL=${GRAFANA_PROTOCOL:-https}
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
+      - GF_SERVER_PROTOCOL=${GRAFANA_PROTOCOL:-http}
       - GF_SERVER_HTTP_PORT=${GRAFANA_PORT:-3000}
-      - GF_SERVER_HTTPS_PORT=${GRAFANA_HTTPS_PORT:-3443}
-      - GF_SERVER_CERT_FILE=/etc/grafana/certs/server-cert.pem
-      - GF_SERVER_CERT_KEY=/etc/grafana/certs/server-key.pem
       - GF_INSTALL_PLUGINS=${GRAFANA_INSTALL_PLUGINS:-}
       - TZ=${TIMEZONE:-UTC}
     volumes:
       - grafana_data:/var/lib/grafana
-      - ../../../configs/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ../../../configs/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ../../configs/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../../configs/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ../secrets/certificates/grafana:/etc/grafana/certs:ro
       - ../secrets/certificates/ca:/etc/grafana/ca:ro
     secrets:
@@ -1099,7 +1095,7 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
     volumes:
-      - ../../../configs/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - ../../configs/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
       - ../secrets/certificates/loki:/etc/loki/certs:ro
       - ../secrets/certificates/ca:/etc/loki/ca:ro
       - loki_data:/loki
@@ -1135,7 +1131,7 @@ services:
     image: ghcr.io/datalyptica/datalyptica/alloy:${DATALYPTICA_VERSION:-v1.0.0}
     container_name: ${COMPOSE_PROJECT_NAME}-alloy
     volumes:
-      - ../../../configs/loki/alloy-config.alloy:/etc/alloy/config.alloy:ro
+      - ../../configs/loki/alloy-config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - alloy_data:/var/lib/alloy
@@ -1181,8 +1177,8 @@ services:
     environment:
       - TZ=${TIMEZONE:-UTC}
     volumes:
-      - ../../../configs/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - ../../../configs/alertmanager/templates:/etc/alertmanager/templates:ro
+      - ../../configs/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ../../configs/alertmanager/templates:/etc/alertmanager/templates:ro
       - ../secrets/certificates/alertmanager:/etc/alertmanager/certs:ro
       - ../secrets/certificates/ca:/etc/alertmanager/ca:ro
       - alertmanager_data:/alertmanager
@@ -1324,7 +1320,7 @@ services:
   # JupyterHub - Multi-user Jupyter Notebook Environment
   jupyterhub:
     build:
-      context: ../deploy/docker/jupyterhub
+      context: ../docker/jupyterhub
       dockerfile: Dockerfile
     image: ghcr.io/datalyptica/datalyptica/jupyterhub:${DATALYPTICA_VERSION}
     container_name: ${COMPOSE_PROJECT_NAME}-jupyterhub
@@ -1357,7 +1353,7 @@ services:
       - TZ=${TIMEZONE:-UTC}
     volumes:
       - jupyterhub_data:/srv/jupyterhub/data
-      - ../../../configs/jupyterhub:/srv/jupyterhub/config:ro
+      - ../../configs/jupyterhub:/srv/jupyterhub/config:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - data_network
@@ -1389,7 +1385,7 @@ services:
   # MLflow - ML Experiment Tracking and Model Registry
   mlflow:
     build:
-      context: ../deploy/docker/mlflow
+      context: ../docker/mlflow
       dockerfile: Dockerfile
     image: ghcr.io/datalyptica/datalyptica/mlflow:${DATALYPTICA_VERSION}
     container_name: ${COMPOSE_PROJECT_NAME}-mlflow
@@ -1438,7 +1434,7 @@ services:
   # Apache Superset - Modern BI Platform
   superset:
     build:
-      context: ../deploy/docker/superset
+      context: ../docker/superset
       dockerfile: Dockerfile
     image: ghcr.io/datalyptica/datalyptica/superset:${DATALYPTICA_VERSION}
     container_name: ${COMPOSE_PROJECT_NAME}-superset
@@ -1464,7 +1460,7 @@ services:
       - TZ=${TIMEZONE:-UTC}
     volumes:
       - superset_data:/app/superset_home
-      - ../../../configs/superset:/app/superset_home/config:ro
+      - ../../configs/superset:/app/superset_home/config:ro
     networks:
       - data_network
       - storage_network
@@ -1495,7 +1491,7 @@ services:
   # Apache Airflow - Workflow Orchestration
   airflow-webserver:
     build:
-      context: ../deploy/docker/airflow
+      context: ../docker/airflow
       dockerfile: Dockerfile
     image: ghcr.io/datalyptica/datalyptica/airflow:${DATALYPTICA_VERSION}
     container_name: ${COMPOSE_PROJECT_NAME}-airflow-webserver
@@ -1534,7 +1530,7 @@ services:
       - airflow_dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - airflow_plugins:/opt/airflow/plugins
-      - ../../../configs/airflow:/opt/airflow/config:ro
+      - ../../configs/airflow:/opt/airflow/config:ro
     networks:
       - data_network
       - storage_network
@@ -1578,7 +1574,7 @@ services:
       - airflow_dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - airflow_plugins:/opt/airflow/plugins
-      - ../../../configs/airflow:/opt/airflow/config:ro
+      - ../../configs/airflow:/opt/airflow/config:ro
     networks:
       - data_network
       - storage_network
@@ -1612,7 +1608,7 @@ services:
       - airflow_dags:/opt/airflow/dags
       - airflow_logs:/opt/airflow/logs
       - airflow_plugins:/opt/airflow/plugins
-      - ../../../configs/airflow:/opt/airflow/config:ro
+      - ../../configs/airflow:/opt/airflow/config:ro
     networks:
       - data_network
       - storage_network

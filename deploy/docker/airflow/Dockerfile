@@ -13,6 +13,7 @@ RUN apt-get clean && \
     git \
     postgresql-client \
     mariadb-client \
+    redis-tools \
     vim \
     gcc \
     g++ \
