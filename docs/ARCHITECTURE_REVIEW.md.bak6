@@ -13,7 +13,7 @@ The Datalyptica (Datalyptica Data Platform) platform represents a comprehensive,
 
 ### Platform Overview
 
-**Purpose:** On-premises/hybrid data platform providing unified batch and stream processing, ACID transactions, schema evolution, and time-travel capabilities.
+**Purpose:** On-premises/hybrid data lakehouse platform providing unified batch and stream processing, ACID transactions, schema evolution, and time-travel capabilities.
 
 **Architecture Pattern:** Lambda Architecture with Unified Data Platform paradigm  
 **Deployment Model:** Container-based (Docker/Kubernetes)  
