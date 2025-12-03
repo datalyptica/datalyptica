@@ -203,11 +203,48 @@ curl http://localhost:19120/api/v2/trees/tree/main | jq
 
 ---
 
+## 🚢 Deployment Options
+
+Datalyptica supports multiple deployment methods for different use cases:
+
+### 🐳 Docker Compose (Development & Testing)
+
+Quick local deployment for development and testing:
+
+```bash
+cd deploy/compose
+docker compose up -d
+```
+
+**Best for**: Local development, testing, demos  
+**Requirements**: Docker 20.10+, 16GB RAM, 50GB disk  
+**Time**: 5-10 minutes
+
+### ☸️ OpenShift/Kubernetes (Production)
+
+Enterprise-grade deployment on Red Hat OpenShift or Kubernetes:
+
+**📖 Complete Deployment Guides**:
+- **[Quick Start Guide](docs/OPENSHIFT_DEPLOYMENT_QUICKSTART.md)** - Choose your deployment method
+- **[CLI Deployment Guide](docs/OPENSHIFT_DEPLOYMENT_CLI.md)** - Complete command-line deployment
+- **[UI Deployment Guide](docs/OPENSHIFT_DEPLOYMENT_UI.md)** - Web Console deployment
+
+**Best for**: Production, enterprise environments  
+**Requirements**: OpenShift 4.17+ or Kubernetes 1.30+  
+**Time**: 2-4 hours  
+**Features**: High availability, auto-scaling, production monitoring
+
+**Quick Links**:
+- [Component Versions](deploy/openshift/docs/COMPONENT-VERSIONS.md) - All verified versions & migration guides
+- [Architecture Overview](deploy/openshift/README.md) - Platform design & resource requirements
+- [Version Updates](docs/VERSION_UPDATE_SUMMARY.md) - Recent version changes (Dec 2025)
+
+---
+
 ## 📚 Documentation
 
 ### Core Documentation
 
-- **[Deployment Guide](DEPLOYMENT.md)** - Production deployment procedures
 - **[Environment Variables](ENVIRONMENT_VARIABLES.md)** - Complete configuration reference
 - **[Troubleshooting Guide](TROUBLESHOOTING.md)** - Common issues and solutions
 - **[Architecture Guide](.github/copilot-instructions.md)** - Detailed architecture and patterns
