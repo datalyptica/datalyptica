@@ -11,6 +11,7 @@
 ### Main Deployment Guides
 
 1. **[CLI Deployment Guide](./OPENSHIFT_DEPLOYMENT_CLI.md)** - Complete command-line deployment
+
    - Best for: Automation, CI/CD, experienced users
    - Tool: `oc` CLI
    - Time: ~2-3 hours
@@ -47,16 +48,16 @@ Are you comfortable with command-line tools?
 
 ### Comparison Table
 
-| Feature | CLI Method | UI Method |
-|---------|-----------|-----------|
-| **Speed** | ⚡⚡⚡ Fast | ⚡⚡ Moderate |
-| **Automation** | ✅ Yes | ❌ Manual |
-| **Learning Curve** | Steep | Gentle |
-| **Visibility** | Terminal output | Visual dashboards |
-| **Best For** | Automation, experts | Learning, one-time setup |
-| **Prerequisites** | oc CLI installed | Just a browser |
-| **Copy-Paste** | YAML files ready | YAML embedded in guide |
-| **Troubleshooting** | CLI commands | Visual inspection |
+| Feature             | CLI Method          | UI Method                |
+| ------------------- | ------------------- | ------------------------ |
+| **Speed**           | ⚡⚡⚡ Fast         | ⚡⚡ Moderate            |
+| **Automation**      | ✅ Yes              | ❌ Manual                |
+| **Learning Curve**  | Steep               | Gentle                   |
+| **Visibility**      | Terminal output     | Visual dashboards        |
+| **Best For**        | Automation, experts | Learning, one-time setup |
+| **Prerequisites**   | oc CLI installed    | Just a browser           |
+| **Copy-Paste**      | YAML files ready    | YAML embedded in guide   |
+| **Troubleshooting** | CLI commands        | Visual inspection        |
 
 ---
 
@@ -65,6 +66,7 @@ Are you comfortable with command-line tools?
 Both methods follow the same deployment phases:
 
 ### Phase 1: Pre-Deployment ⚙️
+
 - [ ] Access OpenShift cluster
 - [ ] Create namespaces/projects
 - [ ] Configure security (SCC)
@@ -74,6 +76,7 @@ Both methods follow the same deployment phases:
 **Time**: 15-20 minutes
 
 ### Phase 2: Operator Installation 🔧
+
 - [ ] Strimzi Kafka Operator (v0.49.0)
 - [ ] Crunchy PostgreSQL Operator (v5.8.5)
 - [ ] Flink Kubernetes Operator (v1.13.0)
@@ -82,6 +85,7 @@ Both methods follow the same deployment phases:
 **Critical**: Required for managed services
 
 ### Phase 3: Storage Layer 💾
+
 - [ ] MinIO (Object Storage)
 - [ ] PostgreSQL (Relational DB)
 - [ ] Redis (Cache & Metadata)
@@ -90,12 +94,14 @@ Both methods follow the same deployment phases:
 **Critical**: Foundation for all services
 
 ### Phase 4: Catalog Layer 📚
+
 - [ ] Nessie (Catalog Service)
 - [ ] Redis Sentinel (HA)
 
 **Time**: 10-15 minutes
 
 ### Phase 5: Streaming Layer 🌊
+
 - [ ] Apache Kafka (v4.1.1) ⚠️
 - [ ] Schema Registry
 
@@ -103,6 +109,7 @@ Both methods follow the same deployment phases:
 **Note**: v4.1.1 requires v1 API (breaking change)
 
 ### Phase 6: Processing Layer ⚙️
+
 - [ ] Apache Spark (v4.0.1) ⚠️
 - [ ] Apache Flink (v2.1.1) ⚠️
 - [ ] Apache Iceberg (v1.10.0)
@@ -111,12 +118,14 @@ Both methods follow the same deployment phases:
 **Note**: Multiple major version updates
 
 ### Phase 7: Query Layer 🔍
+
 - [ ] Trino (v478)
 - [ ] ClickHouse (v25.11.2.24) ⚠️
 
 **Time**: 15-20 minutes
 
 ### Phase 8: Analytics & ML Layer 🤖
+
 - [ ] Apache Airflow (v3.1.3) ⚠️
 - [ ] JupyterHub (v5.4.2)
 - [ ] MLflow (v3.6.0) ⚠️
@@ -125,6 +134,7 @@ Both methods follow the same deployment phases:
 **Time**: 30-40 minutes
 
 ### Phase 9: Monitoring Layer 📊
+
 - [ ] Prometheus (v3.8.0)
 - [ ] Grafana (v12.3.0) ⚠️
 - [ ] Loki (v3.6.2) 🔒
@@ -133,11 +143,13 @@ Both methods follow the same deployment phases:
 **Time**: 20-30 minutes
 
 ### Phase 10: IAM Layer 🔐
+
 - [ ] Keycloak (v26.4.7) 🔒
 
 **Time**: 10-15 minutes
 
 ### Total Deployment Time
+
 - **CLI Method**: ~2-3 hours
 - **UI Method**: ~3-4 hours
 - **With breaks**: Plan for 4-6 hours
@@ -151,17 +163,18 @@ Both methods follow the same deployment phases:
 
 ### Minimum Cluster Requirements
 
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
-| **Worker Nodes** | 3 | 5+ |
-| **CPU per Node** | 16 cores | 32 cores |
-| **Memory per Node** | 64 GB | 128 GB |
-| **Storage** | 2 TB | 5+ TB |
-| **Network** | 10 Gbps | 25 Gbps |
+| Resource            | Minimum  | Recommended |
+| ------------------- | -------- | ----------- |
+| **Worker Nodes**    | 3        | 5+          |
+| **CPU per Node**    | 16 cores | 32 cores    |
+| **Memory per Node** | 64 GB    | 128 GB      |
+| **Storage**         | 2 TB     | 5+ TB       |
+| **Network**         | 10 Gbps  | 25 Gbps     |
 
 ### Per-Service Resource Allocation
 
 **High Resource** (4+ CPU, 8+ GB RAM):
+
 - Kafka brokers
 - Spark workers
 - PostgreSQL
@@ -169,6 +182,7 @@ Both methods follow the same deployment phases:
 - ClickHouse
 
 **Medium Resource** (2-4 CPU, 4-8 GB RAM):
+
 - Airflow webserver/scheduler
 - MLflow
 - Grafana
@@ -176,6 +190,7 @@ Both methods follow the same deployment phases:
 - Flink
 
 **Low Resource** (<2 CPU, <4 GB RAM):
+
 - Redis
 - Nessie
 - MinIO (single instance)
@@ -199,6 +214,7 @@ Both methods follow the same deployment phases:
 - [ ] Password generator or password manager
 
 **Installation Commands**:
+
 ```bash
 # Install oc CLI (Linux)
 curl -O https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz
@@ -227,6 +243,7 @@ helm version
 - [ ] Access to deployment guide (bookmarked/saved)
 
 **Recommended Browser Extensions**:
+
 - YAML/JSON formatter
 - Dark mode (for late-night deployments)
 
@@ -237,46 +254,55 @@ helm version
 ### Verified Versions (December 2025)
 
 **Operators**:
+
 - Strimzi Kafka: **0.49.0** (Dec 2025) ⚠️ v1 API required
 - Crunchy PostgreSQL: **5.8.5** (Dec 2025)
 - Flink Kubernetes: **1.13.0** (Sep 2025)
 
 **Storage & Catalog**:
+
 - MinIO: **RELEASE.2025-10-15T17-29-55Z** 🔒 CVE fix
 - PostgreSQL: **16.6**
 - Redis: **8.4.0** ⚠️ 30%+ performance boost
 - Nessie: **0.105.7**
 
 **Streaming**:
+
 - Kafka: **4.1.1** ⚠️ KRaft production-ready
 - Strimzi: **0.49.0** ⚠️ v1 API mandatory
 
 **Processing**:
+
 - Spark: **4.0.1** ⚠️ Scala 2.13 only (recommended)
 - Spark Alt: **3.5.7** (Scala 2.12 compatible)
 - Flink: **2.1.1** ⚠️ Major API changes
 - Iceberg: **1.10.0** (Spark 4.0 + Flink 2.0 support!)
 
 **Query**:
+
 - Trino: **478**
 - ClickHouse: **25.11.2.24** ⚠️ Major series update
 
 **Analytics & ML**:
+
 - Airflow: **3.1.3** ⚠️ Python 3.9-3.13
 - JupyterHub: **5.4.2**
 - MLflow: **3.6.0** ⚠️ OpenTelemetry
 - Superset: **5.0.0** (Stable GA)
 
 **Monitoring**:
+
 - Prometheus: **3.8.0**
 - Grafana: **12.3.0** ⚠️ SQLite backend
 - Loki: **3.6.2** 🔒 CVE fixes
 - Alertmanager: **0.29.0**
 
 **IAM**:
+
 - Keycloak: **26.4.7** 🔒 Security updates
 
 **Legend**:
+
 - ⚠️ = Major version update with breaking changes
 - 🔒 = Security update (CVE fixes included)
 
@@ -287,41 +313,49 @@ helm version
 ### Critical Breaking Changes
 
 1. **Kafka 4.1.1** (3.x → 4.x)
+
    - KRaft mode now production-ready
    - ZooKeeper migration required for upgrades
    - API v1 mandatory (v1beta2 deprecated)
 
 2. **Spark 4.0.1** (3.x → 4.x)
+
    - Scala 2.13 only (2.12 dropped)
    - Alternative: Use Spark 3.5.7 for Scala 2.12
    - Iceberg 1.10.0 fully supports Spark 4.0
 
 3. **Strimzi 0.49.0** (0.43 → 0.49)
+
    - v1 API mandatory
    - All Kafka CRDs must use `kafka.strimzi.io/v1`
    - Update all custom resources before deployment
 
 4. **Grafana 12.3.0** (11.x → 12.x)
+
    - New SQLite backend
    - CVE-2025-41115 fix
    - Dashboard migration may be required
 
 5. **Redis 8.4.0** (7.x → 8.x)
+
    - 30%+ throughput improvement
    - 92% memory reduction (new encoding)
    - Command syntax changes
 
 6. **Airflow 3.1.3** (2.x → 3.x)
+
    - Python 3.9-3.13 support
    - SQLAlchemy 2.0 required
    - DAG compatibility check needed
 
 7. **MLflow 3.6.0** (2.x → 3.x)
+
    - Full OpenTelemetry integration
    - TypeScript SDK added
    - API endpoint changes
 
 8. **Flink 2.1.1** (1.x → 2.x)
+
    - API changes
    - Job resubmission required
    - Improved checkpointing
@@ -356,6 +390,7 @@ oc get pvc --all-namespaces | grep datalyptica
 ```
 
 **Or in UI**:
+
 1. Navigate to **Workloads** → **Pods**
 2. Select **All Projects**
 3. Filter: `datalyptica-`
@@ -377,6 +412,7 @@ After deployment, access these URLs (via Routes):
 - **Spark Master**: Cluster monitoring
 
 **Find URLs**:
+
 ```bash
 # CLI
 oc get routes --all-namespaces | grep datalyptica
@@ -390,16 +426,16 @@ oc get routes --all-namespaces | grep datalyptica
 
 ### Common Issues
 
-| Issue | Symptom | Quick Fix |
-|-------|---------|-----------|
-| **Pod Pending** | Pod stuck in Pending | Check PVC status, node resources |
-| **ImagePullBackOff** | Can't pull image | Verify image name/tag, check registry access |
-| **CrashLoopBackOff** | Pod keeps restarting | Check logs, verify config, increase resources |
-| **PVC Pending** | Storage not bound | Check StorageClass, verify provisioner |
-| **Service No Endpoints** | Service has no backends | Verify pod labels match service selector |
-| **Route 503 Error** | Route returns error | Check pod readiness, verify service |
-| **OOM Killed** | Out of memory | Increase memory limits |
-| **CPU Throttling** | Slow performance | Increase CPU limits |
+| Issue                    | Symptom                 | Quick Fix                                     |
+| ------------------------ | ----------------------- | --------------------------------------------- |
+| **Pod Pending**          | Pod stuck in Pending    | Check PVC status, node resources              |
+| **ImagePullBackOff**     | Can't pull image        | Verify image name/tag, check registry access  |
+| **CrashLoopBackOff**     | Pod keeps restarting    | Check logs, verify config, increase resources |
+| **PVC Pending**          | Storage not bound       | Check StorageClass, verify provisioner        |
+| **Service No Endpoints** | Service has no backends | Verify pod labels match service selector      |
+| **Route 503 Error**      | Route returns error     | Check pod readiness, verify service           |
+| **OOM Killed**           | Out of memory           | Increase memory limits                        |
+| **CPU Throttling**       | Slow performance        | Increase CPU limits                           |
 
 ### Debug Commands (CLI)
 
@@ -482,18 +518,21 @@ oc adm top nodes
 ### Skills Development
 
 **Beginner** (Start with UI):
+
 - OpenShift basics
 - Container concepts
 - Service networking
 - Storage management
 
 **Intermediate** (Move to CLI):
+
 - YAML authoring
 - kubectl/oc commands
 - Debugging techniques
 - Resource management
 
 **Advanced** (Automation):
+
 - Helm charts
 - GitOps (ArgoCD/Flux)
 - CI/CD pipelines
@@ -506,6 +545,7 @@ oc adm top nodes
 Print this checklist or keep it open during deployment:
 
 ### Pre-Deployment
+
 - [ ] Review architecture documentation
 - [ ] Choose deployment method (CLI/UI)
 - [ ] Verify cluster meets requirements
@@ -514,6 +554,7 @@ Print this checklist or keep it open during deployment:
 - [ ] Allocate 4-6 hours for deployment
 
 ### Deployment Phases
+
 - [ ] Phase 1: Pre-deployment setup (20 min)
 - [ ] Phase 2: Install operators (15 min)
 - [ ] Phase 3: Deploy storage layer (30 min)
@@ -526,6 +567,7 @@ Print this checklist or keep it open during deployment:
 - [ ] Phase 10: Deploy IAM layer (15 min)
 
 ### Post-Deployment
+
 - [ ] Verify all pods are running
 - [ ] Access all web UIs via routes
 - [ ] Configure Grafana dashboards
@@ -542,6 +584,7 @@ Print this checklist or keep it open during deployment:
 **Ready to Deploy?**
 
 Choose your path:
+
 - **[→ CLI Deployment Guide](./OPENSHIFT_DEPLOYMENT_CLI.md)**
 - **[→ UI Deployment Guide](./OPENSHIFT_DEPLOYMENT_UI.md)**
 

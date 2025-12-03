@@ -12,6 +12,7 @@
 ### Three Comprehensive Deployment Guides
 
 1. **[OPENSHIFT_DEPLOYMENT_QUICKSTART.md](./OPENSHIFT_DEPLOYMENT_QUICKSTART.md)** (13,000+ words)
+
    - Quick reference and decision guide
    - Component version summary
    - Resource requirements
@@ -21,6 +22,7 @@
    - **Start here** to choose your deployment method
 
 2. **[OPENSHIFT_DEPLOYMENT_CLI.md](./OPENSHIFT_DEPLOYMENT_CLI.md)** (21,000+ words)
+
    - Complete CLI-based deployment guide
    - Copy-paste ready commands
    - All 18 components with verified versions
@@ -47,30 +49,35 @@
 ### All Guides Include
 
 ✅ **100% Online Verified Versions** (Dec 2025)
+
 - All 18 components verified from authoritative sources
 - Breaking changes documented with ⚠️
 - Security updates marked with 🔒
 - Migration guides referenced
 
 ✅ **Complete Deployment Steps**
+
 - Pre-deployment setup
 - 10 deployment phases
 - Post-deployment verification
 - Access instructions
 
 ✅ **Real Production Examples**
+
 - Actual YAML configurations
 - Resource requests/limits
 - Health checks configured
 - Security contexts defined
 
 ✅ **Troubleshooting Sections**
+
 - Common issues with solutions
 - Debug commands (CLI)
 - UI navigation tips
 - Log analysis guidance
 
 ✅ **Time Estimates**
+
 - Per-phase time requirements
 - Total deployment time
 - Break recommendations
@@ -81,20 +88,21 @@
 
 ### Phase Structure (Same for Both Methods)
 
-| Phase | Components | Time | Priority |
-|-------|-----------|------|----------|
-| **0. Pre-Deployment** | Setup, namespaces, security | 20 min | Critical |
-| **1. Operators** | Strimzi, Crunchy, Flink | 15 min | Critical |
-| **2. Storage** | MinIO, PostgreSQL | 30 min | Critical |
-| **3. Catalog** | Nessie, Redis | 15 min | High |
-| **4. Streaming** | Kafka 4.1.1 | 20 min | High |
-| **5. Processing** | Spark 4.0.1, Flink 2.1.1 | 30 min | High |
-| **6. Query** | Trino, ClickHouse | 20 min | High |
-| **7. Analytics** | Airflow, MLflow, Superset, JupyterHub | 40 min | Medium |
-| **8. Monitoring** | Prometheus, Grafana, Loki | 30 min | High |
-| **9. IAM** | Keycloak | 15 min | Medium |
+| Phase                 | Components                            | Time   | Priority |
+| --------------------- | ------------------------------------- | ------ | -------- |
+| **0. Pre-Deployment** | Setup, namespaces, security           | 20 min | Critical |
+| **1. Operators**      | Strimzi, Crunchy, Flink               | 15 min | Critical |
+| **2. Storage**        | MinIO, PostgreSQL                     | 30 min | Critical |
+| **3. Catalog**        | Nessie, Redis                         | 15 min | High     |
+| **4. Streaming**      | Kafka 4.1.1                           | 20 min | High     |
+| **5. Processing**     | Spark 4.0.1, Flink 2.1.1              | 30 min | High     |
+| **6. Query**          | Trino, ClickHouse                     | 20 min | High     |
+| **7. Analytics**      | Airflow, MLflow, Superset, JupyterHub | 40 min | Medium   |
+| **8. Monitoring**     | Prometheus, Grafana, Loki             | 30 min | High     |
+| **9. IAM**            | Keycloak                              | 15 min | Medium   |
 
-**Total Time**: 
+**Total Time**:
+
 - CLI Method: 2-3 hours
 - UI Method: 3-4 hours
 - With breaks: 4-6 hours recommended
@@ -106,41 +114,49 @@
 ### Verified Component Versions
 
 **Operators (3)**:
+
 - Strimzi Kafka Operator: **0.49.0** ⚠️ v1 API
 - Crunchy PostgreSQL Operator: **5.8.5**
 - Flink Kubernetes Operator: **1.13.0**
 
 **Storage & Catalog (4)**:
+
 - MinIO: **RELEASE.2025-10-15T17-29-55Z** 🔒
 - PostgreSQL: **16.6**
 - Redis: **8.4.0** ⚠️
 - Nessie: **0.105.7**
 
 **Streaming (1)**:
+
 - Apache Kafka: **4.1.1** ⚠️
 
 **Processing (3)**:
+
 - Apache Spark: **4.0.1** ⚠️ (recommended)
 - Apache Flink: **2.1.1** ⚠️
 - Apache Iceberg: **1.10.0**
 
 **Query (2)**:
+
 - Trino: **478**
 - ClickHouse: **25.11.2.24** ⚠️
 
 **Analytics & ML (4)**:
+
 - Apache Airflow: **3.1.3** ⚠️
 - JupyterHub: **5.4.2**
 - MLflow: **3.6.0** ⚠️
 - Apache Superset: **5.0.0**
 
 **Monitoring (4)**:
+
 - Prometheus: **3.8.0**
 - Grafana: **12.3.0** ⚠️
 - Loki: **3.6.2** 🔒
 - Alertmanager: **0.29.0**
 
 **IAM (1)**:
+
 - Keycloak: **26.4.7** 🔒
 
 **Total: 22 Components** (18 application + 3 operators + Iceberg)
@@ -152,24 +168,28 @@
 ### CLI Guide - Best For:
 
 ✅ **DevOps Engineers**
+
 - Need automation/scripting
 - Comfortable with terminal
 - Want CI/CD integration
 - Prefer command-line tools
 
 ✅ **Experienced Kubernetes Users**
+
 - Know `kubectl`/`oc` commands
 - Understand YAML structure
 - Want fastest deployment
 - Need repeatable process
 
 ✅ **Automation Requirements**
+
 - GitOps workflows
 - Infrastructure as Code
 - Ansible/Terraform integration
 - Jenkins/ArgoCD pipelines
 
 **Advantages**:
+
 - ⚡ Faster (2-3 hours)
 - 🤖 Scriptable
 - 📝 Version controllable
@@ -178,24 +198,28 @@
 ### UI Guide - Best For:
 
 ✅ **Platform Administrators**
+
 - Prefer visual interfaces
 - First-time OpenShift deployment
 - Learning OpenShift/Kubernetes
 - One-time manual setup
 
 ✅ **Business Users**
+
 - Non-technical background
 - Need visual feedback
 - Want guided experience
 - Occasional deployments
 
 ✅ **Training Scenarios**
+
 - Teaching OpenShift
 - Learning deployment process
 - Understanding relationships
 - Exploring platform features
 
 **Advantages**:
+
 - 👁️ Visual feedback
 - 📊 Easier debugging
 - 📚 Learning-friendly
@@ -220,6 +244,7 @@
 **Storage**: ~10 TB (data + logs)
 
 **Breakdown by Layer**:
+
 - Storage Layer: 30 cores, 96 GB RAM
 - Streaming Layer: 20 cores, 64 GB RAM
 - Processing Layer: 25 cores, 80 GB RAM
@@ -329,18 +354,21 @@ oc get csv -n datalyptica-operators
 ### Configuration Tasks (Week 1)
 
 1. **Security Setup**
+
    - Configure Keycloak realms
    - Set up user authentication
    - Configure RBAC policies
    - Enable TLS everywhere
 
 2. **Monitoring Setup**
+
    - Import Grafana dashboards
    - Configure alert rules
    - Set up notification channels
    - Test alerting
 
 3. **Data Platform Setup**
+
    - Create Iceberg databases/tables
    - Configure Nessie branches
    - Set up data ingestion
@@ -355,12 +383,14 @@ oc get csv -n datalyptica-operators
 ### Operational Tasks (Ongoing)
 
 1. **Performance Tuning**
+
    - Monitor resource usage
    - Adjust replica counts
    - Scale up/down services
    - Optimize queries
 
 2. **Backup & Recovery**
+
    - Set up automated backups
    - Test restore procedures
    - Document recovery plans
@@ -399,6 +429,7 @@ oc get csv -n datalyptica-operators
 ### Dockerfiles
 
 All Dockerfiles updated with latest verified base images:
+
 - Prometheus: v2.48.0 → **v3.8.0**
 - Grafana: v10.2.2 → **v12.3.0**
 - Loki: v2.9.3 → **v3.6.2**
@@ -415,7 +446,7 @@ All Dockerfiles updated with latest verified base images:
 ✅ **All routes accessible** (web UIs loading)  
 ✅ **No error logs** in critical services  
 ✅ **Resource usage within limits** (CPU, memory)  
-✅ **Storage claims bound** (PVCs in Bound state)  
+✅ **Storage claims bound** (PVCs in Bound state)
 
 ### Functional Success Indicators
 
@@ -426,7 +457,7 @@ All Dockerfiles updated with latest verified base images:
 ✅ **Can orchestrate with Airflow**  
 ✅ **Can track experiments in MLflow**  
 ✅ **Can monitor in Grafana**  
-✅ **Can authenticate via Keycloak**  
+✅ **Can authenticate via Keycloak**
 
 ---
 
@@ -471,6 +502,7 @@ All Dockerfiles updated with latest verified base images:
 ### Common Issues Documentation
 
 All guides include troubleshooting sections for:
+
 - Pod startup issues
 - Storage/PVC problems
 - Network connectivity
@@ -500,13 +532,13 @@ You now have **three comprehensive deployment guides** totaling **52,000+ words*
 ✅ 9 major breaking changes documented  
 ✅ Step-by-step instructions  
 ✅ Troubleshooting guidance  
-✅ Post-deployment tasks  
+✅ Post-deployment tasks
 
 **Choose your deployment method** and get started:
 
 → **[Quick Start Guide](OPENSHIFT_DEPLOYMENT_QUICKSTART.md)** - Start here!  
 → **[CLI Deployment](OPENSHIFT_DEPLOYMENT_CLI.md)** - For automation  
-→ **[UI Deployment](OPENSHIFT_DEPLOYMENT_UI.md)** - For visual deployment  
+→ **[UI Deployment](OPENSHIFT_DEPLOYMENT_UI.md)** - For visual deployment
 
 **Happy Deploying!** 🚀
 

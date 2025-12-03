@@ -225,6 +225,7 @@ docker compose up -d
 Enterprise-grade deployment on Red Hat OpenShift or Kubernetes:
 
 **📖 Complete Deployment Guides**:
+
 - **[Quick Start Guide](docs/OPENSHIFT_DEPLOYMENT_QUICKSTART.md)** - Choose your deployment method
 - **[CLI Deployment Guide](docs/OPENSHIFT_DEPLOYMENT_CLI.md)** - Complete command-line deployment
 - **[UI Deployment Guide](docs/OPENSHIFT_DEPLOYMENT_UI.md)** - Web Console deployment
@@ -235,6 +236,7 @@ Enterprise-grade deployment on Red Hat OpenShift or Kubernetes:
 **Features**: High availability, auto-scaling, production monitoring
 
 **Quick Links**:
+
 - [Component Versions](deploy/openshift/docs/COMPONENT-VERSIONS.md) - All verified versions & migration guides
 - [Architecture Overview](deploy/openshift/README.md) - Platform design & resource requirements
 - [Version Updates](docs/VERSION_UPDATE_SUMMARY.md) - Recent version changes (Dec 2025)

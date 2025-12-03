@@ -31,11 +31,13 @@
 ### 1. Login to Web Console
 
 1. **Open Browser** and navigate to your OpenShift cluster URL:
+
    ```
    https://console-openshift-console.apps.your-cluster.example.com
    ```
 
 2. **Select Authentication Method**:
+
    - Click on your identity provider (e.g., LDAP, OAuth, htpasswd)
    - Enter your username and password
    - Click **Log in**
@@ -47,6 +49,7 @@
 ### 2. Switch to Administrator Perspective
 
 If you're in Developer perspective:
+
 1. Click the **perspective switcher** (top-left corner)
 2. Select **Administrator**
 
@@ -57,6 +60,7 @@ If you're in Developer perspective:
 ### 1. Create Security Context Constraints (SCC)
 
 1. **Navigate to User Management**:
+
    - Left sidebar → **User Management** → **RoleBindings**
 
 2. **Create Custom SCC**:
@@ -75,21 +79,21 @@ allowHostPID: false
 allowHostPorts: false
 allowPrivilegedContainer: false
 allowedCapabilities:
-- NET_BIND_SERVICE
+  - NET_BIND_SERVICE
 defaultAddCapabilities: []
 fsGroup:
   type: MustRunAs
   ranges:
-  - min: 1000
-    max: 65535
+    - min: 1000
+      max: 65535
 groups: []
 priority: 10
 readOnlyRootFilesystem: false
 requiredDropCapabilities:
-- KILL
-- MKNOD
-- SETUID
-- SETGID
+  - KILL
+  - MKNOD
+  - SETUID
+  - SETGID
 runAsUser:
   type: MustRunAsRange
   uidRangeMin: 1000
@@ -100,12 +104,12 @@ supplementalGroups:
   type: RunAsAny
 users: []
 volumes:
-- configMap
-- downwardAPI
-- emptyDir
-- persistentVolumeClaim
-- projected
-- secret
+  - configMap
+  - downwardAPI
+  - emptyDir
+  - persistentVolumeClaim
+  - projected
+  - secret
 ```
 
 3. **Click Create**
@@ -113,9 +117,11 @@ volumes:
 ### 2. Create Storage Classes
 
 1. **Navigate to Storage**:
+
    - Left sidebar → **Storage** → **StorageClasses**
 
 2. **Create Fast Storage Class**:
+
    - Click **Create StorageClass**
    - **Name**: `datalyptica-fast`
    - **Provisioner**: Select your cloud provider (e.g., `kubernetes.io/aws-ebs`)
@@ -142,13 +148,16 @@ volumes:
 ### 1.1 Install Strimzi Kafka Operator
 
 1. **Navigate to OperatorHub**:
+
    - Left sidebar → **Operators** → **OperatorHub**
 
 2. **Search for Strimzi**:
+
    - In search box, type: `Strimzi`
    - Click on **Strimzi** tile
 
 3. **Install Operator**:
+
    - Click **Install**
    - **Installation Mode**: Select `A specific namespace on the cluster`
    - **Installed Namespace**: Create new namespace `datalyptica-operators`
@@ -163,13 +172,16 @@ volumes:
 ### 1.2 Install Crunchy PostgreSQL Operator
 
 1. **Navigate to OperatorHub**:
+
    - Left sidebar → **Operators** → **OperatorHub**
 
 2. **Search for PostgreSQL**:
+
    - Type: `Crunchy PostgreSQL`
    - Click on **Crunchy Postgres for Kubernetes** tile
 
 3. **Install Operator**:
+
    - Click **Install**
    - **Installation Mode**: `A specific namespace on the cluster`
    - **Installed Namespace**: Select `datalyptica-operators`
@@ -185,6 +197,7 @@ volumes:
 **Note**: Flink operator may need to be installed via Helm or YAML (not always available in OperatorHub)
 
 1. **Navigate to Import YAML**:
+
    - Top-right → **+** (Import YAML) button
 
 2. **Deploy Flink Operator** (if not in OperatorHub):
@@ -196,6 +209,7 @@ volumes:
 ## Phase 2: Create Projects
 
 1. **Navigate to Projects**:
+
    - Left sidebar → **Home** → **Projects**
 
 2. **Create Projects** (repeat for each):
@@ -206,6 +220,7 @@ volumes:
    - Click **Create**
 
 **Required Projects**:
+
 - `datalyptica-operators` (if not created during operator install)
 - `datalyptica-storage`
 - `datalyptica-catalog`
@@ -223,10 +238,12 @@ volumes:
 ### Create Secrets for Credentials
 
 1. **Navigate to Secrets**:
+
    - Left sidebar → **Workloads** → **Secrets**
    - **Project**: Select `datalyptica-storage` from top dropdown
 
 2. **Create PostgreSQL Secret**:
+
    - Click **Create** → **Key/Value Secret**
    - **Secret Name**: `postgres-credentials`
    - **Key**: `password`
@@ -234,6 +251,7 @@ volumes:
    - Click **Create**
 
 3. **Create MinIO Secret**:
+
    - Click **Create** → **Key/Value Secret**
    - **Secret Name**: `minio-credentials`
    - **Key**: `root-password`
@@ -253,10 +271,12 @@ volumes:
 ### 4.1 Deploy MinIO Object Storage
 
 1. **Navigate to Deployments**:
+
    - Left sidebar → **Workloads** → **Deployments**
    - **Project**: Select `datalyptica-storage`
 
 2. **Create PVC First**:
+
    - Left sidebar → **Storage** → **PersistentVolumeClaims**
    - Click **Create PersistentVolumeClaim**
    - **Name**: `minio-data`
@@ -287,40 +307,40 @@ spec:
         app: minio
     spec:
       containers:
-      - name: minio
-        image: minio/minio:RELEASE.2025-10-15T17-29-55Z
-        args:
-        - server
-        - /data
-        - --console-address
-        - ":9001"
-        env:
-        - name: MINIO_ROOT_USER
-          value: admin
-        - name: MINIO_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: minio-credentials
-              key: root-password
-        ports:
-        - containerPort: 9000
-          name: api
-        - containerPort: 9001
-          name: console
-        volumeMounts:
-        - name: data
-          mountPath: /data
-        resources:
-          requests:
-            cpu: 1000m
-            memory: 2Gi
-          limits:
-            cpu: 2000m
-            memory: 4Gi
+        - name: minio
+          image: minio/minio:RELEASE.2025-10-15T17-29-55Z
+          args:
+            - server
+            - /data
+            - --console-address
+            - ":9001"
+          env:
+            - name: MINIO_ROOT_USER
+              value: admin
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-credentials
+                  key: root-password
+          ports:
+            - containerPort: 9000
+              name: api
+            - containerPort: 9001
+              name: console
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 2Gi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
       volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: minio-data
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-data
 ```
 
 4. **Create MinIO Service**:
@@ -337,17 +357,18 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 9000
-    targetPort: 9000
-    name: api
-  - port: 9001
-    targetPort: 9001
-    name: console
+    - port: 9000
+      targetPort: 9000
+      name: api
+    - port: 9001
+      targetPort: 9001
+      name: console
   selector:
     app: minio
 ```
 
 5. **Create Route for MinIO Console**:
+
    - Left sidebar → **Networking** → **Routes**
    - Click **Create Route**
    - **Name**: `minio-console`
@@ -366,6 +387,7 @@ spec:
 ### 4.2 Deploy PostgreSQL (Using Crunchy Operator)
 
 1. **Navigate to Installed Operators**:
+
    - Left sidebar → **Operators** → **Installed Operators**
    - **Project**: Select `datalyptica-storage`
    - Click on **Crunchy Postgres for Kubernetes**
@@ -385,35 +407,35 @@ spec:
   postgresVersion: 16
   image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres:ubi8-16.6-0
   instances:
-  - name: instance1
-    replicas: 3
-    dataVolumeClaimSpec:
-      accessModes:
-      - ReadWriteOnce
+    - name: instance1
+      replicas: 3
+      dataVolumeClaimSpec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 100Gi
+        storageClassName: datalyptica-fast
       resources:
         requests:
-          storage: 100Gi
-      storageClassName: datalyptica-fast
-    resources:
-      requests:
-        cpu: 2000m
-        memory: 4Gi
-      limits:
-        cpu: 4000m
-        memory: 8Gi
+          cpu: 2000m
+          memory: 4Gi
+        limits:
+          cpu: 4000m
+          memory: 8Gi
   backups:
     pgbackrest:
       image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbackrest:ubi8-2.53.1-0
       repos:
-      - name: repo1
-        volume:
-          volumeClaimSpec:
-            accessModes:
-            - ReadWriteOnce
-            resources:
-              requests:
-                storage: 50Gi
-            storageClassName: datalyptica-standard
+        - name: repo1
+          volume:
+            volumeClaimSpec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 50Gi
+              storageClassName: datalyptica-standard
   monitoring:
     pgmonitor:
       exporter:
@@ -434,6 +456,7 @@ spec:
 ### 5.1 Deploy Redis
 
 1. **Switch Project**:
+
    - Top dropdown → Select `datalyptica-catalog`
 
 2. **Create ConfigMap**:
@@ -441,7 +464,8 @@ spec:
    - Click **Create ConfigMap**
    - **Name**: `redis-config`
    - **Key**: `redis.conf`
-   - **Value**: 
+   - **Value**:
+
 ```
 maxmemory 2gb
 maxmemory-policy allkeys-lru
@@ -451,9 +475,11 @@ save 60 10000
 appendonly yes
 appendfsync everysec
 ```
-   - Click **Create**
+
+- Click **Create**
 
 3. **Create PVC**:
+
    - **Storage** → **PersistentVolumeClaims**
    - Click **Create PersistentVolumeClaim**
    - **Name**: `redis-data`
@@ -485,33 +511,33 @@ spec:
         app: redis
     spec:
       containers:
-      - name: redis
-        image: redis:8.4.0-alpine
-        command:
-        - redis-server
-        - /etc/redis/redis.conf
-        ports:
-        - containerPort: 6379
-          name: redis
-        volumeMounts:
-        - name: data
-          mountPath: /data
-        - name: config
-          mountPath: /etc/redis
-        resources:
-          requests:
-            cpu: 500m
-            memory: 2Gi
-          limits:
-            cpu: 1000m
-            memory: 4Gi
+        - name: redis
+          image: redis:8.4.0-alpine
+          command:
+            - redis-server
+            - /etc/redis/redis.conf
+          ports:
+            - containerPort: 6379
+              name: redis
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /etc/redis
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              cpu: 1000m
+              memory: 4Gi
       volumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: redis-data
-      - name: config
-        configMap:
-          name: redis-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: redis-data
+        - name: config
+          configMap:
+            name: redis-config
 ```
 
 5. **Create Service**:
@@ -528,8 +554,8 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 6379
-    targetPort: 6379
+    - port: 6379
+      targetPort: 6379
   selector:
     app: redis
 ```
@@ -558,30 +584,30 @@ spec:
         app: nessie
     spec:
       containers:
-      - name: nessie
-        image: ghcr.io/projectnessie/nessie:0.105.7
-        ports:
-        - containerPort: 19120
-          name: http
-        env:
-        - name: QUARKUS_DATASOURCE_JDBC_URL
-          value: jdbc:postgresql://datalyptica-postgres-primary.datalyptica-storage.svc:5432/nessie
-        - name: QUARKUS_DATASOURCE_USERNAME
-          value: nessie
-        - name: QUARKUS_DATASOURCE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-credentials
-              key: password
-        - name: NESSIE_VERSION_STORE_TYPE
-          value: JDBC
-        resources:
-          requests:
-            cpu: 500m
-            memory: 1Gi
-          limits:
-            cpu: 1000m
-            memory: 2Gi
+        - name: nessie
+          image: ghcr.io/projectnessie/nessie:0.105.7
+          ports:
+            - containerPort: 19120
+              name: http
+          env:
+            - name: QUARKUS_DATASOURCE_JDBC_URL
+              value: jdbc:postgresql://datalyptica-postgres-primary.datalyptica-storage.svc:5432/nessie
+            - name: QUARKUS_DATASOURCE_USERNAME
+              value: nessie
+            - name: QUARKUS_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+            - name: NESSIE_VERSION_STORE_TYPE
+              value: JDBC
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
 ```
 
 2. **Create Service**:
@@ -595,9 +621,11 @@ spec:
 ### 6.1 Deploy Kafka (Using Strimzi Operator)
 
 1. **Switch Project**:
+
    - Select `datalyptica-streaming`
 
 2. **Navigate to Strimzi Operator**:
+
    - **Operators** → **Installed Operators**
    - Click **Strimzi**
 
@@ -635,11 +663,11 @@ spec:
     storage:
       type: jbod
       volumes:
-      - id: 0
-        type: persistent-claim
-        size: 100Gi
-        deleteClaim: false
-        class: datalyptica-fast
+        - id: 0
+          type: persistent-claim
+          size: 100Gi
+          deleteClaim: false
+          class: datalyptica-fast
     resources:
       requests:
         cpu: 2000m
@@ -680,14 +708,17 @@ spec:
 ### 7.1 Deploy Spark
 
 1. **Switch Project**:
+
    - Select `datalyptica-processing`
 
 2. **Create Spark Master Deployment**:
+
    - **Workloads** → **Deployments**
    - Click **Create Deployment**
    - Use YAML from CLI guide for Spark master
 
 3. **Create Spark Worker Deployment**:
+
    - Create another deployment for Spark workers
    - Set replicas to 3
 
@@ -697,10 +728,12 @@ spec:
 ### 7.2 Deploy Trino
 
 1. **Create ConfigMap**:
+
    - **Workloads** → **ConfigMaps**
    - Create `trino-config` with catalog configurations
 
 2. **Create Deployment**:
+
    - **Workloads** → **Deployments**
    - Create Trino deployment with 3 replicas
    - Image: `trinodb/trino:478`
@@ -715,17 +748,21 @@ spec:
 ### 8.1 Deploy Apache Airflow
 
 1. **Switch Project**:
+
    - Select `datalyptica-analytics`
 
 2. **Create ConfigMap**:
+
    - Create `airflow-config` with environment variables
 
 3. **Create Webserver Deployment**:
+
    - Image: `apache/airflow:3.1.3-python3.11`
    - Command: `airflow webserver`
    - Port: 8080
 
 4. **Create Scheduler Deployment**:
+
    - Same image
    - Command: `airflow scheduler`
 
@@ -736,6 +773,7 @@ spec:
 ### 8.2 Deploy MLflow
 
 1. **Create Deployment**:
+
    - Image: `ghcr.io/mlflow/mlflow:v3.6.0`
    - Port: 5000
 
@@ -746,6 +784,7 @@ spec:
 ### 8.3 Deploy Superset
 
 1. **Create Deployment**:
+
    - Image: `apache/superset:5.0.0`
    - Port: 8088
 
@@ -755,6 +794,7 @@ spec:
 ### 8.4 Deploy JupyterHub
 
 1. **Create Deployment**:
+
    - Image: `jupyterhub/jupyterhub:5.4.2`
    - Port: 8000
 
@@ -768,19 +808,23 @@ spec:
 ### 9.1 Deploy Prometheus
 
 1. **Switch Project**:
+
    - Select `datalyptica-monitoring`
 
 2. **Create ConfigMap**:
+
    - **Workloads** → **ConfigMaps**
    - Name: `prometheus-config`
    - Upload your `prometheus.yml` and `alerts.yml` files
 
 3. **Create PVC**:
+
    - Name: `prometheus-data`
    - Size: 50GiB
    - Storage class: `datalyptica-standard`
 
 4. **Create Deployment**:
+
    - Image: `prom/prometheus:v3.8.0`
    - Port: 9090
    - Mount ConfigMap and PVC
@@ -792,18 +836,22 @@ spec:
 ### 9.2 Deploy Grafana
 
 1. **Create ConfigMaps**:
+
    - `grafana-datasources` - Upload datasource YAML files
 
 2. **Create Secret**:
+
    - Name: `grafana-credentials`
    - Key: `admin-password`
    - Value: Strong password
 
 3. **Create PVC**:
+
    - Name: `grafana-data`
    - Size: 10GiB
 
 4. **Create Deployment**:
+
    - Image: `grafana/grafana:12.3.0`
    - Port: 3000
    - Mount PVC and ConfigMaps
@@ -815,13 +863,16 @@ spec:
 ### 9.3 Deploy Loki
 
 1. **Create ConfigMap**:
+
    - Upload `loki-config.yml`
 
 2. **Create PVC**:
+
    - Name: `loki-data`
    - Size: 50GiB
 
 3. **Create Deployment**:
+
    - Image: `grafana/loki:3.6.2`
    - Port: 3100
 
@@ -835,9 +886,11 @@ spec:
 ### 10.1 Deploy Keycloak
 
 1. **Switch Project**:
+
    - Select `datalyptica-iam`
 
 2. **Create Secret** (if not already created):
+
    - Name: `keycloak-credentials`
    - Key: `admin-password`
 
@@ -863,45 +916,46 @@ spec:
         app: keycloak
     spec:
       containers:
-      - name: keycloak
-        image: quay.io/keycloak/keycloak:26.4.7
-        args: ["start"]
-        env:
-        - name: KC_DB
-          value: postgres
-        - name: KC_DB_URL
-          value: jdbc:postgresql://datalyptica-postgres-primary.datalyptica-storage.svc:5432/keycloak
-        - name: KC_DB_USERNAME
-          value: keycloak
-        - name: KC_DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-credentials
-              key: password
-        - name: KEYCLOAK_ADMIN
-          value: admin
-        - name: KEYCLOAK_ADMIN_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: keycloak-credentials
-              key: admin-password
-        - name: KC_PROXY
-          value: edge
-        - name: KC_HOSTNAME_STRICT
-          value: "false"
-        ports:
-        - containerPort: 8080
-          name: http
-        resources:
-          requests:
-            cpu: 1000m
-            memory: 2Gi
-          limits:
-            cpu: 2000m
-            memory: 4Gi
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.4.7
+          args: ["start"]
+          env:
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              value: jdbc:postgresql://datalyptica-postgres-primary.datalyptica-storage.svc:5432/keycloak
+            - name: KC_DB_USERNAME
+              value: keycloak
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+            - name: KEYCLOAK_ADMIN
+              value: admin
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-credentials
+                  key: admin-password
+            - name: KC_PROXY
+              value: edge
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 2Gi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
 ```
 
 4. **Create Service**:
+
    - Port: 8080
 
 5. **Create Route**:
@@ -936,6 +990,7 @@ spec:
 ### View Logs
 
 1. **Go to Pod**:
+
    - **Workloads** → **Pods**
    - Click on pod name
 
@@ -961,6 +1016,7 @@ spec:
 ### Quick Navigation Tips
 
 **Left Sidebar Sections**:
+
 - **Home**: Projects, Search, Events, Status
 - **Operators**: OperatorHub, Installed Operators
 - **Workloads**: Pods, Deployments, StatefulSets, Jobs, CronJobs
@@ -985,22 +1041,26 @@ spec:
 ### Common Tasks
 
 **View All Resources in Project**:
+
 1. Select project from dropdown
 2. Left sidebar → **Home** → **Search**
 3. Select **Resources** → **All**
 
 **Monitor Pod Status**:
+
 1. **Workloads** → **Pods**
 2. Click pod name
 3. View **Details**, **Metrics**, **Logs**, **Terminal**, **Events**, **YAML**
 
 **Edit Resource**:
+
 1. Find resource (Deployment, Service, etc.)
 2. Click resource name
 3. Click **Actions** → **Edit [Resource]**
 4. Or click **YAML** tab to edit directly
 
 **Scale Deployment**:
+
 1. **Workloads** → **Deployments**
 2. Click deployment name
 3. Click **Actions** → **Edit Pod Count**
@@ -1008,6 +1068,7 @@ spec:
 5. Click **Save**
 
 **Create Route**:
+
 1. **Networking** → **Routes**
 2. Click **Create Route**
 3. Fill in: Name, Service, Target Port
@@ -1021,6 +1082,7 @@ spec:
 ### Pod Issues
 
 **Pod Not Starting**:
+
 1. Go to **Workloads** → **Pods**
 2. Click on problematic pod
 3. Check **Events** tab for errors
@@ -1028,11 +1090,13 @@ spec:
 5. Check **YAML** tab for configuration issues
 
 **ImagePullBackOff**:
+
 1. Check image name and tag in pod YAML
 2. Verify image exists and is accessible
 3. Check if image pull secrets are configured
 
 **CrashLoopBackOff**:
+
 1. View pod **Logs** tab
 2. Look for application errors
 3. Check **Events** tab for details
@@ -1041,6 +1105,7 @@ spec:
 ### Storage Issues
 
 **PVC Pending**:
+
 1. **Storage** → **PersistentVolumeClaims**
 2. Click PVC name
 3. Check **Events** tab
@@ -1050,12 +1115,14 @@ spec:
 ### Network Issues
 
 **Service Not Accessible**:
+
 1. **Networking** → **Services**
 2. Verify service selector matches pod labels
 3. Check endpoints: Click service → **Pods** tab
 4. Verify target port matches container port
 
 **Route Not Working**:
+
 1. **Networking** → **Routes**
 2. Verify service exists and is healthy
 3. Check TLS termination settings
@@ -1066,21 +1133,25 @@ spec:
 ## Next Steps After Deployment
 
 1. **Configure Monitoring Dashboards**:
+
    - Login to Grafana
    - Import pre-built dashboards
    - Configure alerts
 
 2. **Set Up Data Pipelines**:
+
    - Access Airflow UI
    - Create DAGs
    - Schedule jobs
 
 3. **Configure Security**:
+
    - Set up Keycloak realms
    - Configure RBAC
    - Enable TLS everywhere
 
 4. **Performance Tuning**:
+
    - Monitor resource usage
    - Adjust replica counts
    - Scale up/down as needed

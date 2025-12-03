@@ -862,7 +862,7 @@ data:
     query.max-memory=4GB
     query.max-memory-per-node=2GB
     discovery.uri=http://trino:8080
-  
+
   catalog-iceberg.properties: |
     connector.name=iceberg
     iceberg.catalog.type=nessie
@@ -1709,6 +1709,7 @@ oc exec -it <pod-name> -n <namespace> -- /bin/bash
 ### Common Issues
 
 **Issue: Pod stuck in Pending**
+
 ```bash
 # Check PVC status
 oc get pvc -n <namespace>
@@ -1718,6 +1719,7 @@ oc describe node | grep -A 5 "Allocated resources"
 ```
 
 **Issue: ImagePullBackOff**
+
 ```bash
 # Check image pull secrets
 oc get secrets -n <namespace>
@@ -1727,6 +1729,7 @@ oc describe pod <pod-name> -n <namespace> | grep -A 10 Events
 ```
 
 **Issue: CrashLoopBackOff**
+
 ```bash
 # Check logs
 oc logs --previous <pod-name> -n <namespace>
@@ -1760,6 +1763,7 @@ oc get pod <pod-name> -n <namespace> -o yaml | grep -A 10 livenessProbe
 **Deployment Complete!** 🎉
 
 All services should now be running on OpenShift. Use the routes to access the web UIs:
+
 - MinIO Console
 - Grafana Dashboard
 - Airflow Web UI
