@@ -1,5 +1,6 @@
 # Loki - Log aggregation system
-FROM grafana/loki:2.9.3
+# Version: 3.6.2 (verified Nov 25, 2025) 🔒 Security: CVE fixes
+FROM grafana/loki:3.6.2
 
 LABEL org.opencontainers.image.title="Datalyptica Loki"
 LABEL org.opencontainers.image.description="Custom Loki for Datalyptica Data Platform logging"

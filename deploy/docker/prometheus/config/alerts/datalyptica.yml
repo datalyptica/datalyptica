@@ -1,4 +1,5 @@
 # Prometheus alert rules
+# Prometheus Version: 3.8.0 (verified Nov 28, 2025)
 groups:
   - name: datalyptica_alerts
     interval: 30s

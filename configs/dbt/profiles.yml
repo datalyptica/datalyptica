@@ -1,4 +1,7 @@
 # dbt profiles configuration for Datalyptica
+# Trino Version: 478 (verified Oct 29, 2025)
+# Spark Version: 4.0.1 (verified Nov 7, 2025) - Recommended
+# Spark Alternative: 3.5.7 for Scala 2.12 compatibility
 
 datalyptica:
   target: trino

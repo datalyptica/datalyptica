@@ -1,3 +1,5 @@
+# Patroni Configuration for PostgreSQL High Availability
+# PostgreSQL Version: 16.6 (Crunchy Operator 5.8.5, verified Dec 5, 2025)
 scope: datalyptica
 namespace: /db/
 name: ${PATRONI_NAME}

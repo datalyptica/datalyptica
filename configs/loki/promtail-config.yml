@@ -1,3 +1,5 @@
+# Promtail Configuration
+# Version: 3.6.2 (matches Loki 3.6.2, verified Nov 25, 2025)
 server:
   http_listen_port: 9080
   grpc_listen_port: 0
@@ -15,15 +17,17 @@ scrape_configs:
       - host: unix:///var/run/docker.sock
         refresh_interval: 5s
     relabel_configs:
-      - source_labels: ['__meta_docker_container_name']
-        regex: '/(.*)'
-        target_label: 'container'
-      - source_labels: ['__meta_docker_container_log_stream']
-        target_label: 'stream'
-      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
-        target_label: 'service'
-      - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
-        target_label: 'project'
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/(.*)"
+        target_label: "container"
+      - source_labels: ["__meta_docker_container_log_stream"]
+        target_label: "stream"
+      - source_labels:
+          ["__meta_docker_container_label_com_docker_compose_service"]
+        target_label: "service"
+      - source_labels:
+          ["__meta_docker_container_label_com_docker_compose_project"]
+        target_label: "project"
     pipeline_stages:
       - docker: {}
       - json:
@@ -32,7 +36,7 @@ scrape_configs:
             msg: message
       - labels:
           level:
-          
+
   # PostgreSQL logs
   - job_name: postgresql
     static_configs:

@@ -1,5 +1,7 @@
 # Grafana - Analytics and monitoring platform
-FROM grafana/grafana:10.2.2
+# Version: 12.3.0 (verified Nov 19, 2025) ⚠️ MAJOR UPDATE: 11.x→12.x
+# Breaking: New SQLite backend, CVE-2025-41115 fix
+FROM grafana/grafana:12.3.0
 
 LABEL org.opencontainers.image.title="Datalyptica Grafana"
 LABEL org.opencontainers.image.description="Custom Grafana for Datalyptica Data Platform visualization"

@@ -1,5 +1,6 @@
 # Prometheus - Monitoring and alerting toolkit
-FROM prom/prometheus:v2.48.0
+# Version: 3.8.0 (verified Nov 28, 2025)
+FROM prom/prometheus:v3.8.0
 
 LABEL org.opencontainers.image.title="Datalyptica Prometheus"
 LABEL org.opencontainers.image.description="Custom Prometheus for Datalyptica Data Platform monitoring"

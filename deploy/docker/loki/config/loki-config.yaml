@@ -1,4 +1,5 @@
 # Loki Configuration for Datalyptica
+# Version: 3.6.2 (verified Nov 25, 2025) 🔒 Security: CVE fixes
 auth_enabled: false
 
 server:

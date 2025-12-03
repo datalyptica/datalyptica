@@ -1,3 +1,5 @@
+# Prometheus Configuration
+# Version: 3.8.0 (verified Nov 28, 2025)
 global:
   scrape_interval: 15s
   evaluation_interval: 15s

@@ -1,3 +1,6 @@
+# Grafana Datasource Configuration
+# Grafana Version: 12.3.0 (verified Nov 19, 2025)
+# Prometheus Version: 3.8.0 (verified Nov 28, 2025)
 apiVersion: 1
 
 datasources:
@@ -11,4 +14,4 @@ datasources:
       timeInterval: 15s
       queryTimeout: 60s
       httpMethod: POST
-    secureJsonData: {} 
+    secureJsonData: {}

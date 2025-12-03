@@ -1,3 +1,5 @@
+# Prometheus Alert Rules
+# Prometheus Version: 3.8.0 (verified Nov 28, 2025)
 groups:
   # Critical System Alerts
   - name: system_critical
