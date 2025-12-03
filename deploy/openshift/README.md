@@ -1,7 +1,7 @@
 # Datalyptica OpenShift Deployment Architecture
 
 **Version:** 3.0.0  
-**Platform:** Red Hat OpenShift 4.14+ / Kubernetes 1.27+  
+**Platform:** Red Hat OpenShift 4.17+ / Kubernetes 1.30+  
 **Deployment Model:** Cloud-Native with Operators  
 **Last Updated:** December 3, 2025
 
@@ -73,7 +73,7 @@ This architecture deploys the complete Datalyptica Data Platform on Red Hat Open
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    OpenShift Cluster (4.14+)                     │
+│                    OpenShift Cluster (4.17+)                     │
 │                                                                  │
 │  ┌────────────────────────────────────────────────────────────┐ │
 │  │                   Control Plane (3 nodes)                   │ │
@@ -176,8 +176,8 @@ This architecture deploys the complete Datalyptica Data Platform on Red Hat Open
 
 ### OpenShift Version Requirements
 
-- **Red Hat OpenShift**: 4.14+ (or higher)
-- **Kubernetes**: 1.27+ (if using vanilla Kubernetes)
+- **Red Hat OpenShift**: 4.17+ (or higher)
+- **Kubernetes**: 1.30+ (if using vanilla Kubernetes)
 - **OpenShift Container Platform (OCP)** or **OKD** (community version)
 
 ### Required Operators
@@ -186,15 +186,15 @@ All available from OperatorHub:
 
 | Operator                        | Purpose            | Version    |
 | ------------------------------- | ------------------ | ---------- |
-| **Strimzi Kafka Operator**      | Kafka management   | 0.39+      |
-| **Crunchy PostgreSQL Operator** | PostgreSQL HA      | 5.5+       |
+| **Strimzi Kafka Operator**      | Kafka management   | 0.43+      |
+| **Crunchy PostgreSQL Operator** | PostgreSQL HA      | 5.7+       |
 | **ClickHouse Operator**         | ClickHouse cluster | Latest     |
-| **Spark Operator**              | Spark on K8s       | 1.3+       |
-| **Flink Kubernetes Operator**   | Flink management   | 1.7+       |
-| **Keycloak Operator**           | IAM                | 24+        |
+| **Spark Operator**              | Spark on K8s       | 2.0+       |
+| **Flink Kubernetes Operator**   | Flink management   | 1.10+      |
+| **Keycloak Operator**           | IAM                | 26+        |
 | **Redis Operator**              | Redis clusters     | Latest     |
 | **Prometheus Operator**         | Monitoring         | (built-in) |
-| **Grafana Operator**            | Dashboards         | 5.9+       |
+| **Grafana Operator**            | Dashboards         | 5.14+      |
 | **Loki Operator**               | Log aggregation    | Latest     |
 
 ---
@@ -413,7 +413,7 @@ spec:
   monitoring:
     pgmonitor:
       exporter:
-        image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres-exporter:ubi8-5.5.0-0
+        image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres-exporter:ubi8-5.7.1-0
 ```
 
 **Databases to Create**:
@@ -441,7 +441,7 @@ metadata:
   namespace: datalyptica-streaming
 spec:
   kafka:
-    version: 3.6.1
+    version: 3.9.0
     replicas: 5
     listeners:
       - name: plain
@@ -532,7 +532,7 @@ spec:
     spec:
       containers:
         - name: schema-registry
-          image: confluentinc/cp-schema-registry:7.6.0
+          image: confluentinc/cp-schema-registry:7.8.0
           ports:
             - containerPort: 8085
           env:
@@ -578,7 +578,7 @@ spec:
     spec:
       containers:
         - name: nessie
-          image: ghcr.io/projectnessie/nessie:0.77.1
+          image: ghcr.io/projectnessie/nessie:0.98.2
           ports:
             - containerPort: 19120
               name: http
@@ -650,11 +650,11 @@ metadata:
 spec:
   type: Scala
   mode: cluster
-  image: "ghcr.io/datalyptica/spark:3.5.0-iceberg-1.4.3"
+  image: "ghcr.io/datalyptica/spark:3.5.4-iceberg-1.7.1"
   imagePullPolicy: Always
   mainClass: com.datalyptica.DataProcessor
   mainApplicationFile: "s3a://datalyptica-apps/spark-jobs/processor.jar"
-  sparkVersion: "3.5.0"
+  sparkVersion: "3.5.4"
   restartPolicy:
     type: OnFailure
     onFailureRetries: 3
@@ -718,7 +718,7 @@ spec:
     spec:
       containers:
         - name: trino
-          image: trinodb/trino:439
+          image: trinodb/trino:469
           ports:
             - containerPort: 8080
               name: http
@@ -765,7 +765,7 @@ spec:
     spec:
       containers:
         - name: trino
-          image: trinodb/trino:439
+          image: trinodb/trino:469
           env:
             - name: TRINO_ENVIRONMENT
               value: "production"
