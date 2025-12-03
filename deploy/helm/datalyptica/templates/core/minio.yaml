@@ -1,0 +1,105 @@
+{{- if .Values.minio.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: {{ .Values.namespaces.core }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "minio" "tier" "core" "root" .) | nindent 4 }}
+spec:
+  type: {{ .Values.minio.service.type }}
+  ports:
+    - port: {{ .Values.minio.service.apiPort }}
+      targetPort: 9000
+      protocol: TCP
+      name: api
+    - port: {{ .Values.minio.service.consolePort }}
+      targetPort: 9001
+      protocol: TCP
+      name: console
+  selector:
+    app: minio
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio
+  namespace: {{ .Values.namespaces.core }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "minio" "tier" "core" "root" .) | nindent 4 }}
+spec:
+  serviceName: minio
+  replicas: {{ .Values.minio.replicas }}
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+        tier: core
+        {{- include "datalyptica.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "datalyptica.securityContext" (dict "securityContext" .Values.minio.securityContext) | nindent 6 }}
+      serviceAccountName: {{ include "datalyptica.serviceAccountName" . }}
+      containers:
+        - name: minio
+          image: {{ include "datalyptica.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.minio.image.repository "tag" .Values.minio.image.tag "root" .) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 9000
+              name: api
+            - containerPort: 9001
+              name: console
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-credentials
+                  key: root-user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-credentials
+                  key: root-password
+            - name: MINIO_BROWSER
+              value: "on"
+            - name: MINIO_DOMAIN
+              value: "minio.{{ .Values.namespaces.core }}.svc.cluster.local"
+          command:
+            - minio
+            - server
+            - /data
+            - --console-address
+            - ":9001"
+          volumeMounts:
+            - name: minio-data
+              mountPath: /data
+          {{- include "datalyptica.resources" (dict "resources" .Values.minio.resources) | nindent 10 }}
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+  {{- if .Values.minio.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: minio-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass }}
+        resources:
+          requests:
+            storage: {{ .Values.minio.persistence.size }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,132 @@
+{{- if .Values.trino.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trino-coordinator
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "trino-coordinator" "tier" "apps" "root" .) | nindent 4 }}
+spec:
+  type: {{ .Values.trino.coordinator.service.type }}
+  ports:
+    - port: {{ .Values.trino.coordinator.service.port }}
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app: trino-coordinator
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trino-coordinator
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "trino-coordinator" "tier" "apps" "root" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.trino.coordinator.replicas }}
+  selector:
+    matchLabels:
+      app: trino-coordinator
+  template:
+    metadata:
+      labels:
+        app: trino-coordinator
+        tier: apps
+        {{- include "datalyptica.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "datalyptica.securityContext" (dict "securityContext" .Values.trino.coordinator.securityContext) | nindent 6 }}
+      serviceAccountName: datalyptica-apps
+      containers:
+        - name: trino
+          image: {{ include "datalyptica.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.trino.image.repository "tag" .Values.trino.image.tag "root" .) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: TRINO_ENVIRONMENT
+              value: "production"
+          {{- include "datalyptica.resources" (dict "resources" .Values.trino.coordinator.resources) | nindent 10 }}
+          livenessProbe:
+            httpGet:
+              path: /v1/info
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /v1/info
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trino-worker
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "trino-worker" "tier" "apps" "root" .) | nindent 4 }}
+spec:
+  clusterIP: None
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app: trino-worker
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trino-worker
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "trino-worker" "tier" "apps" "root" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.trino.worker.replicas }}
+  selector:
+    matchLabels:
+      app: trino-worker
+  template:
+    metadata:
+      labels:
+        app: trino-worker
+        tier: apps
+        {{- include "datalyptica.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "datalyptica.securityContext" (dict "securityContext" .Values.trino.worker.securityContext) | nindent 6 }}
+      serviceAccountName: datalyptica-apps
+      containers:
+        - name: trino
+          image: {{ include "datalyptica.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.trino.image.repository "tag" .Values.trino.image.tag "root" .) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: TRINO_ENVIRONMENT
+              value: "production"
+            - name: TRINO_COORDINATOR
+              value: "trino-coordinator.{{ .Values.namespaces.apps }}.svc.cluster.local:8080"
+          {{- include "datalyptica.resources" (dict "resources" .Values.trino.worker.resources) | nindent 10 }}
+          livenessProbe:
+            httpGet:
+              path: /v1/info
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /v1/info
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 3
+{{- end }}

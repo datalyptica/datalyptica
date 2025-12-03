@@ -1,0 +1,169 @@
+# etcd Distributed Key-Value Store
+# This creates a 3-node etcd cluster with Raft consensus
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd-headless
+  namespace: datalyptica-infra
+  labels:
+    app: etcd
+spec:
+  clusterIP: None
+  ports:
+    - name: client
+      port: 2379
+      targetPort: 2379
+    - name: peer
+      port: 2380
+      targetPort: 2380
+  selector:
+    app: etcd
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd
+  namespace: datalyptica-infra
+  labels:
+    app: etcd
+spec:
+  type: ClusterIP
+  ports:
+    - name: client
+      port: 2379
+      targetPort: 2379
+  selector:
+    app: etcd
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: etcd
+  namespace: datalyptica-infra
+  labels:
+    app: etcd
+spec:
+  serviceName: etcd-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: etcd
+  template:
+    metadata:
+      labels:
+        app: etcd
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: etcd
+              topologyKey: kubernetes.io/hostname
+
+      containers:
+        - name: etcd
+          image: quay.io/coreos/etcd:v3.5.9
+          imagePullPolicy: IfNotPresent
+
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -ex
+              # Get pod index from hostname
+              HOSTNAME=$(hostname)
+              ID=${HOSTNAME##*-}
+
+              # Cluster members
+              CLUSTER=""
+              for i in 0 1 2; do
+                if [ "$i" != "0" ]; then
+                  CLUSTER="${CLUSTER},"
+                fi
+                CLUSTER="${CLUSTER}etcd-${i}=http://etcd-${i}.etcd-headless.datalyptica-infra.svc.cluster.local:2380"
+              done
+
+              # Start etcd
+              exec etcd \
+                --name etcd-${ID} \
+                --data-dir /var/run/etcd \
+                --listen-client-urls http://0.0.0.0:2379 \
+                --advertise-client-urls http://etcd-${ID}.etcd-headless.datalyptica-infra.svc.cluster.local:2379 \
+                --listen-peer-urls http://0.0.0.0:2380 \
+                --initial-advertise-peer-urls http://etcd-${ID}.etcd-headless.datalyptica-infra.svc.cluster.local:2380 \
+                --initial-cluster ${CLUSTER} \
+                --initial-cluster-state new \
+                --initial-cluster-token datalyptica-etcd-cluster \
+                --auto-compaction-retention=1 \
+                --auto-compaction-mode=periodic
+
+          ports:
+            - name: client
+              containerPort: 2379
+            - name: peer
+              containerPort: 2380
+
+          env:
+            - name: ETCDCTL_API
+              value: "3"
+            - name: ETCD_QUOTA_BACKEND_BYTES
+              value: "8589934592" # 8GB
+
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - etcdctl endpoint health
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - etcdctl endpoint health
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          volumeMounts:
+            - name: data
+              mountPath: /var/run/etcd
+
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app: etcd
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: standard # CHANGE THIS TO YOUR STORAGE CLASS
+        resources:
+          requests:
+            storage: 5Gi

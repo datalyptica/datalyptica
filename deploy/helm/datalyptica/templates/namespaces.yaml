@@ -1,0 +1,31 @@
+{{- if .Values.namespaces }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespaces.core }}
+  labels:
+    name: {{ .Values.namespaces.core }}
+    {{- include "datalyptica.labels" . | nindent 4 }}
+    tier: core
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespaces.apps }}
+  labels:
+    name: {{ .Values.namespaces.apps }}
+    {{- include "datalyptica.labels" . | nindent 4 }}
+    tier: apps
+{{- if .Values.prometheus.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespaces.monitoring }}
+  labels:
+    name: {{ .Values.namespaces.monitoring }}
+    {{- include "datalyptica.labels" . | nindent 4 }}
+    tier: monitoring
+{{- end }}
+{{- end }}

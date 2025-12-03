@@ -1,0 +1,173 @@
+# STEP 1: Namespace Setup
+
+**Time Required:** 5 minutes  
+**Method:** OpenShift Web Console
+
+---
+
+## INSTRUCTIONS
+
+### Option A: Using OpenShift Web Console (Recommended for beginners)
+
+1. **Log into OpenShift Web Console**
+   - Open your browser
+   - Navigate to your OpenShift cluster URL
+   - Click **Log In** and enter credentials
+
+2. **Switch to Administrator Perspective**
+   - In top-left corner, ensure **Administrator** is selected (not Developer)
+
+3. **Create Namespaces (Projects)**
+   - Click **Home** → **Projects**
+   - Click **Create Project** button
+   - Enter project details:
+   
+   **Project 1:**
+   - Name: `datalyptica-infra`
+   - Display Name: `Datalyptica Infrastructure`
+   - Description: `Core infrastructure services - PostgreSQL, Redis, etcd, MinIO`
+   - Click **Create**
+   
+   **Project 2:**
+   - Click **Create Project** again
+   - Name: `datalyptica-data`
+   - Display Name: `Datalyptica Data Layer`
+   - Description: `Data catalog and metadata services - Nessie`
+   - Click **Create**
+   
+   **Project 3:**
+   - Click **Create Project** again
+   - Name: `datalyptica-apps`
+   - Display Name: `Datalyptica Applications`
+   - Description: `Application services - Kafka, Trino, Flink, Spark, ClickHouse, Airflow, Superset`
+   - Click **Create**
+   
+   **Project 4:**
+   - Click **Create Project** again
+   - Name: `datalyptica-monitoring`
+   - Display Name: `Datalyptica Monitoring`
+   - Description: `Monitoring and observability - Prometheus, Grafana, Loki`
+   - Click **Create**
+
+4. **Verify Creation**
+   - You should see all 4 projects listed in **Home** → **Projects**
+   - Each should show status: **Active**
+
+### Option B: Using YAML (For advanced users)
+
+1. **In OpenShift Web Console:**
+   - Click **+** (plus icon) in top-right corner
+   - Copy and paste the YAML below
+   - Click **Create**
+
+2. **Or using CLI:**
+   ```bash
+   oc apply -f STEP-1-namespace-setup.yaml
+   ```
+
+---
+
+## YAML MANIFEST
+
+```yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datalyptica-infra
+  labels:
+    app.kubernetes.io/name: datalyptica
+    app.kubernetes.io/component: infrastructure
+  annotations:
+    openshift.io/description: "Core infrastructure services - PostgreSQL, Redis, etcd, MinIO"
+    openshift.io/display-name: "Datalyptica Infrastructure"
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datalyptica-data
+  labels:
+    app.kubernetes.io/name: datalyptica
+    app.kubernetes.io/component: data-layer
+  annotations:
+    openshift.io/description: "Data catalog and metadata services - Nessie"
+    openshift.io/display-name: "Datalyptica Data Layer"
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datalyptica-apps
+  labels:
+    app.kubernetes.io/name: datalyptica
+    app.kubernetes.io/component: applications
+  annotations:
+    openshift.io/description: "Application services - Kafka, Trino, Flink, Spark, ClickHouse, Airflow, Superset"
+    openshift.io/display-name: "Datalyptica Applications"
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datalyptica-monitoring
+  labels:
+    app.kubernetes.io/name: datalyptica
+    app.kubernetes.io/component: monitoring
+  annotations:
+    openshift.io/description: "Monitoring and observability - Prometheus, Grafana, Loki"
+    openshift.io/display-name: "Datalyptica Monitoring"
+```
+
+---
+
+## VALIDATION
+
+### Check via Web Console:
+1. Navigate to **Home** → **Projects**
+2. Verify you see all 4 projects:
+   - ✅ datalyptica-infra
+   - ✅ datalyptica-data
+   - ✅ datalyptica-apps
+   - ✅ datalyptica-monitoring
+3. Each should show **Active** status
+
+### Check via CLI:
+```bash
+oc get projects | grep datalyptica
+
+# Expected output:
+# datalyptica-apps          Active
+# datalyptica-data          Active
+# datalyptica-infra         Active
+# datalyptica-monitoring    Active
+```
+
+---
+
+## TROUBLESHOOTING
+
+**Issue: "Forbidden: User cannot create projects"**
+- **Cause:** Insufficient permissions
+- **Solution:** Contact cluster admin to grant project creation rights or have them create projects for you
+
+**Issue: "Project name already exists"**
+- **Cause:** Projects were previously created
+- **Solution:** Use existing projects or delete old ones first:
+  ```bash
+  oc delete project datalyptica-infra
+  ```
+
+---
+
+## NEXT STEP
+
+Once all 4 namespaces are created and active:
+
+✅ **Proceed to:** `STEP-2-operator-install.md`
+
+---
+
+**Status:** ☐ Completed  
+**Completed On:** _______________  
+**Notes:** 

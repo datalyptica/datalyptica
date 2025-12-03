@@ -31,7 +31,7 @@ fi
 
 echo "========================================"
 echo "✅ Superset Ready - Starting Service"
-echo "========================================
+echo "========================================"
 
 # Execute the main command
 exec "$@"

@@ -1,0 +1,206 @@
+# PostgreSQL HA Cluster - Crunchy Postgres Operator
+# This creates a 3-node PostgreSQL cluster with automatic failover
+
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: datalyptica-pg
+  namespace: datalyptica-infra
+  labels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: datalyptica
+spec:
+  # PostgreSQL version
+  postgresVersion: 15
+
+  # Image repository (use certified images)
+  image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres:ubi8-15.4-1
+
+  # Number of instances (1 primary + 2 replicas)
+  instances:
+    - name: instance1
+      replicas: 3
+
+      # Pod anti-affinity to spread across nodes
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  postgres-operator.crunchydata.com/cluster: datalyptica-pg
+                  postgres-operator.crunchydata.com/instance-set: instance1
+              topologyKey: kubernetes.io/hostname
+
+      # Resource requests and limits
+      resources:
+        requests:
+          cpu: 500m
+          memory: 2Gi
+        limits:
+          cpu: 2000m
+          memory: 4Gi
+
+      # Storage configuration
+      dataVolumeClaimSpec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: standard # CHANGE THIS TO YOUR STORAGE CLASS
+
+      # WAL storage (separate for better performance)
+      walVolumeClaimSpec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+        storageClassName: standard # CHANGE THIS TO YOUR STORAGE CLASS
+
+  # Patroni configuration for HA
+  patroni:
+    dynamicConfiguration:
+      postgresql:
+        parameters:
+          # Connection settings
+          max_connections: 200
+          shared_buffers: 1GB
+          effective_cache_size: 3GB
+          maintenance_work_mem: 256MB
+
+          # WAL settings for replication
+          wal_level: replica
+          max_wal_senders: 10
+          max_replication_slots: 10
+          hot_standby: "on"
+
+          # Checkpoint settings
+          checkpoint_timeout: 15min
+          checkpoint_completion_target: 0.9
+
+          # Query performance
+          random_page_cost: 1.1
+          effective_io_concurrency: 200
+          work_mem: 16MB
+
+          # Logging
+          log_destination: stderr
+          logging_collector: "on"
+          log_directory: pg_log
+          log_filename: postgresql-%a.log
+          log_rotation_age: 1d
+          log_rotation_size: 0
+          log_min_duration_statement: 1000
+          log_line_prefix: "%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h "
+
+      # Synchronous replication for zero data loss
+      synchronous_mode: true
+      synchronous_mode_strict: true
+      synchronous_node_count: 1
+
+      # Automatic failover settings
+      ttl: 30
+      loop_wait: 10
+      retry_timeout: 10
+      maximum_lag_on_failover: 1048576 # 1MB
+
+  # PgBouncer for connection pooling
+  proxy:
+    pgBouncer:
+      image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbouncer:ubi8-1.20-1
+      replicas: 2
+
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
+
+      config:
+        global:
+          pool_mode: transaction
+          max_client_conn: 1000
+          default_pool_size: 25
+          reserve_pool_size: 5
+          reserve_pool_timeout: 5
+          server_idle_timeout: 600
+          server_lifetime: 3600
+
+  # Backup configuration with pgBackRest
+  backups:
+    pgbackrest:
+      image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbackrest:ubi8-2.47-1
+
+      # Backup storage
+      repos:
+        - name: repo1
+          volume:
+            volumeClaimSpec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 50Gi
+              storageClassName: standard # CHANGE THIS TO YOUR STORAGE CLASS
+
+      # Backup schedules
+      global:
+        repo1-retention-full: "14" # Keep 14 full backups
+        repo1-retention-full-type: count
+
+      # Full backup every day at 1 AM
+      jobs:
+        - name: full-backup
+          schedule: "0 1 * * *"
+          type: full
+          backoffLimit: 2
+
+        # Incremental backup every 6 hours
+        - name: incremental-backup
+          schedule: "0 */6 * * *"
+          type: incr
+          backoffLimit: 2
+
+  # Monitoring
+  monitoring:
+    pgmonitor:
+      exporter:
+        image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres-exporter:ubi8-5.4.0-1
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+
+  # Service configuration
+  service:
+    type: ClusterIP
+
+  # Users - additional users can be created
+  users:
+    - name: postgres
+      databases:
+        - postgres
+      options: "SUPERUSER"
+
+    - name: nessie
+      databases:
+        - nessie
+
+    - name: airflow
+      databases:
+        - airflow
+
+    - name: superset
+      databases:
+        - superset
+
+    - name: mlflow
+      databases:
+        - mlflow

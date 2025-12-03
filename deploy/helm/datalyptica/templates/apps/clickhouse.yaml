@@ -1,0 +1,94 @@
+{{- if .Values.clickhouse.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "clickhouse" "tier" "apps" "root" .) | nindent 4 }}
+spec:
+  type: {{ .Values.clickhouse.service.type }}
+  ports:
+    - port: {{ .Values.clickhouse.service.httpPort }}
+      targetPort: 8123
+      protocol: TCP
+      name: http
+    - port: {{ .Values.clickhouse.service.nativePort }}
+      targetPort: 9000
+      protocol: TCP
+      name: native
+  selector:
+    app: clickhouse
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: clickhouse
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "clickhouse" "tier" "apps" "root" .) | nindent 4 }}
+spec:
+  serviceName: clickhouse
+  replicas: {{ .Values.clickhouse.replicas }}
+  selector:
+    matchLabels:
+      app: clickhouse
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+        tier: apps
+        {{- include "datalyptica.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "datalyptica.securityContext" (dict "securityContext" .Values.clickhouse.securityContext) | nindent 6 }}
+      serviceAccountName: datalyptica-apps
+      containers:
+        - name: clickhouse
+          image: {{ include "datalyptica.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.clickhouse.image.repository "tag" .Values.clickhouse.image.tag "root" .) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 8123
+              name: http
+            - containerPort: 9000
+              name: native
+          env:
+            - name: CLICKHOUSE_DB
+              value: "default"
+            - name: CLICKHOUSE_USER
+              value: "default"
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: clickhouse-credentials
+                  key: password
+          volumeMounts:
+            - name: clickhouse-data
+              mountPath: /var/lib/clickhouse
+          {{- include "datalyptica.resources" (dict "resources" .Values.clickhouse.resources) | nindent 10 }}
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+  {{- if .Values.clickhouse.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: clickhouse-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ .Values.global.storageClass }}
+        resources:
+          requests:
+            storage: {{ .Values.clickhouse.persistence.size }}
+  {{- end }}
+{{- end }}

@@ -161,8 +161,11 @@ up: check-env ## Start the full Datalyptica stack in proper order
 	@echo "  → Starting PostgreSQL, Redis, Loki..."
 	@$(COMPOSE) up -d postgresql redis loki
 	@echo "  → Waiting for databases to be healthy..."
-	@sleep 5
+	@sleep 10
 	@$(COMPOSE) ps postgresql redis loki
+	@echo "  → Creating databases and users..."
+	@./scripts/init-databases.sh >/dev/null 2>&1 || echo "$(YELLOW)  ⚠ Database init skipped (may already exist)$(NC)"
+	@echo "  $(GREEN)✓ Databases ready$(NC)"
 	@echo ""
 	@echo "$(YELLOW)Phase 2: Storage & Catalog$(NC)"
 	@echo "  → Starting MinIO and Nessie..."
@@ -281,52 +284,7 @@ init: check-env ## Initialize databases, users, and storage (run after 'make up'
 	done
 	@echo ""
 	@echo "$(YELLOW)🗄️  Step 2/4: Creating PostgreSQL databases and users...$(NC)"
-	@DATALYPTICA_PWD=$$(cat secrets/passwords/datalyptica_password); \
-	NESSIE_PWD=$$(cat secrets/passwords/nessie_password); \
-	KEYCLOAK_PWD=$$(cat secrets/passwords/keycloak_db_password); \
-	AIRFLOW_PWD=$$(cat secrets/passwords/airflow_password); \
-	docker exec -i datalyptica-postgresql psql -U postgres <<-EOSQL || true \
-		-- Create users \
-		DO \$$\$$ \
-		BEGIN \
-			IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'datalyptica') THEN \
-				CREATE USER datalyptica WITH PASSWORD '$$DATALYPTICA_PWD'; \
-				RAISE NOTICE 'Created user: datalyptica'; \
-			END IF; \
-			IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'nessie') THEN \
-				CREATE USER nessie WITH PASSWORD '$$NESSIE_PWD'; \
-				RAISE NOTICE 'Created user: nessie'; \
-			END IF; \
-			IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'keycloak') THEN \
-				CREATE USER keycloak WITH PASSWORD '$$KEYCLOAK_PWD'; \
-				RAISE NOTICE 'Created user: keycloak'; \
-			END IF; \
-			IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'airflow') THEN \
-				CREATE USER airflow WITH PASSWORD '$$AIRFLOW_PWD'; \
-				RAISE NOTICE 'Created user: airflow'; \
-			END IF; \
-		END \$$\$$; \
-		-- Create databases \
-		SELECT 'CREATE DATABASE datalyptica OWNER datalyptica' \
-		WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'datalyptica')\\gexec \
-		SELECT 'CREATE DATABASE nessie OWNER nessie' \
-		WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'nessie')\\gexec \
-		SELECT 'CREATE DATABASE keycloak_db OWNER keycloak' \
-		WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'keycloak_db')\\gexec \
-		SELECT 'CREATE DATABASE airflow OWNER airflow' \
-		WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'airflow')\\gexec \
-		-- Grant privileges \
-		GRANT ALL PRIVILEGES ON DATABASE datalyptica TO datalyptica; \
-		GRANT ALL PRIVILEGES ON DATABASE nessie TO nessie; \
-		GRANT ALL PRIVILEGES ON DATABASE keycloak_db TO keycloak; \
-		GRANT ALL PRIVILEGES ON DATABASE airflow TO airflow; \
-	EOSQL
-	@for db in nessie keycloak_db airflow datalyptica; do \
-		docker exec -i datalyptica-postgresql psql -U postgres -d $$db -c \
-			"GRANT ALL ON SCHEMA public TO $$(docker exec datalyptica-postgresql psql -U postgres -d $$db -tAc \"SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname = '$$db'\");" \
-			>/dev/null 2>&1 || true; \
-	done
-	@echo "  $(GREEN)✓ Databases and users created$(NC)"
+	@./scripts/init-databases.sh 2>&1 | grep -E "(✓|✗|Created|already exists)" || echo "  $(GREEN)✓ Databases ready$(NC)"
 	@echo ""
 	@echo "$(YELLOW)🗄️  Step 3/4: Initializing MinIO buckets...$(NC)"
 	@docker exec datalyptica-minio sh -c ' \
@@ -392,11 +350,11 @@ init-minio: check-env ## Initialize MinIO buckets and directories
 init-kafka: check-env ## Initialize Kafka storage (KRaft mode)
 	@echo "$(YELLOW)Initializing Kafka storage...$(NC)"
 	@echo "  → Generating cluster ID..."
-	@CLUSTER_ID=$$(docker exec datalyptica-kafka kafka-storage random-uuid); \
+	@CLUSTER_ID=$$(docker exec datalyptica-kafka /opt/kafka/bin/kafka-storage.sh random-uuid); \
 	echo "  → Cluster ID: $$CLUSTER_ID"; \
 	echo "  → Formatting storage..."; \
 	docker exec -e CLUSTER_ID=$$CLUSTER_ID datalyptica-kafka \
-		kafka-storage format -t $$CLUSTER_ID -c /etc/kafka/kafka.properties 2>&1 | grep -v "Formatting" || true
+		/opt/kafka/bin/kafka-storage.sh format -t $$CLUSTER_ID -c /etc/kafka/kafka.properties 2>&1 | grep -v "Formatting" || true
 	@echo "  $(GREEN)✓ Kafka storage formatted$(NC)"
 	@echo "  → Restarting Kafka..."
 	@$(COMPOSE) restart kafka >/dev/null 2>&1

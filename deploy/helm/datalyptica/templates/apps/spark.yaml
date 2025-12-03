@@ -1,0 +1,143 @@
+{{- if .Values.spark.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-master
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "spark-master" "tier" "apps" "root" .) | nindent 4 }}
+spec:
+  type: {{ .Values.spark.master.service.type }}
+  ports:
+    - port: {{ .Values.spark.master.service.rpcPort }}
+      targetPort: 7077
+      protocol: TCP
+      name: rpc
+    - port: {{ .Values.spark.master.service.uiPort }}
+      targetPort: 4040
+      protocol: TCP
+      name: ui
+  selector:
+    app: spark-master
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-master
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "spark-master" "tier" "apps" "root" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.spark.master.replicas }}
+  selector:
+    matchLabels:
+      app: spark-master
+  template:
+    metadata:
+      labels:
+        app: spark-master
+        tier: apps
+        {{- include "datalyptica.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "datalyptica.securityContext" (dict "securityContext" .Values.spark.master.securityContext) | nindent 6 }}
+      serviceAccountName: datalyptica-apps
+      containers:
+        - name: spark
+          image: {{ include "datalyptica.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.spark.image.repository "tag" .Values.spark.image.tag "root" .) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 7077
+              name: rpc
+            - containerPort: 4040
+              name: ui
+          command:
+            - /opt/spark/bin/spark-class
+            - org.apache.spark.deploy.master.Master
+          env:
+            - name: SPARK_MODE
+              value: "master"
+            - name: SPARK_MASTER_HOST
+              value: "spark-master"
+            - name: SPARK_MASTER_PORT
+              value: "7077"
+            - name: SPARK_MASTER_WEBUI_PORT
+              value: "4040"
+          {{- include "datalyptica.resources" (dict "resources" .Values.spark.master.resources) | nindent 10 }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 4040
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 4040
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-worker
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "spark-worker" "tier" "apps" "root" .) | nindent 4 }}
+spec:
+  clusterIP: None
+  ports:
+    - port: 8081
+      targetPort: 8081
+      protocol: TCP
+      name: ui
+  selector:
+    app: spark-worker
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-worker
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "spark-worker" "tier" "apps" "root" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.spark.worker.replicas }}
+  selector:
+    matchLabels:
+      app: spark-worker
+  template:
+    metadata:
+      labels:
+        app: spark-worker
+        tier: apps
+        {{- include "datalyptica.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "datalyptica.securityContext" (dict "securityContext" .Values.spark.worker.securityContext) | nindent 6 }}
+      serviceAccountName: datalyptica-apps
+      containers:
+        - name: spark
+          image: {{ include "datalyptica.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.spark.image.repository "tag" .Values.spark.image.tag "root" .) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 8081
+              name: ui
+          command:
+            - /opt/spark/bin/spark-class
+            - org.apache.spark.deploy.worker.Worker
+            - spark://spark-master.{{ .Values.namespaces.apps }}.svc.cluster.local:7077
+          env:
+            - name: SPARK_MODE
+              value: "worker"
+            - name: SPARK_MASTER_URL
+              value: "spark://spark-master.{{ .Values.namespaces.apps }}.svc.cluster.local:7077"
+            - name: SPARK_WORKER_CORES
+              value: "{{ .Values.spark.worker.cores }}"
+            - name: SPARK_WORKER_MEMORY
+              value: "{{ .Values.spark.worker.memory }}"
+            - name: SPARK_WORKER_WEBUI_PORT
+              value: "8081"
+          {{- include "datalyptica.resources" (dict "resources" .Values.spark.worker.resources) | nindent 10 }}
+{{- end }}

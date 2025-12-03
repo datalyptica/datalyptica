@@ -26,7 +26,7 @@ echo "✅ Redis is ready"
 
 echo "========================================"
 echo "✅ Airflow Ready - Starting Component"
-echo "========================================
+echo "========================================"
 
 # Execute the main command based on the component
 case "$1" in

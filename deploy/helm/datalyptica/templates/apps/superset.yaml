@@ -1,0 +1,86 @@
+{{- if .Values.superset.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: superset
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "superset" "tier" "apps" "root" .) | nindent 4 }}
+spec:
+  type: {{ .Values.superset.service.type }}
+  ports:
+    - port: {{ .Values.superset.service.port }}
+      targetPort: 8088
+      protocol: TCP
+      name: http
+  selector:
+    app: superset
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: superset
+  namespace: {{ .Values.namespaces.apps }}
+  labels:
+    {{- include "datalyptica.componentLabels" (dict "component" "superset" "tier" "apps" "root" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.superset.replicas }}
+  selector:
+    matchLabels:
+      app: superset
+  template:
+    metadata:
+      labels:
+        app: superset
+        tier: apps
+        {{- include "datalyptica.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- include "datalyptica.securityContext" (dict "securityContext" .Values.superset.securityContext) | nindent 6 }}
+      serviceAccountName: datalyptica-apps
+      initContainers:
+        - name: init-db
+          image: {{ include "datalyptica.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.superset.image.repository "tag" .Values.superset.image.tag "root" .) }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              superset db upgrade
+              superset fab create-admin \
+                --username admin \
+                --firstname Admin \
+                --lastname User \
+                --email admin@example.com \
+                --password {{ include "datalyptica.password" (dict "key" "superset-admin-password" "root" .) }} || true
+              superset init
+          env:
+            {{- include "datalyptica.superset.env" . | nindent 12 }}
+      containers:
+        - name: superset
+          image: {{ include "datalyptica.image" (dict "registry" .Values.global.imageRegistry "repository" .Values.superset.image.repository "tag" .Values.superset.image.tag "root" .) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: 8088
+              name: http
+          command:
+            - /bin/bash
+            - -c
+            - gunicorn --bind 0.0.0.0:8088 --workers 4 --timeout 120 --limit-request-line 0 --limit-request-field_size 0 "superset.app:create_app()"
+          env:
+            {{- include "datalyptica.superset.env" . | nindent 12 }}
+          {{- include "datalyptica.resources" (dict "resources" .Values.superset.resources) | nindent 10 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8088
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8088
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 3
+{{- end }}
