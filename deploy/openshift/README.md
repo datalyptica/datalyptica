@@ -33,7 +33,7 @@ This architecture deploys the complete Datalyptica Data Platform on Red Hat Open
 ✅ **Scalability** - Horizontal pod autoscaling  
 ✅ **GitOps Ready** - ArgoCD/Flux compatible  
 ✅ **Multi-tenancy** - Namespace isolation  
-✅ **Observability** - Prometheus Operator, Grafana, Loki  
+✅ **Observability** - Prometheus Operator, Grafana, Loki
 
 ---
 
@@ -41,18 +41,18 @@ This architecture deploys the complete Datalyptica Data Platform on Red Hat Open
 
 ### Advantages Over VM Deployment
 
-| Aspect | VM Deployment | OpenShift Deployment |
-|--------|---------------|---------------------|
-| **HA** | Manual setup (Patroni, Keepalived) | Built-in (ReplicaSets, StatefulSets) |
-| **Scaling** | Manual VM provisioning | Automatic (HPA, VPA) |
-| **Updates** | Manual rolling updates | Rolling updates via operators |
-| **Resource Utilization** | Fixed allocation | Dynamic scheduling |
-| **Recovery** | Manual intervention | Self-healing pods |
-| **Deployment Time** | Days to weeks | Hours |
-| **Complexity** | High (50 VMs to manage) | Lower (declarative configs) |
-| **Cost** | Fixed (50 VMs always on) | Elastic (scale to zero capable) |
-| **Monitoring** | Manual setup | Built-in (Prometheus Operator) |
-| **Networking** | Manual VLANs, VIPs | Software-defined (CNI) |
+| Aspect                   | VM Deployment                      | OpenShift Deployment                 |
+| ------------------------ | ---------------------------------- | ------------------------------------ |
+| **HA**                   | Manual setup (Patroni, Keepalived) | Built-in (ReplicaSets, StatefulSets) |
+| **Scaling**              | Manual VM provisioning             | Automatic (HPA, VPA)                 |
+| **Updates**              | Manual rolling updates             | Rolling updates via operators        |
+| **Resource Utilization** | Fixed allocation                   | Dynamic scheduling                   |
+| **Recovery**             | Manual intervention                | Self-healing pods                    |
+| **Deployment Time**      | Days to weeks                      | Hours                                |
+| **Complexity**           | High (50 VMs to manage)            | Lower (declarative configs)          |
+| **Cost**                 | Fixed (50 VMs always on)           | Elastic (scale to zero capable)      |
+| **Monitoring**           | Manual setup                       | Built-in (Prometheus Operator)       |
+| **Networking**           | Manual VLANs, VIPs                 | Software-defined (CNI)               |
 
 ### OpenShift-Specific Benefits
 
@@ -154,25 +154,25 @@ This architecture deploys the complete Datalyptica Data Platform on Red Hat Open
 
 **For Small Deployment** (Development/Testing):
 
-| Node Type | Count | vCPU | RAM | Storage | Role |
-|-----------|-------|------|-----|---------|------|
-| Control Plane | 3 | 8 | 32 GB | 200 GB | Master nodes |
-| Infrastructure | 3 | 16 | 64 GB | 500 GB | Infra workloads |
-| Worker | 5 | 32 | 128 GB | 1 TB | Application workloads |
-| **Total** | **11** | **232** | **1,088 GB** | **5.6 TB** | |
+| Node Type      | Count  | vCPU    | RAM          | Storage    | Role                  |
+| -------------- | ------ | ------- | ------------ | ---------- | --------------------- |
+| Control Plane  | 3      | 8       | 32 GB        | 200 GB     | Master nodes          |
+| Infrastructure | 3      | 16      | 64 GB        | 500 GB     | Infra workloads       |
+| Worker         | 5      | 32      | 128 GB       | 1 TB       | Application workloads |
+| **Total**      | **11** | **232** | **1,088 GB** | **5.6 TB** |                       |
 
 **For Production Deployment**:
 
-| Node Type | Count | vCPU | RAM | Storage | Role |
-|-----------|-------|------|-----|---------|------|
-| Control Plane | 3 | 16 | 64 GB | 500 GB | Master nodes (HA) |
-| Infrastructure | 3 | 32 | 128 GB | 1 TB | Infra workloads |
-| Worker (Catalog) | 3 | 32 | 128 GB | 2 TB | Database workloads |
-| Worker (Streaming) | 5 | 32 | 128 GB | 2 TB | Kafka brokers |
-| Worker (Processing) | 6 | 64 | 256 GB | 2 TB | Spark/Flink |
-| Worker (Query) | 5 | 32 | 128 GB | 1 TB | Trino/ClickHouse |
-| Worker (Analytics) | 3 | 32 | 128 GB | 1 TB | Airflow/Jupyter |
-| **Total** | **28** | **896** | **3,456 GB** | **35 TB** | |
+| Node Type           | Count  | vCPU    | RAM          | Storage   | Role               |
+| ------------------- | ------ | ------- | ------------ | --------- | ------------------ |
+| Control Plane       | 3      | 16      | 64 GB        | 500 GB    | Master nodes (HA)  |
+| Infrastructure      | 3      | 32      | 128 GB       | 1 TB      | Infra workloads    |
+| Worker (Catalog)    | 3      | 32      | 128 GB       | 2 TB      | Database workloads |
+| Worker (Streaming)  | 5      | 32      | 128 GB       | 2 TB      | Kafka brokers      |
+| Worker (Processing) | 6      | 64      | 256 GB       | 2 TB      | Spark/Flink        |
+| Worker (Query)      | 5      | 32      | 128 GB       | 1 TB      | Trino/ClickHouse   |
+| Worker (Analytics)  | 3      | 32      | 128 GB       | 1 TB      | Airflow/Jupyter    |
+| **Total**           | **28** | **896** | **3,456 GB** | **35 TB** |                    |
 
 ### OpenShift Version Requirements
 
@@ -184,18 +184,18 @@ This architecture deploys the complete Datalyptica Data Platform on Red Hat Open
 
 All available from OperatorHub:
 
-| Operator | Purpose | Version |
-|----------|---------|---------|
-| **Strimzi Kafka Operator** | Kafka management | 0.39+ |
-| **Crunchy PostgreSQL Operator** | PostgreSQL HA | 5.5+ |
-| **ClickHouse Operator** | ClickHouse cluster | Latest |
-| **Spark Operator** | Spark on K8s | 1.3+ |
-| **Flink Kubernetes Operator** | Flink management | 1.7+ |
-| **Keycloak Operator** | IAM | 24+ |
-| **Redis Operator** | Redis clusters | Latest |
-| **Prometheus Operator** | Monitoring | (built-in) |
-| **Grafana Operator** | Dashboards | 5.9+ |
-| **Loki Operator** | Log aggregation | Latest |
+| Operator                        | Purpose            | Version    |
+| ------------------------------- | ------------------ | ---------- |
+| **Strimzi Kafka Operator**      | Kafka management   | 0.39+      |
+| **Crunchy PostgreSQL Operator** | PostgreSQL HA      | 5.5+       |
+| **ClickHouse Operator**         | ClickHouse cluster | Latest     |
+| **Spark Operator**              | Spark on K8s       | 1.3+       |
+| **Flink Kubernetes Operator**   | Flink management   | 1.7+       |
+| **Keycloak Operator**           | IAM                | 24+        |
+| **Redis Operator**              | Redis clusters     | Latest     |
+| **Prometheus Operator**         | Monitoring         | (built-in) |
+| **Grafana Operator**            | Dashboards         | 5.9+       |
+| **Loki Operator**               | Log aggregation    | Latest     |
 
 ---
 
@@ -247,22 +247,22 @@ Catalog Namespace:
   CPU: 100 cores
   Memory: 400 GB
   Storage: 10 TB
-  
+
 Streaming Namespace:
   CPU: 200 cores
   Memory: 800 GB
   Storage: 20 TB
-  
+
 Processing Namespace:
   CPU: 400 cores (burstable)
   Memory: 1.6 TB
   Storage: 10 TB
-  
+
 Query Namespace:
   CPU: 200 cores
   Memory: 800 GB
   Storage: 10 TB
-  
+
 Analytics Namespace:
   CPU: 150 cores
   Memory: 600 GB
@@ -282,7 +282,7 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: datalyptica-fast-ssd
-provisioner: kubernetes.io/aws-ebs  # or appropriate CSI driver
+provisioner: kubernetes.io/aws-ebs # or appropriate CSI driver
 parameters:
   type: io2
   iopsPerGB: "50"
@@ -305,7 +305,7 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: datalyptica-shared
-provisioner: efs.csi.aws.com  # or NFS CSI
+provisioner: efs.csi.aws.com # or NFS CSI
 parameters:
   provisioningMode: efs-ap
   fileSystemId: fs-xxxxx
@@ -316,20 +316,21 @@ volumeBindingMode: Immediate
 
 ### Storage Requirements by Component
 
-| Component | Access Mode | Storage Class | Size | IOPS |
-|-----------|-------------|---------------|------|------|
-| PostgreSQL | RWO | fast-ssd | 500 GB per replica | High |
-| Kafka | RWO | fast-ssd | 1 TB per broker | Very High |
-| ClickHouse | RWO | fast-ssd | 500 GB per node | High |
-| Redis | RWO | fast-ssd | 50 GB per replica | High |
-| Spark PVCs | RWO | standard | Dynamic | Medium |
-| Flink State | RWO | fast-ssd | 100 GB | High |
-| Shared Configs | RWX | shared | 100 GB | Low |
-| JupyterHub Homes | RWX | shared | 1 TB | Medium |
+| Component        | Access Mode | Storage Class | Size               | IOPS      |
+| ---------------- | ----------- | ------------- | ------------------ | --------- |
+| PostgreSQL       | RWO         | fast-ssd      | 500 GB per replica | High      |
+| Kafka            | RWO         | fast-ssd      | 1 TB per broker    | Very High |
+| ClickHouse       | RWO         | fast-ssd      | 500 GB per node    | High      |
+| Redis            | RWO         | fast-ssd      | 50 GB per replica  | High      |
+| Spark PVCs       | RWO         | standard      | Dynamic            | Medium    |
+| Flink State      | RWO         | fast-ssd      | 100 GB             | High      |
+| Shared Configs   | RWX         | shared        | 100 GB             | Low       |
+| JupyterHub Homes | RWX         | shared        | 1 TB               | Medium    |
 
 ### Enterprise Object Storage Integration
 
 **Option 1: External S3-Compatible Service**
+
 ```yaml
 # Configure via environment variables
 AWS_ENDPOINT: https://s3.enterprise.local
@@ -340,6 +341,7 @@ S3_BUCKET: datalyptica-warehouse
 ```
 
 **Option 2: S3 CSI Driver** (if supported by storage provider)
+
 ```yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -352,6 +354,7 @@ parameters:
 ```
 
 **Option 3: MinIO Operator** (if no enterprise storage available)
+
 ```yaml
 # Deploy MinIO in distributed mode via operator
 # Not recommended for production, but option for testing
@@ -414,6 +417,7 @@ spec:
 ```
 
 **Databases to Create**:
+
 - `datalyptica` - Main platform DB
 - `nessie` - Nessie catalog
 - `keycloak` - Keycloak data
@@ -455,23 +459,23 @@ spec:
       process.roles: broker,controller
       node.id: 1
       controller.quorum.voters: 1@datalyptica-kafka-0.datalyptica-kafka-brokers:9093,2@datalyptica-kafka-1.datalyptica-kafka-brokers:9093,3@datalyptica-kafka-2.datalyptica-kafka-brokers:9093,4@datalyptica-kafka-3.datalyptica-kafka-brokers:9093,5@datalyptica-kafka-4.datalyptica-kafka-brokers:9093
-      
+
       # Performance tuning
       num.network.threads: 8
       num.io.threads: 16
       socket.send.buffer.bytes: 1048576
       socket.receive.buffer.bytes: 1048576
-      
+
       # Replication
       default.replication.factor: 3
       min.insync.replicas: 2
       unclean.leader.election.enable: false
-      
+
       # Log configuration
       log.retention.hours: 168
       log.segment.bytes: 1073741824
       compression.type: lz4
-      
+
       # Producer/Consumer
       offsets.topic.replication.factor: 3
       transaction.state.log.replication.factor: 3
@@ -897,17 +901,17 @@ spec:
 
 ### Built-in HA Features
 
-| Component | HA Mechanism | Replicas | Failover |
-|-----------|--------------|----------|----------|
-| **PostgreSQL** | Operator-managed replication | 3 | <30s |
-| **Kafka** | KRaft quorum | 5 | <10s |
-| **Nessie** | Load-balanced pods | 3 | <5s |
-| **Redis** | Operator-managed sentinel | 3 | <10s |
-| **Trino Coordinator** | Multiple instances | 2+ | <5s |
-| **ClickHouse** | Operator replication | 3+ | <30s |
-| **Keycloak** | Clustered pods | 3 | <5s |
-| **Airflow Scheduler** | HA mode (K8s Executor) | 2 | <30s |
-| **All Web UIs** | ReplicaSets | 2-3 | <5s |
+| Component             | HA Mechanism                 | Replicas | Failover |
+| --------------------- | ---------------------------- | -------- | -------- |
+| **PostgreSQL**        | Operator-managed replication | 3        | <30s     |
+| **Kafka**             | KRaft quorum                 | 5        | <10s     |
+| **Nessie**            | Load-balanced pods           | 3        | <5s      |
+| **Redis**             | Operator-managed sentinel    | 3        | <10s     |
+| **Trino Coordinator** | Multiple instances           | 2+       | <5s      |
+| **ClickHouse**        | Operator replication         | 3+       | <30s     |
+| **Keycloak**          | Clustered pods               | 3        | <5s      |
+| **Airflow Scheduler** | HA mode (K8s Executor)       | 2        | <30s     |
+| **All Web UIs**       | ReplicaSets                  | 2-3      | <5s      |
 
 ### Pod Disruption Budgets
 
@@ -1014,12 +1018,12 @@ spec:
               name: datalyptica-catalog
       ports:
         - protocol: TCP
-          port: 5432  # PostgreSQL
+          port: 5432 # PostgreSQL
     - to:
         - podSelector: {}
       ports:
         - protocol: TCP
-          port: 53  # DNS
+          port: 53 # DNS
 ```
 
 ---
@@ -1181,14 +1185,14 @@ oc apply -f manifests/monitoring/loki.yaml
 
 ### VM Deployment vs OpenShift
 
-| Aspect | VM (50 VMs) | OpenShift (28 nodes) |
-|--------|-------------|---------------------|
-| **Hardware** | $250K | $200K |
-| **Storage** | $500K-$2M | $300K-$1M (more efficient) |
-| **Annual Ops** | $960K | $600K (less manual work) |
-| **OpenShift License** | - | $150K/year |
-| **Total Year 1** | $1.71M-$3.21M | $1.25M-$1.95M |
-| **TCO (3 years)** | $3.63M-$5.63M | $2.45M-$3.35M |
+| Aspect                | VM (50 VMs)   | OpenShift (28 nodes)       |
+| --------------------- | ------------- | -------------------------- |
+| **Hardware**          | $250K         | $200K                      |
+| **Storage**           | $500K-$2M     | $300K-$1M (more efficient) |
+| **Annual Ops**        | $960K         | $600K (less manual work)   |
+| **OpenShift License** | -             | $150K/year                 |
+| **Total Year 1**      | $1.71M-$3.21M | $1.25M-$1.95M              |
+| **TCO (3 years)**     | $3.63M-$5.63M | $2.45M-$3.35M              |
 
 **Savings**: 30-40% lower TCO with OpenShift
 
@@ -1204,6 +1208,6 @@ OpenShift deployment provides:
 ✅ **Faster Deployment** - Days instead of weeks  
 ✅ **Lower TCO** - 30-40% cost savings over 3 years  
 ✅ **Cloud-Native** - Modern architecture patterns  
-✅ **Enterprise Support** - Red Hat support for entire stack  
+✅ **Enterprise Support** - Red Hat support for entire stack
 
 **Next Steps**: Review architecture, provision OpenShift cluster, deploy operators!
