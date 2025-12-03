@@ -11,9 +11,6 @@ LABEL org.opencontainers.image.title="PostgreSQL"
 LABEL org.opencontainers.image.description="Extended PostgreSQL image for standalone and HA variants"
 
 # Official postgres image already has all PostgreSQL components
-# Just add our custom initialization scripts
-COPY scripts/init-datalyptica-db.sh /docker-entrypoint-initdb.d/01-init-datalyptica-db.sh
-RUN chmod +x /docker-entrypoint-initdb.d/01-init-datalyptica-db.sh
 
 # Declare volumes for configuration and data
 VOLUME ["/var/lib/postgresql/data", "/etc/postgresql"]

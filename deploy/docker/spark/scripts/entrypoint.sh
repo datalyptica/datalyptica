@@ -23,21 +23,6 @@ export AWS_ACCESS_KEY_ID=${S3_ACCESS_KEY}
 export AWS_SECRET_ACCESS_KEY=${S3_SECRET_KEY}
 export AWS_REGION=${S3_REGION}
 
-# Install additional Python packages if needed (check if already installed)
-install_python_packages() {
-    echo "Checking Python package dependencies..."
-    
-    # Check if packages are installed, install if missing
-    python3 -c "import pandas" 2>/dev/null || pip3 install pandas==2.3.0
-    python3 -c "import numpy" 2>/dev/null || pip3 install numpy==2.0.2
-    python3 -c "import requests" 2>/dev/null || pip3 install requests==2.32.4
-    
-    echo "Python packages verified/installed."
-}
-
-# Run package installation check
-install_python_packages
-
 # Function to start Spark master
 start_master() {
     echo "Starting Spark master..."

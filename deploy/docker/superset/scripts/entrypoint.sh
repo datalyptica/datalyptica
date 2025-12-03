@@ -29,37 +29,9 @@ else
     echo "Warning: No config template found!"
 fi
 
-# Initialize database on first run
-if [ ! -f /app/superset_home/.initialized ]; then
-    echo "First run detected, initializing Superset database..."
-    
-    # Upgrade database
-    superset db upgrade
-    
-    # Create admin user
-    superset fab create-admin \
-        --username ${SUPERSET_ADMIN_USERNAME} \
-        --firstname Admin \
-        --lastname User \
-        --email ${SUPERSET_ADMIN_EMAIL} \
-        --password ${SUPERSET_ADMIN_PASSWORD}
-    
-    # Initialize Superset
-    superset init
-    
-    # Mark as initialized
-    touch /app/superset_home/.initialized
-    
-    echo "✅ Superset database initialized"
-else
-    echo "Superset already initialized, skipping database setup"
-    # Run upgrade in case of schema changes
-    superset db upgrade
-fi
-
 echo "========================================"
-echo "✅ Superset Initialized Successfully"
-echo "========================================"
+echo "✅ Superset Ready - Starting Service"
+echo "========================================
 
 # Execute the main command
 exec "$@"

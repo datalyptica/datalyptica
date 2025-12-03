@@ -15,11 +15,8 @@ RUN mkdir -p /opt/keycloak/themes/datalyptica
 # Copy custom theme (if exists)
 COPY themes/datalyptica/ /opt/keycloak/themes/datalyptica/
 
-# Copy custom realm configurations
-COPY config/realms/ /opt/keycloak/data/import/
-
 # Set ownership
-RUN chown -R keycloak:keycloak /opt/keycloak/themes /opt/keycloak/data
+RUN chown -R keycloak:keycloak /opt/keycloak/themes
 
 USER keycloak
 

@@ -20,6 +20,22 @@ process_config_templates() {
     fi
 }
 
+# Function to load secrets from files
+load_secrets() {
+    echo "Loading secrets from files..."
+    
+    # Load database password from secret file if exists
+    if [ -f "/run/secrets/nessie_password" ]; then
+        export QUARKUS_DATASOURCE_PASSWORD=$(cat /run/secrets/nessie_password)
+        echo "✓ Loaded database password from secret file"
+    elif [ -n "$NESSIE_PASSWORD_FILE" ] && [ -f "$NESSIE_PASSWORD_FILE" ]; then
+        export QUARKUS_DATASOURCE_PASSWORD=$(cat "$NESSIE_PASSWORD_FILE")
+        echo "✓ Loaded database password from $NESSIE_PASSWORD_FILE"
+    elif [ -z "$QUARKUS_DATASOURCE_PASSWORD" ]; then
+        echo "WARNING: No database password found in secrets or environment"
+    fi
+}
+
 # Function to validate required environment variables
 validate_environment() {
     echo "Validating required environment variables..."
@@ -28,7 +44,6 @@ validate_environment() {
     
     # Check for required database variables
     [ -z "$QUARKUS_DATASOURCE_USERNAME" ] && missing_vars="$missing_vars QUARKUS_DATASOURCE_USERNAME"
-    [ -z "$QUARKUS_DATASOURCE_PASSWORD" ] && missing_vars="$missing_vars QUARKUS_DATASOURCE_PASSWORD"
     [ -z "$POSTGRES_DB" ] && missing_vars="$missing_vars POSTGRES_DB"
     
     # Check for required S3 variables
@@ -38,6 +53,12 @@ validate_environment() {
     if [ -n "$missing_vars" ]; then
         echo "ERROR: Missing required environment variables:$missing_vars"
         echo "Please set these variables in your docker-compose.yml or .env file"
+        exit 1
+    fi
+    
+    # Check password after loading secrets
+    if [ -z "$QUARKUS_DATASOURCE_PASSWORD" ]; then
+        echo "ERROR: Database password not found. Check secrets configuration."
         exit 1
     fi
     
@@ -83,6 +104,9 @@ start_nessie() {
 
 # Main execution
 main() {
+    # Load secrets from files first
+    load_secrets
+    
     # Validate environment variables
     validate_environment
     

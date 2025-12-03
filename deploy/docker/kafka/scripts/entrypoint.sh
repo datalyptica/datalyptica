@@ -24,38 +24,18 @@ if [ ! -w "${KAFKA_LOG_DIRS:-/var/lib/kafka/data}" ]; then
     exit 1
 fi
 
-# For KRaft mode, format storage if needed
+# For KRaft mode, validate CLUSTER_ID is provided
 if [[ "${KRAFT_MODE}" == "true" ]]; then
     echo "===> Running in KRaft mode, skipping Zookeeper health check..."
     
-    # Check if CLUSTER_ID is provided
+    # Validate CLUSTER_ID is provided (must be formatted externally)
     if [[ -z "${CLUSTER_ID}" ]]; then
-        echo "===> Generating new cluster id ..."
-        CLUSTER_ID=$(kafka-storage random-uuid)
-        echo "Generated cluster id: ${CLUSTER_ID}"
-    else
-        echo "===> Using provided cluster id ${CLUSTER_ID} ..."
+        echo "ERROR: CLUSTER_ID environment variable is required for KRaft mode"
+        echo "Please run 'make init-kafka' before starting Kafka"
+        exit 1
     fi
     
-    # Check if storage is already formatted
-    if kafka-storage info -c /etc/kafka/kafka.properties 2>/dev/null | grep -q "Found log directory"; then
-        echo "===> Storage already formatted, checking cluster ID..."
-        
-        # Get existing cluster ID
-        EXISTING_CLUSTER_ID=$(kafka-storage info -c /etc/kafka/kafka.properties 2>/dev/null | grep "Cluster ID:" | awk '{print $3}' || echo "")
-        
-        if [[ -n "${EXISTING_CLUSTER_ID}" && "${EXISTING_CLUSTER_ID}" != "${CLUSTER_ID}" ]]; then
-            echo "WARNING: Existing cluster ID (${EXISTING_CLUSTER_ID}) differs from provided (${CLUSTER_ID})"
-            echo "===> Clearing old metadata and reformatting..."
-            rm -rf ${KAFKA_LOG_DIRS:-/var/lib/kafka/data}/*
-            kafka-storage format -t ${CLUSTER_ID} -c /etc/kafka/kafka.properties --ignore-formatted
-        else
-            echo "===> Storage already formatted with correct cluster ID, skipping format..."
-        fi
-    else
-        echo "===> Formatting storage with cluster id ${CLUSTER_ID} ..."
-        kafka-storage format -t ${CLUSTER_ID} -c /etc/kafka/kafka.properties
-    fi
+    echo "===> Using cluster id ${CLUSTER_ID} ..."
 else
     # ZooKeeper mode - check if ZooKeeper is accessible
     if [[ -n "${KAFKA_ZOOKEEPER_CONNECT}" ]]; then

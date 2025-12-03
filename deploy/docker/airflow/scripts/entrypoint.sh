@@ -24,19 +24,9 @@ until redis-cli -h ${REDIS_HOST} -p ${REDIS_PORT} ping 2>/dev/null | grep -q PON
 done
 echo "✅ Redis is ready"
 
-# Initialize database - run upgrade/migrate each time for safety
-echo "Upgrading Airflow database schema..."
-airflow db migrate 2>&1 | grep -v "Could not import Security Manager" || true
-
-# Create admin user if it doesn't exist (only for webserver)
-if [ "$1" = "webserver" ]; then
-    echo "Ensuring admin user exists..."
-    python /usr/local/bin/create_user.py 2>&1 || echo "Admin user already exists or creation skipped"
-fi
-
 echo "========================================"
-echo "✅ Airflow Initialized Successfully"
-echo "========================================"
+echo "✅ Airflow Ready - Starting Component"
+echo "========================================
 
 # Execute the main command based on the component
 case "$1" in
