@@ -24,7 +24,7 @@ spec:
   output:
     to:
       kind: ImageStreamTag
-      name: spark-iceberg:3.5.1
+      name: spark-iceberg:3.5.7
   source:
     type: Git
     git:
@@ -64,7 +64,7 @@ spec:
   output:
     to:
       kind: ImageStreamTag
-      name: flink-connectors:1.18.0
+      name: flink-connectors:2.1.0
   source:
     type: Git
     git:

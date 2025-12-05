@@ -20,8 +20,10 @@ data:
     
     # High Availability Configuration
     high-availability.type: kubernetes
-    high-availability.storageDir: s3://lakehouse/flink-ha
+    high-availability.storageDir: file:///opt/flink/ha
     high-availability.cluster-id: datalyptica-flink
+    kubernetes.cluster-id: datalyptica-flink
+    kubernetes.namespace: datalyptica
     
     # TaskManager Configuration
     taskmanager.memory.process.size: 2048m
@@ -30,8 +32,8 @@ data:
     
     # State Backend Configuration (Iceberg)
     state.backend: rocksdb
-    state.checkpoints.dir: s3://lakehouse/flink-checkpoints
-    state.savepoints.dir: s3://lakehouse/flink-savepoints
+    state.checkpoints.dir: file:///opt/flink/checkpoints
+    state.savepoints.dir: file:///opt/flink/savepoints
     state.backend.incremental: true
     
     # Execution Configuration
@@ -167,7 +169,7 @@ spec:
       serviceAccountName: flink
       containers:
       - name: jobmanager
-        image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:1.18.0
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
         args: ["jobmanager"]
         ports:
         - containerPort: 6123
@@ -288,7 +290,7 @@ spec:
       serviceAccountName: flink
       containers:
       - name: taskmanager
-        image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:1.18.0
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
         args: ["taskmanager"]
         ports:
         - containerPort: 6122

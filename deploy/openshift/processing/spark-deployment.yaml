@@ -96,7 +96,7 @@ spec:
               topologyKey: kubernetes.io/hostname
       containers:
       - name: spark-master
-        image: image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.1
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.7
         command: ["/opt/spark/bin/spark-class"]
         args: 
         - "org.apache.spark.deploy.master.Master"
@@ -199,7 +199,7 @@ spec:
               topologyKey: kubernetes.io/hostname
       containers:
       - name: spark-worker
-        image: image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.1
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.7
         command: ["/opt/spark/bin/spark-class"]
         args: 
         - "org.apache.spark.deploy.worker.Worker"
