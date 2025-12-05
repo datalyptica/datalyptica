@@ -109,7 +109,7 @@ curl -s https://$(oc get route nessie -n datalyptica -o jsonpath='{.spec.host}')
 **[DEPLOYMENT-05-PROCESSING.md](./DEPLOYMENT-05-PROCESSING.md)**
 
 What you'll deploy:
-- ✅ **Apache Spark 3.5.7** - Batch processing with Iceberg 1.8.0
+- ✅ **Apache Spark 3.5.7** - Batch processing with Iceberg 1.10.0
   - 1 Master + 5 Workers
   - Custom image with pre-installed connectors
   - Pod anti-affinity for HA
@@ -118,7 +118,7 @@ What you'll deploy:
 - ✅ **Apache Flink 2.1.0** - Stream processing with Kubernetes HA
   - 2 JobManagers (active/standby with leader election)
   - 5 TaskManagers (20 slots total)
-  - Custom image with Kafka 3.4.0 and Iceberg 1.8.0 connectors
+  - Custom image with Kafka 3.4.0 and Iceberg 1.10.0 connectors
   - S3 filesystem plugin
   - RTO < 15s, RPO = 30s
   - EXACTLY_ONCE checkpointing
@@ -153,7 +153,7 @@ curl -s https://$(oc get route flink-jobmanager -n datalyptica -o jsonpath='{.sp
 │  ┌──────────────────────────────────────────────────────────┐  │
 │  │              PROCESSING & STREAMING TIER                 │  │
 │  │  • Spark 3.5.7 (1M + 5W) + Flink 2.1.0 (2JM + 5TM)     │  │
-│  │  • Iceberg 1.8.0 table format                           │  │
+│  │  • Iceberg 1.10.0 table format                          │  │
 │  └───────────────────────┬──────────────────────────────────┘  │
 │                          │                                      │
 │  ┌──────────────────────▼───────────────────────────────────┐  │
@@ -189,9 +189,9 @@ curl -s https://$(oc get route flink-jobmanager -n datalyptica -o jsonpath='{.sp
 | **PostgreSQL** | 16.6 | 3 replicas (Crunchy), 200Gi each | ✅ Tested |
 | **Redis** | 8.4.0 | 3 servers + 3 sentinels, 50Gi each | ✅ Tested |
 | **Nessie** | 0.105.7 | 3 replicas, HA with PDB | ✅ Tested |
-| **Spark** | 3.5.7 | 1 master + 5 workers, Iceberg 1.8.0 | ✅ Tested |
+| **Spark** | 3.5.7 | 1 master + 5 workers, Iceberg 1.10.0 | ✅ Tested |
 | **Flink** | 2.1.0 | 2 JobManagers + 5 TaskManagers, K8s HA | ✅ Tested |
-| **Iceberg** | 1.8.0 | Certified with Spark 3.5.x & Flink 2.1.x | ✅ Tested |
+| **Iceberg** | 1.10.0 | Latest stable for Spark 3.5.x & Flink 2.0+ | ✅ Tested |
 
 **Total Resources**:
 - **Pods**: ~40 (including replicas)
@@ -270,7 +270,7 @@ Both Spark and Flink use **custom-built images** stored in OpenShift's internal 
 - ✅ **Faster startup**: 10s vs 2+ minutes (no init containers)
 - ✅ **Reliability**: Pre-validated connector versions
 - ✅ **Consistency**: Same image across all pods
-- ✅ **Certified plugins**: Iceberg 1.8.0 certified for both engines
+- ✅ **Certified plugins**: Iceberg 1.10.0 latest stable for both engines
 
 ### Building Images
 
@@ -501,13 +501,13 @@ echo -e "\n=== Validation Complete ==="
 ## 📝 Changelog
 
 ### Version 4.0 (December 5, 2025)
-- ✅ Updated to Spark 3.5.7 with Iceberg 1.8.0
+- ✅ Updated to Spark 3.5.7 with Iceberg 1.10.0
 - ✅ Updated to Flink 2.1.0 with Kubernetes HA
 - ✅ Added custom image builds for faster startup
 - ✅ Implemented PodDisruptionBudgets for HA
 - ✅ Added pod anti-affinity configurations
 - ✅ Optimized health check timings
-- ✅ Certified plugin matrix (Spark 3.5.x + Flink 2.1.x + Iceberg 1.8.0)
+- ✅ Latest stable versions (Spark 3.5.x + Flink 2.0+ + Iceberg 1.10.0)
 
 ### Version 3.0 (December 2025)
 - ✅ Updated to PostgreSQL 16.6 with Crunchy 5.8.5

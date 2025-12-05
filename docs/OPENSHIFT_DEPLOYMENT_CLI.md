@@ -1028,7 +1028,7 @@ oc wait --for=condition=Ready pod -l app=trino \
 
 ### 4.3 Deploy Spark (v3.5.7) with High Availability
 
-**Note:** Using custom-built image with Iceberg 1.8.0 pre-installed. See `deploy/openshift/builds/processing-image-builds.yaml` for BuildConfig.
+**Note:** Using custom-built image with Iceberg 1.10.0 pre-installed. See `deploy/openshift/builds/processing-image-builds.yaml` for BuildConfig.
 
 ```bash
 # Option 1: Apply from repository (recommended)
@@ -1244,7 +1244,7 @@ oc get pods -l app.kubernetes.io/name=spark -n datalyptica
 
 ### 4.4 Deploy Flink (v2.1.0) with Kubernetes HA
 
-**Note:** Using custom-built image with Iceberg 1.8.0 and S3 plugin. See `deploy/openshift/builds/processing-image-builds.yaml` for BuildConfig.
+**Note:** Using custom-built image with Iceberg 1.10.0 and S3 plugin. See `deploy/openshift/builds/processing-image-builds.yaml` for BuildConfig.
 
 ```bash
 # Option 1: Apply from repository (recommended)

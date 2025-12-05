@@ -38,7 +38,7 @@ All components verified from authoritative sources:
 - ✅ Trino: **478**
 - ✅ Spark: **3.5.7** (deployed with HA: 1 master + 5 workers)
 - ✅ Flink: **2.1.0** ⚠️ MAJOR 1.x→2.x (deployed with Kubernetes HA: 2 JobManagers + 5 TaskManagers)
-- ✅ Iceberg: **1.8.0** (certified for Spark 3.5.x + Flink 2.1.x)
+- ✅ Iceberg: **1.10.0** (latest stable for Spark 3.5.x + Flink 2.0+)
 - ✅ ClickHouse: **25.11.2.24** ⚠️ MAJOR 24.x→25.x
 - ✅ MinIO: **RELEASE.2025-10-15T17-29-55Z** 🔒 CVE fix
 
@@ -76,7 +76,7 @@ All components verified from authoritative sources:
 - Updated Kafka from 3.9.0 to 4.1.1 with v1 API requirement
 - Updated Spark from 3.5.1 to 3.5.7 with HA (1 master + 5 workers, pod anti-affinity, PDB)
 - Updated Flink from 1.18.0 to 2.1.0 with Kubernetes HA (2 JobManagers + 5 TaskManagers)
-- Updated Iceberg from 1.4.3/1.9.1 to 1.8.0 (certified matrix)
+- Updated Iceberg from 1.4.3/1.9.1 to 1.10.0 (latest stable)
 - Updated PostgreSQL to 16.6 with Crunchy 5.8.5 compatibility
 - Added critical notes section documenting 9 major updates
 

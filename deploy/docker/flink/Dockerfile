@@ -5,13 +5,13 @@ USER root
 # Download Flink connectors during build (no compilation, just download)
 # Using Flink 2.1 with compatible versions:
 # - Kafka Connector 3.4.0 (certified for Flink 2.1)
-# - Iceberg 1.8.0 (certified for Flink 2.1)
+# - Iceberg 1.10.0 (latest stable for Flink 2.0+)
 RUN mkdir -p /opt/flink/lib/connectors && \
     cd /opt/flink/lib/connectors && \
     curl -L -o flink-sql-connector-kafka-3.4.0-2.1.jar \
       https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.4.0-2.1/flink-sql-connector-kafka-3.4.0-2.1.jar && \
-    curl -L -o iceberg-flink-runtime-2.1-1.8.0.jar \
-      https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-flink-runtime-2.1/1.8.0/iceberg-flink-runtime-2.1-1.8.0.jar && \
+    curl -L -o iceberg-flink-runtime-2.0-1.10.0.jar \
+      https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-flink-runtime-2.0/1.10.0/iceberg-flink-runtime-2.0-1.10.0.jar && \
     ls -lh
 
 # Download S3 filesystem plugin

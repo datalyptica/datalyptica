@@ -11,8 +11,8 @@
 
 | Component | Status | Version | Replicas | Configuration | Details |
 |-----------|--------|---------|----------|---------------|---------|
-| **Apache Spark** | ✅ Deployed | 3.5.7 | 1 Master + 5 Workers | HA with PDB | Custom image with Iceberg 1.8.0 |
-| **Apache Flink** | ✅ Deployed | 2.1.0 | 2 JobManagers + 5 TaskManagers | Kubernetes HA | Custom image with Kafka 3.4.0, Iceberg 1.8.0, S3 plugin |
+| **Apache Spark** | ✅ Deployed | 3.5.7 | 1 Master + 5 Workers | HA with PDB | Custom image with Iceberg 1.10.0 |
+| **Apache Flink** | ✅ Deployed | 2.1.0 | 2 JobManagers + 5 TaskManagers | Kubernetes HA | Custom image with Kafka 3.4.0, Iceberg 1.10.0, S3 plugin |
 
 **Current Console Access:**
 ```bash
@@ -43,16 +43,16 @@ echo "Flink UI: https://$(oc get route flink-jobmanager -n datalyptica -o jsonpa
 
 The Processing & Streaming Layer provides distributed data processing capabilities:
 
-- **Apache Spark 3.5.7**: Batch processing with Iceberg 1.8.0 integration
+- **Apache Spark 3.5.7**: Batch processing with Iceberg 1.10.0 integration
 - **Apache Flink 2.1.0**: Real-time stream processing with Kafka and Iceberg connectors
 
 ### Technology Stack
 
 | Component | Version | Purpose | Connectors |
 |-----------|---------|---------|------------|
-| **Spark** | 3.5.7 | Batch processing | Iceberg 1.8.0, Nessie catalog, Hadoop AWS 3.4.1 |
-| **Flink** | 2.1.0 | Stream processing | Kafka 3.4.0, Iceberg 1.8.0, S3 filesystem |
-| **Iceberg** | 1.8.0 | Table format | Certified for Spark 3.5.x and Flink 2.1.x |
+| **Spark** | 3.5.7 | Batch processing | Iceberg 1.10.0, Nessie catalog, Hadoop AWS 3.4.1 |
+| **Flink** | 2.1.0 | Stream processing | Kafka 3.4.0, Iceberg 1.10.0, S3 filesystem |
+| **Iceberg** | 1.10.0 | Table format | Latest stable for Spark 3.5.x and Flink 2.0+ |
 
 ---
 
@@ -85,14 +85,14 @@ The Processing & Streaming Layer provides distributed data processing capabiliti
 │  │                              │  │  │  TaskManagers (5)        ││  │
 │  │  Custom Image:               │  │  │  - 5 replicas           ││  │
 │  │  spark-iceberg:3.5.7         │  │  │  - Pod anti-affinity    ││  │
-│  │  - Iceberg 1.8.0             │  │  │  - PDB: minAvail=3      ││  │
+│  │  - Iceberg 1.10.0            │  │  │  - PDB: minAvail=3      ││  │
 │  │  - Nessie client             │  │  │  - 4 slots each         ││  │
 │  │  - Hadoop AWS 3.4.1          │  │  └─────────────────────────┘│  │
 │  │  - AWS SDK 1.12.772          │  │                              │  │
 │  │                              │  │  Custom Image:               │  │
 │  │  HA Features:                │  │  flink-connectors:2.1.0      │  │
 │  │  ✓ Pod anti-affinity         │  │  - Kafka connector 3.4.0    │  │
-│  │  ✓ PodDisruptionBudgets      │  │  - Iceberg 1.8.0            │  │
+│  │  ✓ PodDisruptionBudgets      │  │  - Iceberg 1.10.0           │  │
 │  │  ✓ Rolling updates           │  │  - S3 filesystem plugin     │  │
 │  │  ✓ Balanced health checks    │  │                              │  │
 │  │                              │  │  HA Features:                │  │
@@ -141,8 +141,8 @@ Images are built and stored in OpenShift's internal registry:
 **Included JARs**:
 ```
 /opt/spark/jars/iceberg/
-├── iceberg-spark-runtime-3.5_2.12-1.8.0.jar
-├── iceberg-nessie-1.8.0.jar
+├── iceberg-spark-runtime-3.5_2.12-1.10.0.jar
+├── iceberg-nessie-1.10.0.jar
 ├── hadoop-aws-3.4.1.jar
 └── aws-java-sdk-bundle-1.12.772.jar
 ```
@@ -156,8 +156,8 @@ USER root
 # Download Iceberg and AWS JARs (certified versions)
 RUN mkdir -p /opt/spark/jars/iceberg && \
     cd /opt/spark/jars/iceberg && \
-    wget -q https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.8.0/iceberg-spark-runtime-3.5_2.12-1.8.0.jar && \
-    wget -q https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-nessie/1.8.0/iceberg-nessie-1.8.0.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.10.0/iceberg-spark-runtime-3.5_2.12-1.10.0.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-nessie/1.10.0/iceberg-nessie-1.10.0.jar && \
     wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.4.1/hadoop-aws-3.4.1.jar && \
     wget -q https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.772/aws-java-sdk-bundle-1.12.772.jar
 
@@ -179,7 +179,7 @@ WORKDIR /opt/spark
 ```
 /opt/flink/lib/connectors/
 ├── flink-sql-connector-kafka-3.4.0-2.1.jar
-└── iceberg-flink-runtime-2.1-1.8.0.jar
+└── iceberg-flink-runtime-2.0-1.10.0.jar
 
 /opt/flink/plugins/s3-fs-hadoop/
 └── flink-s3-fs-hadoop-2.1.0.jar
@@ -196,8 +196,8 @@ RUN mkdir -p /opt/flink/lib/connectors && \
     cd /opt/flink/lib/connectors && \
     curl -L -o flink-sql-connector-kafka-3.4.0-2.1.jar \
       https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.4.0-2.1/flink-sql-connector-kafka-3.4.0-2.1.jar && \
-    curl -L -o iceberg-flink-runtime-2.1-1.8.0.jar \
-      https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-flink-runtime-2.1/1.8.0/iceberg-flink-runtime-2.1-1.8.0.jar
+    curl -L -o iceberg-flink-runtime-2.0-1.10.0.jar \
+      https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-flink-runtime-2.0/1.10.0/iceberg-flink-runtime-2.0-1.10.0.jar
 
 # Download S3 filesystem plugin
 RUN mkdir -p /opt/flink/plugins/s3-fs-hadoop && \
@@ -673,7 +673,7 @@ oc logs -l datalyptica.io/component=master -n datalyptica --tail=100 --follow
 **Documentation References**:
 - [Apache Spark 3.5 Documentation](https://spark.apache.org/docs/3.5.7/)
 - [Apache Flink 2.1 Documentation](https://nightlies.apache.org/flink/flink-docs-release-2.1/)
-- [Apache Iceberg Documentation](https://iceberg.apache.org/docs/1.8.0/)
+- [Apache Iceberg Documentation](https://iceberg.apache.org/docs/1.10.0/)
 
 ---
 

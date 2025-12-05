@@ -19,7 +19,7 @@
 6. **Flink** 1.18.0 → 2.1.0 (MAJOR 1.x → 2.x) - Deployed with Kubernetes HA
 7. **ClickHouse** 24.12.2.59 → 25.11.2.24 (MAJOR 24.x → 25.x)
 8. **Strimzi** 0.43+ → 0.49.0 (v1 API required)
-9. **Iceberg** 1.4.3 → 1.8.0 (certified for Spark 3.5.x + Flink 2.1.x)
+9. **Iceberg** 1.4.3 → 1.10.0 (latest stable for Spark 3.5.x + Flink 2.0+)
 
 **Security Updates:**
 
@@ -83,7 +83,7 @@
 | Component          | Version ✅                | Image                                    | Release Date | Notes                                                                    |
 | ------------------ | ------------------------- | ---------------------------------------- | ------------ | ------------------------------------------------------------------------ |
 | **Apache Spark**   | **3.5.7** ✅              | apache/spark:3.5.7-scala2.12-java17      | Latest       | Deployed with HA (1 master + 5 workers), Scala 2.12/2.13 compatible      |
-| **Apache Iceberg** | **1.8.0** ✅              | (bundled with Spark/Flink)               | Latest       | Certified with Spark 3.5.x + Flink 2.1.x, Nessie catalog support         |
+| **Apache Iceberg** | **1.10.0** ✅             | (bundled with Spark/Flink)               | Latest       | Latest stable for Spark 3.5.x + Flink 2.0+, Nessie catalog support       |
 | **Apache Flink**   | **2.1.0** ✅              | apache/flink:2.1.0-scala_2.12-java17     | Latest       | Deployed with Kubernetes HA (2 JobManagers + 5 TaskManagers)             |
 
 ### Query Engines
