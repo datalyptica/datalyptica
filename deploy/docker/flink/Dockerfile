@@ -2,6 +2,13 @@ FROM flink:2.1.0-scala_2.12-java17
 
 USER root
 
+# Install Python 3 and PyFlink dependencies
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip python3-dev && \
+    pip3 install --no-cache-dir apache-flink==2.1.0 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # Download Flink connectors during build (no compilation, just download)
 # Using Flink 2.1 with compatible versions:
 # - Kafka Connector 3.4.0 (certified for Flink 2.1)
