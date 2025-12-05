@@ -1,0 +1,189 @@
+---
+# PostgreSQL Database Initialization Job
+# This Job runs after PostgreSQL cluster is ready and creates all application databases and users
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgresql-init-databases
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: postgresql-init
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: storage
+    datalyptica.io/component: postgresql-init
+spec:
+  ttlSecondsAfterFinished: 600  # Clean up after 10 minutes
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgresql-init
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: init-databases
+        image: postgres:16-alpine
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "=== PostgreSQL Database Initialization ==="
+          echo "Waiting for PostgreSQL to be ready..."
+          
+          until pg_isready -h datalyptica-postgres-rw -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          
+          echo "PostgreSQL is ready. Creating databases and users..."
+          
+          # Create all users and databases
+          psql -v ON_ERROR_STOP=1 <<-EOSQL
+            -- ============================================
+            -- CATALOG LAYER
+            -- ============================================
+            DO \$\$
+            BEGIN
+                IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'nessie') THEN
+                    CREATE USER nessie WITH PASSWORD '${NESSIE_PASSWORD}';
+                    RAISE NOTICE 'Created user: nessie';
+                END IF;
+            END \$\$;
+            
+            SELECT 'CREATE DATABASE nessie OWNER nessie'
+            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'nessie')\gexec
+            
+            -- ============================================
+            -- IDENTITY & ACCESS MANAGEMENT
+            -- ============================================
+            DO \$\$
+            BEGIN
+                IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'keycloak') THEN
+                    CREATE USER keycloak WITH PASSWORD '${KEYCLOAK_PASSWORD}';
+                    RAISE NOTICE 'Created user: keycloak';
+                END IF;
+            END \$\$;
+            
+            SELECT 'CREATE DATABASE keycloak OWNER keycloak'
+            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'keycloak')\gexec
+            
+            -- ============================================
+            -- ANALYTICS & ORCHESTRATION
+            -- ============================================
+            DO \$\$
+            BEGIN
+                IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'airflow') THEN
+                    CREATE USER airflow WITH PASSWORD '${AIRFLOW_PASSWORD}';
+                    RAISE NOTICE 'Created user: airflow';
+                END IF;
+            END \$\$;
+            
+            SELECT 'CREATE DATABASE airflow OWNER airflow'
+            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'airflow')\gexec
+            
+            DO \$\$
+            BEGIN
+                IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'superset') THEN
+                    CREATE USER superset WITH PASSWORD '${SUPERSET_PASSWORD}';
+                    RAISE NOTICE 'Created user: superset';
+                END IF;
+            END \$\$;
+            
+            SELECT 'CREATE DATABASE superset OWNER superset'
+            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'superset')\gexec
+            
+            DO \$\$
+            BEGIN
+                IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'jupyterhub') THEN
+                    CREATE USER jupyterhub WITH PASSWORD '${JUPYTERHUB_PASSWORD}';
+                    RAISE NOTICE 'Created user: jupyterhub';
+                END IF;
+            END \$\$;
+            
+            SELECT 'CREATE DATABASE jupyterhub OWNER jupyterhub'
+            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'jupyterhub')\gexec
+            
+            -- ============================================
+            -- ML & EXPERIMENTATION
+            -- ============================================
+            DO \$\$
+            BEGIN
+                IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'mlflow') THEN
+                    CREATE USER mlflow WITH PASSWORD '${MLFLOW_PASSWORD}';
+                    RAISE NOTICE 'Created user: mlflow';
+                END IF;
+            END \$\$;
+            
+            SELECT 'CREATE DATABASE mlflow OWNER mlflow'
+            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'mlflow')\gexec
+            
+            -- ============================================
+            -- GRANT SCHEMA PRIVILEGES
+            -- ============================================
+            \c nessie
+            GRANT ALL PRIVILEGES ON SCHEMA public TO nessie;
+            
+            \c keycloak
+            GRANT ALL PRIVILEGES ON SCHEMA public TO keycloak;
+            
+            \c airflow
+            GRANT ALL PRIVILEGES ON SCHEMA public TO airflow;
+            
+            \c superset
+            GRANT ALL PRIVILEGES ON SCHEMA public TO superset;
+            
+            \c jupyterhub
+            GRANT ALL PRIVILEGES ON SCHEMA public TO jupyterhub;
+            
+            \c mlflow
+            GRANT ALL PRIVILEGES ON SCHEMA public TO mlflow;
+          EOSQL
+          
+          echo "✓ Database initialization complete!"
+          echo ""
+          echo "Databases created:"
+          psql -c "\l" | grep -E "nessie|keycloak|airflow|superset|jupyterhub|mlflow"
+        env:
+        - name: PGHOST
+          value: datalyptica-postgres-rw
+        - name: PGPORT
+          value: "5432"
+        - name: PGDATABASE
+          value: postgres
+        - name: PGUSER
+          value: postgres
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: password
+        - name: NESSIE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nessie-db-credentials
+              key: password
+        - name: KEYCLOAK_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-db-credentials
+              key: password
+        - name: AIRFLOW_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: airflow-db-credentials
+              key: password
+        - name: SUPERSET_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: superset-db-credentials
+              key: password
+        - name: JUPYTERHUB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: jupyterhub-db-credentials
+              key: password
+        - name: MLFLOW_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mlflow-db-credentials
+              key: password

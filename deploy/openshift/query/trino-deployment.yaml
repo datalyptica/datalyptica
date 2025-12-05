@@ -1,0 +1,393 @@
+---
+# Trino ConfigMap for main configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trino-config
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: trino
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: query
+    datalyptica.io/component: trino
+data:
+  config.properties: |
+    coordinator=true
+    node-scheduler.include-coordinator=false
+    http-server.http.port=8080
+    discovery.uri=http://trino.datalyptica.svc.cluster.local:8080
+    query.max-memory=4GB
+    query.max-memory-per-node=2GB
+    memory.heap-headroom-per-node=1GB
+    
+    # HTTP Proxy Configuration (for OpenShift Routes)
+    http-server.process-forwarded=true
+    http-server.authentication.allow-insecure-over-http=true
+    
+    # High Availability Configuration
+    internal-communication.shared-secret=${ENV:TRINO_SHARED_SECRET}
+    
+    # Query Management
+    query.max-run-time=30m
+    query.max-execution-time=25m
+  
+  node.properties: |
+    node.environment=production
+    node.data-dir=/data/trino
+  
+  jvm.config: |
+    -server
+    -Xmx4G
+    -XX:+UseG1GC
+    -XX:+ExplicitGCInvokesConcurrent
+    -XX:+HeapDumpOnOutOfMemoryError
+    -XX:+ExitOnOutOfMemoryError
+    -XX:+UseGCOverheadLimit
+    -XX:ReservedCodeCacheSize=512M
+  
+  log.properties: |
+    io.trino=INFO
+---
+# Trino Worker ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trino-worker-config
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: trino
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: query
+    datalyptica.io/component: trino-worker
+data:
+  config.properties: |
+    coordinator=false
+    http-server.http.port=8080
+    discovery.uri=http://trino.datalyptica.svc.cluster.local:8080
+    query.max-memory-per-node=2GB
+    memory.heap-headroom-per-node=1GB
+    
+    # High Availability Configuration
+    internal-communication.shared-secret=${ENV:TRINO_SHARED_SECRET}
+---
+# Trino Iceberg Catalog ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trino-catalog-iceberg
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: trino
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: query
+    datalyptica.io/component: trino-catalog
+data:
+  iceberg.properties: |
+    connector.name=iceberg
+    iceberg.catalog.type=nessie
+    iceberg.nessie-catalog.uri=http://nessie.datalyptica.svc.cluster.local:19120/api/v2
+    iceberg.nessie-catalog.default-warehouse-dir=s3://lakehouse/
+    iceberg.nessie-catalog.ref=main
+    fs.native-s3.enabled=true
+    s3.endpoint=http://minio.datalyptica.svc.cluster.local:9000
+    s3.region=us-east-1
+    s3.path-style-access=true
+    iceberg.file-format=PARQUET
+    iceberg.compression-codec=SNAPPY
+---
+# Trino Coordinator Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trino
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: trino
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: query
+    datalyptica.io/component: trino
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: trino
+      app.kubernetes.io/component: coordinator
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: trino
+        app.kubernetes.io/part-of: datalyptica
+        datalyptica.io/tier: query
+        app.kubernetes.io/component: coordinator
+    spec:
+      initContainers:
+      - name: setup-node-config
+        image: trinodb/trino:476
+        command:
+        - sh
+        - -c
+        - |
+          echo "node.environment=production" > /data/node.properties
+          echo "node.data-dir=/data/trino" >> /data/node.properties
+          echo "node.id=${NODE_ID}" >> /data/node.properties
+          cat /data/node.properties
+        env:
+        - name: NODE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        volumeMounts:
+        - name: trino-data
+          mountPath: /data
+      containers:
+      - name: trino
+        image: trinodb/trino:476
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: TRINO_SHARED_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: trino-credentials
+              key: shared-secret
+        - name: NODE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-user
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-password
+        volumeMounts:
+        - name: trino-config
+          mountPath: /etc/trino/config.properties
+          subPath: config.properties
+        - name: trino-data
+          mountPath: /etc/trino/node.properties
+          subPath: node.properties
+        - name: trino-config
+          mountPath: /etc/trino/jvm.config
+          subPath: jvm.config
+        - name: trino-config
+          mountPath: /etc/trino/log.properties
+          subPath: log.properties
+        - name: trino-catalog-iceberg
+          mountPath: /etc/trino/catalog/iceberg.properties
+          subPath: iceberg.properties
+        - name: trino-data
+          mountPath: /data
+        livenessProbe:
+          httpGet:
+            path: /v1/info
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /v1/info
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "6Gi"
+            cpu: "4000m"
+      volumes:
+      - name: trino-config
+        configMap:
+          name: trino-config
+      - name: trino-catalog-iceberg
+        configMap:
+          name: trino-catalog-iceberg
+      - name: trino-data
+        emptyDir: {}
+---
+# Trino Worker Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trino-worker
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: trino
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: query
+    datalyptica.io/component: trino-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: trino
+      app.kubernetes.io/component: worker
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: trino
+        app.kubernetes.io/part-of: datalyptica
+        datalyptica.io/tier: query
+        app.kubernetes.io/component: worker
+    spec:
+      initContainers:
+      - name: setup-node-config
+        image: trinodb/trino:476
+        command:
+        - sh
+        - -c
+        - |
+          echo "node.environment=production" > /data/node.properties
+          echo "node.data-dir=/data/trino" >> /data/node.properties
+          echo "node.id=${NODE_ID}" >> /data/node.properties
+          cat /data/node.properties
+        env:
+        - name: NODE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        volumeMounts:
+        - name: trino-data
+          mountPath: /data
+      containers:
+      - name: trino-worker
+        image: trinodb/trino:476
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: TRINO_SHARED_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: trino-credentials
+              key: shared-secret
+        - name: NODE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-user
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-password
+        volumeMounts:
+        - name: trino-worker-config
+          mountPath: /etc/trino/config.properties
+          subPath: config.properties
+        - name: trino-data
+          mountPath: /etc/trino/node.properties
+          subPath: node.properties
+        - name: trino-config
+          mountPath: /etc/trino/jvm.config
+          subPath: jvm.config
+        - name: trino-config
+          mountPath: /etc/trino/log.properties
+          subPath: log.properties
+        - name: trino-catalog-iceberg
+          mountPath: /etc/trino/catalog/iceberg.properties
+          subPath: iceberg.properties
+        - name: trino-data
+          mountPath: /data
+        livenessProbe:
+          httpGet:
+            path: /v1/info
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /v1/info
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "6Gi"
+            cpu: "4000m"
+      volumes:
+      - name: trino-worker-config
+        configMap:
+          name: trino-worker-config
+      - name: trino-config
+        configMap:
+          name: trino-config
+      - name: trino-catalog-iceberg
+        configMap:
+          name: trino-catalog-iceberg
+      - name: trino-data
+        emptyDir: {}
+---
+# Trino Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: trino
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: trino
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: query
+    datalyptica.io/component: trino
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: trino
+    app.kubernetes.io/component: coordinator
+---
+# Trino Route (OpenShift)
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: trino
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: trino
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: query
+    datalyptica.io/component: trino
+spec:
+  to:
+    kind: Service
+    name: trino
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

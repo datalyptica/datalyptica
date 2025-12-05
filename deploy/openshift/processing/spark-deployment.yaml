@@ -1,0 +1,306 @@
+---
+# Spark ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-config
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+    datalyptica.io/component: spark
+data:
+  spark-defaults.conf: |
+    # Spark Core Configuration
+    spark.master                     spark://spark-master.datalyptica.svc.cluster.local:7077
+    spark.driver.memory              2g
+    spark.driver.maxResultSize       1g
+    spark.executor.memory            2g
+    spark.executor.cores             2
+    spark.executor.instances         2
+    spark.dynamicAllocation.enabled  false
+    spark.serializer                org.apache.spark.serializer.KryoSerializer
+    spark.sql.adaptive.enabled       true
+    spark.sql.adaptive.coalescePartitions.enabled true
+    spark.sql.adaptive.skewJoin.enabled true
+    
+    # Spark SQL Configuration with Iceberg Nessie Catalog
+    spark.sql.extensions             org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+    spark.sql.catalog.iceberg        org.apache.iceberg.spark.SparkCatalog
+    spark.sql.catalog.iceberg.catalog-impl org.apache.iceberg.nessie.NessieCatalog
+    spark.sql.catalog.iceberg.uri    http://nessie.datalyptica.svc.cluster.local:19120/api/v2
+    spark.sql.catalog.iceberg.ref    main
+    spark.sql.catalog.iceberg.warehouse s3://lakehouse/
+    spark.sql.catalog.iceberg.io-impl org.apache.iceberg.aws.s3.S3FileIO
+    spark.sql.catalog.iceberg.s3.endpoint http://minio.datalyptica.svc.cluster.local:9000
+    spark.sql.catalog.iceberg.s3.path-style-access true
+    spark.sql.defaultCatalog         iceberg
+    
+    # S3 Configuration (Hadoop S3A)
+    spark.hadoop.fs.s3a.endpoint    http://minio.datalyptica.svc.cluster.local:9000
+    spark.hadoop.fs.s3a.path.style.access true
+    spark.hadoop.fs.s3a.impl        org.apache.hadoop.fs.s3a.S3AFileSystem
+    spark.hadoop.fs.s3a.aws.credentials.provider org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
+    
+    # Spark UI Configuration
+    spark.ui.port                    4040
+    spark.ui.retainedJobs            100
+    spark.ui.retainedStages          100
+    spark.ui.retainedTasks           100
+    
+    # Spark History Server Configuration
+    spark.history.fs.logDirectory    s3a://lakehouse/spark-history
+    spark.history.fs.cleaner.enabled true
+    spark.history.fs.cleaner.interval 1d
+    spark.history.fs.cleaner.maxAge  7d
+---
+# Spark Master Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-master
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+    datalyptica.io/component: spark-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: spark
+      app.kubernetes.io/component: master
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: spark
+        app.kubernetes.io/part-of: datalyptica
+        datalyptica.io/tier: processing
+        app.kubernetes.io/component: master
+    spec:
+      containers:
+      - name: spark-master
+        image: spark:3.5.1-iceberg-1.9.1
+        command: ["/opt/spark/bin/spark-class"]
+        args: ["org.apache.spark.deploy.master.Master"]
+        ports:
+        - containerPort: 7077
+          name: spark
+          protocol: TCP
+        - containerPort: 8080
+          name: webui
+          protocol: TCP
+        env:
+        - name: SPARK_MODE
+          value: "master"
+        - name: SPARK_MASTER_HOST
+          value: "spark-master"
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-user
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-password
+        - name: SPARK_CONF_spark_hadoop_fs_s3a_access_key
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-user
+        - name: SPARK_CONF_spark_hadoop_fs_s3a_secret_key
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-password
+        - name: SPARK_CONF_spark_sql_catalog_iceberg_s3_access__key__id
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-user
+        - name: SPARK_CONF_spark_sql_catalog_iceberg_s3_secret__access__key
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-password
+        volumeMounts:
+        - name: spark-config
+          mountPath: /opt/spark/conf/spark-defaults.conf
+          subPath: spark-defaults.conf
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+      volumes:
+      - name: spark-config
+        configMap:
+          name: spark-config
+---
+# Spark Worker Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-worker
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+    datalyptica.io/component: spark-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: spark
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: spark
+        app.kubernetes.io/part-of: datalyptica
+        datalyptica.io/tier: processing
+        app.kubernetes.io/component: worker
+    spec:
+      containers:
+      - name: spark-worker
+        image: spark:3.5.1-iceberg-1.9.1
+        command: ["/opt/spark/bin/spark-class"]
+        args: 
+        - "org.apache.spark.deploy.worker.Worker"
+        - "spark://spark-master.datalyptica.svc.cluster.local:7077"
+        ports:
+        - containerPort: 8081
+          name: webui
+          protocol: TCP
+        env:
+        - name: SPARK_MODE
+          value: "worker"
+        - name: SPARK_MASTER_URL
+          value: "spark://spark-master.datalyptica.svc.cluster.local:7077"
+        - name: SPARK_WORKER_CORES
+          value: "2"
+        - name: SPARK_WORKER_MEMORY
+          value: "2g"
+        - name: S3_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-user
+        - name: S3_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-password
+        - name: SPARK_CONF_spark_hadoop_fs_s3a_access_key
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-user
+        - name: SPARK_CONF_spark_hadoop_fs_s3a_secret_key
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-password
+        volumeMounts:
+        - name: spark-config
+          mountPath: /opt/spark/conf/spark-defaults.conf
+          subPath: spark-defaults.conf
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "2000m"
+          limits:
+            memory: "4Gi"
+            cpu: "4000m"
+      volumes:
+      - name: spark-config
+        configMap:
+          name: spark-config
+---
+# Spark Master Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-master
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+    datalyptica.io/component: spark-master
+spec:
+  type: ClusterIP
+  ports:
+  - port: 7077
+    targetPort: 7077
+    protocol: TCP
+    name: spark
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: webui
+  selector:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/component: master
+---
+# Spark Master Route (WebUI)
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: spark-master
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+    datalyptica.io/component: spark-master
+spec:
+  to:
+    kind: Service
+    name: spark-master
+  port:
+    targetPort: webui
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

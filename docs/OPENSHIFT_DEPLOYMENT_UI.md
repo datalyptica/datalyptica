@@ -12,7 +12,7 @@
 1. [Accessing OpenShift Web Console](#accessing-openshift-web-console)
 2. [Pre-Deployment Setup](#pre-deployment-setup)
 3. [Phase 1: Install Operators](#phase-1-install-operators)
-4. [Phase 2: Create Projects](#phase-2-create-projects)
+4. [Phase 2: Create Project](#phase-2-create-project)
 5. [Phase 3: Configure Storage](#phase-3-configure-storage)
 6. [Phase 4: Deploy Storage Services](#phase-4-deploy-storage-services)
 7. [Phase 5: Deploy Catalog Services](#phase-5-deploy-catalog-services)
@@ -23,6 +23,18 @@
 12. [Phase 10: Deploy IAM Services](#phase-10-deploy-iam-services)
 13. [Verification & Access](#verification--access)
 14. [UI Navigation Guide](#ui-navigation-guide)
+
+---
+
+## 📝 Important: Simplified Single-Project Deployment
+
+This guide has been updated to use a **single OpenShift project** named `datalyptica` for all components. This simplifies:
+- ✅ Project management and RBAC
+- ✅ Service-to-service communication (no cross-namespace networking)
+- ✅ Deployment speed and troubleshooting
+- ✅ Resource management
+
+All components (storage, catalog, streaming, processing, query, analytics, monitoring, and IAM) will be deployed in the `datalyptica` project with logical separation via labels.
 
 ---
 
@@ -160,7 +172,7 @@ volumes:
 
    - Click **Install**
    - **Installation Mode**: Select `A specific namespace on the cluster`
-   - **Installed Namespace**: Create new namespace `datalyptica-operators`
+   - **Installed Namespace**: Create new namespace `datalyptica`
    - **Update Channel**: `stable`
    - **Approval Strategy**: `Automatic`
    - Click **Install**
@@ -184,7 +196,7 @@ volumes:
 
    - Click **Install**
    - **Installation Mode**: `A specific namespace on the cluster`
-   - **Installed Namespace**: Select `datalyptica-operators`
+   - **Installed Namespace**: Select `datalyptica`
    - **Update Channel**: `v5`
    - **Approval Strategy**: `Automatic`
    - Click **Install**
@@ -221,15 +233,15 @@ volumes:
 
 **Required Projects**:
 
-- `datalyptica-operators` (if not created during operator install)
-- `datalyptica-storage`
-- `datalyptica-catalog`
-- `datalyptica-streaming`
-- `datalyptica-processing`
-- `datalyptica-query`
-- `datalyptica-analytics`
-- `datalyptica-monitoring`
-- `datalyptica-iam`
+- `datalyptica` (if not created during operator install)
+- `datalyptica`
+- `datalyptica`
+- `datalyptica`
+- `datalyptica`
+- `datalyptica`
+- `datalyptica`
+- `datalyptica`
+- `datalyptica`
 
 ---
 
@@ -240,7 +252,7 @@ volumes:
 1. **Navigate to Secrets**:
 
    - Left sidebar → **Workloads** → **Secrets**
-   - **Project**: Select `datalyptica-storage` from top dropdown
+   - **Project**: Select `datalyptica` from top dropdown
 
 2. **Create PostgreSQL Secret**:
 
@@ -259,9 +271,9 @@ volumes:
    - Click **Create**
 
 4. **Repeat for other namespaces**:
-   - Switch to `datalyptica-iam` project
+   - Switch to `datalyptica` project
    - Create `keycloak-credentials` secret
-   - Switch to `datalyptica-monitoring` project
+   - Switch to `datalyptica` project
    - Create `grafana-credentials` secret
 
 ---
@@ -273,7 +285,7 @@ volumes:
 1. **Navigate to Deployments**:
 
    - Left sidebar → **Workloads** → **Deployments**
-   - **Project**: Select `datalyptica-storage`
+   - **Project**: Select `datalyptica`
 
 2. **Create PVC First**:
 
@@ -295,7 +307,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: minio
-  namespace: datalyptica-storage
+  namespace: datalyptica
 spec:
   replicas: 1
   selector:
@@ -353,7 +365,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: minio
-  namespace: datalyptica-storage
+  namespace: datalyptica
 spec:
   type: ClusterIP
   ports:
@@ -389,7 +401,7 @@ spec:
 1. **Navigate to Installed Operators**:
 
    - Left sidebar → **Operators** → **Installed Operators**
-   - **Project**: Select `datalyptica-storage`
+   - **Project**: Select `datalyptica`
    - Click on **Crunchy Postgres for Kubernetes**
 
 2. **Create PostgreSQL Cluster**:
@@ -402,7 +414,7 @@ apiVersion: postgres-operator.crunchydata.com/v1beta1
 kind: PostgresCluster
 metadata:
   name: datalyptica-postgres
-  namespace: datalyptica-storage
+  namespace: datalyptica
 spec:
   postgresVersion: 16
   image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres:ubi8-16.6-0
@@ -457,7 +469,7 @@ spec:
 
 1. **Switch Project**:
 
-   - Top dropdown → Select `datalyptica-catalog`
+   - Top dropdown → Select `datalyptica`
 
 2. **Create ConfigMap**:
    - Left sidebar → **Workloads** → **ConfigMaps**
@@ -498,7 +510,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis
-  namespace: datalyptica-catalog
+  namespace: datalyptica
 spec:
   serviceName: redis
   replicas: 1
@@ -550,7 +562,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis
-  namespace: datalyptica-catalog
+  namespace: datalyptica
 spec:
   type: ClusterIP
   ports:
@@ -572,7 +584,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nessie
-  namespace: datalyptica-catalog
+  namespace: datalyptica
 spec:
   replicas: 2
   selector:
@@ -591,7 +603,7 @@ spec:
               name: http
           env:
             - name: QUARKUS_DATASOURCE_JDBC_URL
-              value: jdbc:postgresql://datalyptica-postgres-primary.datalyptica-storage.svc:5432/nessie
+              value: jdbc:postgresql://datalyptica-postgres-primary.datalyptica.svc:5432/nessie
             - name: QUARKUS_DATASOURCE_USERNAME
               value: nessie
             - name: QUARKUS_DATASOURCE_PASSWORD
@@ -622,7 +634,7 @@ spec:
 
 1. **Switch Project**:
 
-   - Select `datalyptica-streaming`
+   - Select `datalyptica`
 
 2. **Navigate to Strimzi Operator**:
 
@@ -639,7 +651,7 @@ apiVersion: kafka.strimzi.io/v1
 kind: Kafka
 metadata:
   name: datalyptica-kafka
-  namespace: datalyptica-streaming
+  namespace: datalyptica
 spec:
   kafka:
     version: 4.1.1
@@ -709,7 +721,7 @@ spec:
 
 1. **Switch Project**:
 
-   - Select `datalyptica-processing`
+   - Select `datalyptica`
 
 2. **Create Spark Master Deployment**:
 
@@ -749,7 +761,7 @@ spec:
 
 1. **Switch Project**:
 
-   - Select `datalyptica-analytics`
+   - Select `datalyptica`
 
 2. **Create ConfigMap**:
 
@@ -809,7 +821,7 @@ spec:
 
 1. **Switch Project**:
 
-   - Select `datalyptica-monitoring`
+   - Select `datalyptica`
 
 2. **Create ConfigMap**:
 
@@ -887,7 +899,7 @@ spec:
 
 1. **Switch Project**:
 
-   - Select `datalyptica-iam`
+   - Select `datalyptica`
 
 2. **Create Secret** (if not already created):
 
@@ -904,7 +916,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keycloak
-  namespace: datalyptica-iam
+  namespace: datalyptica
 spec:
   replicas: 2
   selector:
@@ -923,7 +935,7 @@ spec:
             - name: KC_DB
               value: postgres
             - name: KC_DB_URL
-              value: jdbc:postgresql://datalyptica-postgres-primary.datalyptica-storage.svc:5432/keycloak
+              value: jdbc:postgresql://datalyptica-postgres-primary.datalyptica.svc:5432/keycloak
             - name: KC_DB_USERNAME
               value: keycloak
             - name: KC_DB_PASSWORD
@@ -1174,3 +1186,4 @@ spec:
 **Congratulations!** 🎉
 
 You've successfully deployed the Datalyptica platform using the OpenShift Web Console. All services are now accessible via their respective routes.
+

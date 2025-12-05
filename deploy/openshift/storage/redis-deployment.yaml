@@ -1,0 +1,264 @@
+---
+# Redis Headless Service for StatefulSet
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-headless
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: storage
+    datalyptica.io/component: redis
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+  - name: redis
+    port: 6379
+    protocol: TCP
+    targetPort: 6379
+  - name: sentinel
+    port: 26379
+    protocol: TCP
+    targetPort: 26379
+  selector:
+    app.kubernetes.io/name: redis
+---
+# Redis ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: datalyptica
+data:
+  redis.conf: |
+    bind 0.0.0.0
+    protected-mode yes
+    port 6379
+    requirepass REDIS_PASSWORD_PLACEHOLDER
+    masterauth REDIS_PASSWORD_PLACEHOLDER
+    appendonly yes
+    appendfsync everysec
+    maxmemory 2gb
+    maxmemory-policy allkeys-lru
+    
+  sentinel.conf: |
+    bind 0.0.0.0
+    port 26379
+    sentinel monitor redis-master 127.0.0.1 6379 2
+    sentinel auth-pass redis-master REDIS_PASSWORD_PLACEHOLDER
+    sentinel down-after-milliseconds redis-master 5000
+    sentinel parallel-syncs redis-master 1
+    sentinel failover-timeout redis-master 10000
+    sentinel announce-ip ANNOUNCE_IP_PLACEHOLDER
+    sentinel announce-port 26379
+---
+# Redis StatefulSet (HA with 3 replicas)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: storage
+    datalyptica.io/component: redis
+spec:
+  serviceName: redis-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/part-of: datalyptica
+        datalyptica.io/tier: storage
+        datalyptica.io/component: redis
+    spec:
+      initContainers:
+      - name: config-init
+        image: redis:8.4.0-alpine
+        command:
+        - sh
+        - -c
+        - |
+          REDIS_PASSWORD=$(cat /secrets/password)
+          HOSTNAME=$(hostname)
+          POD_IP=$(hostname -i)
+          
+          cp /config/redis.conf /data/redis.conf
+          cp /config/sentinel.conf /data/sentinel.conf
+          sed -i "s/REDIS_PASSWORD_PLACEHOLDER/$REDIS_PASSWORD/g" /data/redis.conf
+          sed -i "s/REDIS_PASSWORD_PLACEHOLDER/$REDIS_PASSWORD/g" /data/sentinel.conf
+          sed -i "s/ANNOUNCE_IP_PLACEHOLDER/$POD_IP/g" /data/sentinel.conf
+          
+          # Check if Sentinel already has a master (for failover recovery)
+          # Try to query redis-sentinel service for current master
+          CURRENT_MASTER=""
+          for i in 0 1 2; do
+            SENTINEL_MASTER=$(redis-cli -h redis-sentinel.datalyptica.svc.cluster.local -p 26379 sentinel get-master-addr-by-name redis-master 2>/dev/null | head -n 1)
+            if [ -n "$SENTINEL_MASTER" ]; then
+              CURRENT_MASTER="$SENTINEL_MASTER"
+              echo "Sentinel reports current master: $CURRENT_MASTER"
+              break
+            fi
+            sleep 2
+          done
+          
+          # Configure replication based on Sentinel state or bootstrap logic
+          if [ -n "$CURRENT_MASTER" ] && [ "$CURRENT_MASTER" != "$POD_IP" ]; then
+            # Sentinel has a master and it's not this pod - configure as replica
+            echo "Configuring as replica of master $CURRENT_MASTER"
+            echo "replica-read-only yes" >> /data/redis.conf
+            echo "replicaof $CURRENT_MASTER 6379" >> /data/redis.conf
+          elif [ "$HOSTNAME" != "redis-0" ]; then
+            # No Sentinel master yet, and not redis-0 - configure as replica of redis-0
+            MASTER_IP=$(getent hosts redis-0.redis-headless.datalyptica.svc.cluster.local | awk '{ print $1 }')
+            if [ -z "$MASTER_IP" ]; then
+              echo "ERROR: Could not resolve redis-0 master IP"
+              exit 1
+            fi
+            echo "Bootstrapping as replica of redis-0 at $MASTER_IP"
+            echo "replica-read-only yes" >> /data/redis.conf
+            echo "replicaof $MASTER_IP 6379" >> /data/redis.conf
+          else
+            # This is redis-0 and no Sentinel master - bootstrap as initial master
+            echo "Bootstrapping as initial master (redis-0)"
+          fi
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: data
+          mountPath: /data
+        - name: redis-secret
+          mountPath: /secrets
+      containers:
+      - name: redis
+        image: redis:8.4.0-alpine
+        command:
+        - redis-server
+        - /data/redis.conf
+        ports:
+        - containerPort: 6379
+          name: redis
+          protocol: TCP
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - redis-cli -a $(cat /data/redis.conf | grep "^requirepass" | cut -d' ' -f2) ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - redis-cli -a $(cat /data/redis.conf | grep "^requirepass" | cut -d' ' -f2) ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+      - name: sentinel
+        image: redis:8.4.0-alpine
+        command:
+        - sh
+        - -c
+        - |
+          # Get master IP (redis-0 is always master)
+          if [ "$(hostname)" = "redis-0" ]; then
+            MASTER_IP="127.0.0.1"
+          else
+            MASTER_IP=$(getent hosts redis-0.redis-headless.datalyptica.svc.cluster.local | awk '{ print $1 }')
+          fi
+          sed -i "s/127.0.0.1/$MASTER_IP/g" /data/sentinel.conf
+          redis-sentinel /data/sentinel.conf
+        ports:
+        - containerPort: 26379
+          name: sentinel
+          protocol: TCP
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: config
+        configMap:
+          name: redis-config
+      - name: redis-secret
+        secret:
+          secretName: redis-credentials
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        app.kubernetes.io/name: redis
+        datalyptica.io/tier: storage
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 50Gi
+      storageClassName: 9500-storageclass
+---
+# Redis Service (points to all instances)
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: storage
+    datalyptica.io/component: redis
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+    name: redis
+  selector:
+    app.kubernetes.io/name: redis
+---
+# Redis Sentinel Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-sentinel
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: storage
+    datalyptica.io/component: redis-sentinel
+spec:
+  type: ClusterIP
+  ports:
+  - port: 26379
+    targetPort: 26379
+    protocol: TCP
+    name: sentinel
+  selector:
+    app.kubernetes.io/name: redis

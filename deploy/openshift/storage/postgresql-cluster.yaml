@@ -1,0 +1,189 @@
+---
+# PostgreSQL Cluster using CrunchyData Operator
+# Includes automatic database and user initialization
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: datalyptica-postgres
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: storage
+    datalyptica.io/component: postgresql
+spec:
+  postgresVersion: 16
+  
+  # High Availability: 3 instances
+  instances:
+    - name: instance1
+      replicas: 3
+      dataVolumeClaimSpec:
+        storageClassName: 9500-storageclass
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 200Gi
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    postgres-operator.crunchydata.com/cluster: datalyptica-postgres
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 2Gi
+        limits:
+          cpu: 2000m
+          memory: 4Gi
+  
+  # Backups to MinIO
+  backups:
+    pgbackrest:
+      global:
+        repo1-retention-full: "14"
+        repo1-retention-full-type: time
+      repos:
+        - name: repo1
+          s3:
+            bucket: datalyptica
+            endpoint: minio.datalyptica.svc.cluster.local:9000
+            region: us-east-1
+          schedules:
+            full: "0 2 * * 0"
+            differential: "0 2 * * 1-6"
+      configuration:
+        - secret:
+            name: minio-credentials
+      repoHost:
+        dedicated: {}
+  
+  # PostgreSQL Configuration
+  patroni:
+    dynamicConfiguration:
+      postgresql:
+        parameters:
+          shared_buffers: 512MB
+          effective_cache_size: 2GB
+          maintenance_work_mem: 256MB
+          checkpoint_completion_target: "0.9"
+          wal_buffers: 16MB
+          default_statistics_target: 100
+          random_page_cost: "1.1"
+          effective_io_concurrency: 200
+          work_mem: 16MB
+          min_wal_size: 1GB
+          max_wal_size: 4GB
+          max_connections: 200
+  
+  # Monitoring - disabled due to image pull issues
+  # monitoring:
+  #   pgmonitor:
+  #     exporter:
+  #       image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres-exporter:ubi8-5.8.4-0
+  
+  # Database Initialization - Create all databases and users
+  databaseInitSQL:
+    key: init.sql
+    name: postgres-init-sql
+  
+  # Users - passwords from secrets
+  users:
+    - name: nessie
+      databases:
+        - nessie
+      password:
+        type: AlphaNumeric
+      options: "SUPERUSER"
+    - name: keycloak
+      databases:
+        - keycloak
+      password:
+        type: AlphaNumeric
+      options: "SUPERUSER"
+    - name: airflow
+      databases:
+        - airflow
+      password:
+        type: AlphaNumeric
+      options: "SUPERUSER"
+    - name: superset
+      databases:
+        - superset
+      password:
+        type: AlphaNumeric
+      options: "SUPERUSER"
+    - name: jupyterhub
+      databases:
+        - jupyterhub
+      password:
+        type: AlphaNumeric
+      options: "SUPERUSER"
+    - name: mlflow
+      databases:
+        - mlflow
+      password:
+        type: AlphaNumeric
+      options: "SUPERUSER"
+---
+# Database Initialization SQL ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-sql
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/part-of: datalyptica
+data:
+  init.sql: |
+    -- Database initialization
+    -- Users are automatically created by CrunchyData operator
+    -- This script grants additional privileges if needed
+    
+    \c nessie
+    GRANT ALL PRIVILEGES ON SCHEMA public TO nessie;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO nessie;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO nessie;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO nessie;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO nessie;
+    
+    \c keycloak
+    GRANT ALL PRIVILEGES ON SCHEMA public TO keycloak;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO keycloak;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO keycloak;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO keycloak;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO keycloak;
+    
+    \c airflow
+    GRANT ALL PRIVILEGES ON SCHEMA public TO airflow;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO airflow;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO airflow;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO airflow;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO airflow;
+    
+    \c superset
+    GRANT ALL PRIVILEGES ON SCHEMA public TO superset;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO superset;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO superset;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO superset;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO superset;
+    
+    \c jupyterhub
+    GRANT ALL PRIVILEGES ON SCHEMA public TO jupyterhub;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO jupyterhub;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO jupyterhub;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO jupyterhub;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO jupyterhub;
+    
+    \c mlflow
+    GRANT ALL PRIVILEGES ON SCHEMA public TO mlflow;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO mlflow;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO mlflow;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO mlflow;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO mlflow;

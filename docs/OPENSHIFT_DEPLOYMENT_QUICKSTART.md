@@ -2,7 +2,25 @@
 
 **Datalyptica Version**: 4.0.0  
 **OpenShift Version**: 4.17+  
-**Last Updated**: December 2025
+**Last Updated**: December 2025  
+**Deployment Model**: ✨ **Simplified Single-Project Architecture**
+
+---
+
+## 🎉 What's New: Simplified Deployment
+
+This guide has been updated to use a **single OpenShift project** approach, reducing complexity by 9x:
+
+| Aspect                  | Before (v3.x)      | Now (v4.0.0)    | Improvement  |
+| ----------------------- | ------------------ | --------------- | ------------ |
+| **Projects/Namespaces** | 9 separate         | 1 unified       | 9x simpler   |
+| **Setup Time**          | 30+ minutes        | 10-15 minutes   | 50% faster   |
+| **RBAC Complexity**     | 9 sets of policies | 1 set           | 9x simpler   |
+| **Cross-NS Networking** | Required           | Not needed      | Eliminated   |
+| **Resource Management** | 9 quotas           | 1 quota         | Unified      |
+| **Troubleshooting**     | Multi-project      | Single location | Much easier  |
+
+**All components now live in the `datalyptica` project with logical separation via labels.**
 
 ---
 
@@ -48,16 +66,20 @@ Are you comfortable with command-line tools?
 
 ### Comparison Table
 
-| Feature             | CLI Method          | UI Method                |
-| ------------------- | ------------------- | ------------------------ |
-| **Speed**           | ⚡⚡⚡ Fast         | ⚡⚡ Moderate            |
-| **Automation**      | ✅ Yes              | ❌ Manual                |
-| **Learning Curve**  | Steep               | Gentle                   |
-| **Visibility**      | Terminal output     | Visual dashboards        |
-| **Best For**        | Automation, experts | Learning, one-time setup |
-| **Prerequisites**   | oc CLI installed    | Just a browser           |
-| **Copy-Paste**      | YAML files ready    | YAML embedded in guide   |
-| **Troubleshooting** | CLI commands        | Visual inspection        |
+| Feature              | CLI Method          | UI Method                |
+| -------------------- | ------------------- | ------------------------ |
+| **Speed**            | ⚡⚡⚡ Fast         | ⚡⚡ Moderate            |
+| **Automation**       | ✅ Yes              | ❌ Manual                |
+| **Learning Curve**   | Steep               | Gentle                   |
+| **Visibility**       | Terminal output     | Visual dashboards        |
+| **Best For**         | Automation, experts | Learning, one-time setup |
+| **Prerequisites**    | oc CLI installed    | Just a browser           |
+| **Copy-Paste**       | YAML files ready    | YAML embedded in guide   |
+| **Troubleshooting**  | CLI commands        | Visual inspection        |
+| **Project Setup**    | Single project      | Single project           |
+| **Simplification**   | ✅ Simplified       | ✅ Simplified            |
+
+**Note**: Both methods now use a **single OpenShift project** (`datalyptica`) for easier management and faster deployment.
 
 ---
 
@@ -68,12 +90,13 @@ Both methods follow the same deployment phases:
 ### Phase 1: Pre-Deployment ⚙️
 
 - [ ] Access OpenShift cluster
-- [ ] Create namespaces/projects
+- [ ] Create single project: `datalyptica`
 - [ ] Configure security (SCC)
 - [ ] Set up storage classes
 - [ ] Generate secrets
 
-**Time**: 15-20 minutes
+**Time**: 10-15 minutes (simplified with single project)
+**Note**: Single project deployment reduces complexity significantly
 
 ### Phase 2: Operator Installation 🔧
 
@@ -376,24 +399,29 @@ helm version
 **After each phase, verify**:
 
 ```bash
-# Check all pods are running
-oc get pods --all-namespaces | grep datalyptica
+# Check all pods are running in single project
+oc get pods -n datalyptica
 
 # Check all services
-oc get svc --all-namespaces | grep datalyptica
+oc get svc -n datalyptica
 
 # Check all routes
-oc get routes --all-namespaces | grep datalyptica
+oc get routes -n datalyptica
 
 # Check persistent volumes
-oc get pvc --all-namespaces | grep datalyptica
+oc get pvc -n datalyptica
+
+# Check by tier labels
+oc get pods -n datalyptica -l datalyptica.io/tier=storage
+oc get pods -n datalyptica -l datalyptica.io/tier=streaming
+oc get pods -n datalyptica -l datalyptica.io/tier=analytics
 ```
 
 **Or in UI**:
 
 1. Navigate to **Workloads** → **Pods**
-2. Select **All Projects**
-3. Filter: `datalyptica-`
+2. Select the **datalyptica** project
+3. View all components in one place
 4. Verify all pods show **Running** status
 
 ### Access Web UIs
@@ -414,10 +442,13 @@ After deployment, access these URLs (via Routes):
 **Find URLs**:
 
 ```bash
-# CLI
-oc get routes --all-namespaces | grep datalyptica
+# CLI - All routes in single project
+oc get routes -n datalyptica
 
-# Or in UI: Networking → Routes → Select All Projects
+# With details
+oc get routes -n datalyptica -o wide
+
+# Or in UI: Networking → Routes → Select datalyptica project
 ```
 
 ---

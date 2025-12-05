@@ -1,0 +1,80 @@
+---
+# Strimzi Kafka Operator
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: strimzi-kafka-operator
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: streaming
+spec:
+  channel: stable
+  name: strimzi-kafka-operator
+  source: community-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+---
+# CrunchyData PostgreSQL Operator (Open Source)
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: crunchy-postgres-operator
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: storage
+spec:
+  channel: v5
+  name: crunchy-postgres-operator
+  source: certified-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+---
+# Keycloak Operator
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: keycloak-operator
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: iam
+spec:
+  channel: fast
+  name: keycloak-operator
+  source: community-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+---
+# Prometheus Operator
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: prometheus
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: monitoring
+spec:
+  channel: beta
+  name: prometheus
+  source: community-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+---
+# Grafana Operator
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: grafana-operator
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: monitoring
+spec:
+  channel: v5
+  name: grafana-operator
+  source: community-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic

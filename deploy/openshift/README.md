@@ -90,51 +90,44 @@ This architecture deploys the complete Datalyptica Data Platform on Red Hat Open
 │  │                  Worker Nodes (10+ nodes)                   │ │
 │  │                                                              │ │
 │  │  ┌──────────────────────────────────────────────────────┐  │ │
-│  │  │            Namespace: datalyptica-catalog            │  │ │
-│  │  │  • PostgreSQL Operator (3 replicas)                  │  │ │
-│  │  │  • Nessie (3 replicas)                               │  │ │
-│  │  │  • Redis Operator (3 replicas)                       │  │ │
-│  │  └──────────────────────────────────────────────────────┘  │ │
-│  │                                                              │ │
-│  │  ┌──────────────────────────────────────────────────────┐  │ │
-│  │  │           Namespace: datalyptica-streaming           │  │ │
-│  │  │  • Strimzi Kafka Operator (KRaft mode)               │  │ │
-│  │  │    - 5 Kafka brokers                                 │  │ │
-│  │  │    - 3 Schema Registry                               │  │ │
-│  │  │    - 3 Kafka Connect                                 │  │ │
-│  │  └──────────────────────────────────────────────────────┘  │ │
-│  │                                                              │ │
-│  │  ┌──────────────────────────────────────────────────────┐  │ │
-│  │  │          Namespace: datalyptica-processing           │  │ │
-│  │  │  • Spark Operator (on-demand pods)                   │  │ │
-│  │  │  • Flink Operator (JobManager + TaskManagers)        │  │ │
-│  │  └──────────────────────────────────────────────────────┘  │ │
-│  │                                                              │ │
-│  │  ┌──────────────────────────────────────────────────────┐  │ │
-│  │  │            Namespace: datalyptica-query              │  │ │
-│  │  │  • Trino (1 coordinator, N workers)                  │  │ │
-│  │  │  • ClickHouse Operator (cluster with replication)    │  │ │
-│  │  └──────────────────────────────────────────────────────┘  │ │
-│  │                                                              │ │
-│  │  ┌──────────────────────────────────────────────────────┐  │ │
-│  │  │          Namespace: datalyptica-analytics            │  │ │
-│  │  │  • Airflow (Kubernetes Executor)                     │  │ │
-│  │  │  • JupyterHub (KubeSpawner)                          │  │ │
-│  │  │  • MLflow                                            │  │ │
-│  │  │  • Superset                                          │  │ │
-│  │  └──────────────────────────────────────────────────────┘  │ │
-│  │                                                              │ │
-│  │  ┌──────────────────────────────────────────────────────┐  │ │
-│  │  │              Namespace: datalyptica-iam              │  │ │
-│  │  │  • Keycloak Operator (3 replicas)                    │  │ │
-│  │  └──────────────────────────────────────────────────────┘  │ │
-│  │                                                              │ │
-│  │  ┌──────────────────────────────────────────────────────┐  │ │
-│  │  │          Namespace: datalyptica-monitoring           │  │ │
-│  │  │  • Prometheus Operator                               │  │ │
-│  │  │  • Grafana Operator                                  │  │ │
-│  │  │  • Loki Stack                                        │  │ │
-│  │  │  • Alertmanager                                      │  │ │
+│  │  │          Single Project: datalyptica                 │  │ │
+│  │  │                                                      │  │ │
+│  │  │  Storage Layer                                       │  │ │
+│  │  │  • MinIO (S3-compatible object storage)             │  │ │
+│  │  │  • PostgreSQL Operator (3 replicas)                 │  │ │
+│  │  │  • Redis Operator (3 replicas)                      │  │ │
+│  │  │                                                      │  │ │
+│  │  │  Catalog Layer                                       │  │ │
+│  │  │  • Nessie (catalog service)                         │  │ │
+│  │  │                                                      │  │ │
+│  │  │  Streaming Layer                                     │  │ │
+│  │  │  • Strimzi Kafka Operator (KRaft mode)              │  │ │
+│  │  │    - 5 Kafka brokers                                │  │ │
+│  │  │    - 3 Schema Registry                              │  │ │
+│  │  │    - 3 Kafka Connect                                │  │ │
+│  │  │                                                      │  │ │
+│  │  │  Processing Layer                                    │  │ │
+│  │  │  • Spark Operator (on-demand pods)                  │  │ │
+│  │  │  • Flink Operator (JobManager + TaskManagers)       │  │ │
+│  │  │                                                      │  │ │
+│  │  │  Query Layer                                         │  │ │
+│  │  │  • Trino (1 coordinator, N workers)                 │  │ │
+│  │  │  • ClickHouse Operator (cluster with replication)   │  │ │
+│  │  │                                                      │  │ │
+│  │  │  Analytics Layer                                     │  │ │
+│  │  │  • Airflow (Kubernetes Executor)                    │  │ │
+│  │  │  • JupyterHub (KubeSpawner)                         │  │ │
+│  │  │  • MLflow                                           │  │ │
+│  │  │  • Superset                                         │  │ │
+│  │  │                                                      │  │ │
+│  │  │  IAM Layer                                           │  │ │
+│  │  │  • Keycloak Operator (3 replicas)                   │  │ │
+│  │  │                                                      │  │ │
+│  │  │  Monitoring Layer                                    │  │ │
+│  │  │  • Prometheus Operator                              │  │ │
+│  │  │  • Grafana Operator                                 │  │ │
+│  │  │  • Loki Stack                                       │  │ │
+│  │  │  • Alertmanager                                     │  │ │
 │  │  └──────────────────────────────────────────────────────┘  │ │
 │  └────────────────────────────────────────────────────────────┘ │
 │                                                                  │
@@ -238,64 +231,105 @@ All available from OperatorHub (versions verified from official sources):
 
 ## Namespace Design
 
-### Namespace Strategy
+### Simplified Single-Project Architecture (Recommended for Getting Started)
 
-Organize by functional tier for isolation and resource management:
+For easier deployment and management, all components can be deployed in a **single OpenShift project** with logical separation via labels and naming conventions:
 
 ```yaml
-# Namespace hierarchy
+# Single project deployment
 datalyptica/
-├── datalyptica-catalog          # Metadata & catalog
-│   ├── PostgreSQL (via operator)
-│   ├── Nessie
-│   └── Redis
-├── datalyptica-streaming        # Event streaming
-│   ├── Kafka (via Strimzi)
-│   ├── Schema Registry
-│   └── Kafka Connect
-├── datalyptica-processing       # Data processing
-│   ├── Spark jobs (via operator)
-│   └── Flink jobs (via operator)
-├── datalyptica-query            # Query engines
-│   ├── Trino
-│   └── ClickHouse (via operator)
-├── datalyptica-analytics        # Analytics & ML
-│   ├── Airflow
-│   ├── JupyterHub
-│   ├── MLflow
-│   └── Superset
-├── datalyptica-iam              # Identity & access
-│   └── Keycloak (via operator)
-├── datalyptica-monitoring       # Observability
-│   ├── Prometheus
-│   ├── Grafana
-│   ├── Loki
-│   └── Alertmanager
-└── datalyptica-system           # Platform utilities
-    ├── Operators
-    └── Shared configs
+├── All components in one namespace: datalyptica
+│   ├── Storage Layer
+│   │   ├── MinIO
+│   │   ├── PostgreSQL (via operator)
+│   │   └── Redis
+│   ├── Catalog Layer
+│   │   └── Nessie
+│   ├── Streaming Layer
+│   │   ├── Kafka (via Strimzi)
+│   │   ├── Schema Registry
+│   │   └── Kafka Connect
+│   ├── Processing Layer
+│   │   ├── Spark jobs (via operator)
+│   │   └── Flink jobs (via operator)
+│   ├── Query Layer
+│   │   ├── Trino
+│   │   └── ClickHouse (via operator)
+│   ├── Analytics Layer
+│   │   ├── Airflow
+│   │   ├── JupyterHub
+│   │   ├── MLflow
+│   │   └── Superset
+│   ├── IAM Layer
+│   │   └── Keycloak (via operator)
+│   └── Monitoring Layer
+│       ├── Prometheus
+│       ├── Grafana
+│       ├── Loki
+│       └── Alertmanager
 ```
 
-### Resource Quotas per Namespace
+**Benefits of Single-Project Deployment:**
+- ✅ Simpler RBAC and permissions management
+- ✅ Easier service-to-service communication (no cross-namespace networking)
+- ✅ Reduced operational complexity
+- ✅ Faster deployment and troubleshooting
+- ✅ Lower resource overhead (fewer namespace controllers)
+- ✅ Ideal for development, testing, and small-to-medium production workloads
+
+**Component Isolation via Labels:**
+```yaml
+# Label all resources by tier
+labels:
+  app.kubernetes.io/part-of: datalyptica
+  datalyptica.io/tier: storage|catalog|streaming|processing|query|analytics|iam|monitoring
+  datalyptica.io/component: <component-name>
+```
+
+### Multi-Project Architecture (Advanced/Enterprise)
+
+For larger deployments requiring strict isolation, resource quotas, and multi-tenancy:
 
 ```yaml
-# Example for production
-Catalog Namespace:
-  CPU: 100 cores
-  Memory: 400 GB
+# Multi-project hierarchy (optional for enterprise scale)
+datalyptica/
+├── datalyptica-storage          # Storage layer (MinIO, PostgreSQL, Redis)
+├── datalyptica-catalog          # Metadata & catalog (Nessie)
+├── datalyptica-streaming        # Event streaming (Kafka)
+├── datalyptica-processing       # Data processing (Spark, Flink)
+├── datalyptica-query            # Query engines (Trino, ClickHouse)
+├── datalyptica-analytics        # Analytics & ML (Airflow, Jupyter, MLflow, Superset)
+├── datalyptica-iam              # Identity & access (Keycloak)
+├── datalyptica-monitoring       # Observability (Prometheus, Grafana, Loki)
+└── datalyptica-operators        # Operator installations
+```
+
+### Resource Quotas
+
+```yaml
+# Single Project (Recommended Starting Point)
+datalyptica:
+  CPU: 200 cores (burstable to 500)
+  Memory: 800 GB (burstable to 2 TB)
+  Storage: 50 TB
+
+# Multi-Project (Enterprise Scale)
+Storage Project:
+  CPU: 50 cores
+  Memory: 200 GB
   Storage: 10 TB
 
-Streaming Namespace:
+Streaming Project:
   CPU: 200 cores
   Memory: 800 GB
   Storage: 20 TB
 
-Processing Namespace:
+Processing Project:
   CPU: 400 cores (burstable)
   Memory: 1.6 TB
   Storage: 10 TB
 
-Query Namespace:
+Query Project:
   CPU: 200 cores
   Memory: 800 GB
   Storage: 10 TB

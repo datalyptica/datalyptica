@@ -1,0 +1,9 @@
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: datalyptica-operators
+  namespace: datalyptica
+spec:
+  targetNamespaces:
+    - datalyptica

@@ -1,0 +1,80 @@
+---
+# Spark ImageStream
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: spark-iceberg
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+---
+# Spark BuildConfig
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: spark-iceberg
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: spark-iceberg:3.5.1
+  source:
+    type: Git
+    git:
+      uri: https://github.com/datalyptica/datalyptica.git
+      ref: main
+    contextDir: deploy/docker/spark
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  triggers:
+  - type: ConfigChange
+  - type: ImageChange
+---
+# Flink ImageStream
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: flink-connectors
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: streaming
+---
+# Flink BuildConfig
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: flink-connectors
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: streaming
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: flink-connectors:1.18.0
+  source:
+    type: Git
+    git:
+      uri: https://github.com/datalyptica/datalyptica.git
+      ref: main
+    contextDir: deploy/docker/flink
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  triggers:
+  - type: ConfigChange
+  - type: ImageChange

@@ -66,10 +66,32 @@ cd datalyptica
 
 ## Pre-Deployment Setup
 
-### 1. Create Project/Namespaces
+### 1. Create Project/Namespace
+
+#### Option A: Single Project (Recommended for Getting Started)
 
 ```bash
-# Create all required namespaces
+# Create single unified project
+oc new-project datalyptica \
+  --description="Datalyptica Data Platform - All Components" \
+  --display-name="Datalyptica"
+
+# Verify project
+oc project datalyptica
+oc status
+```
+
+**Benefits:**
+- Simpler setup and management
+- Easier service-to-service communication
+- Reduced RBAC complexity
+- Faster deployment
+- Ideal for dev/test and small-to-medium production
+
+#### Option B: Multi-Project (Advanced - Enterprise Scale)
+
+```bash
+# Create separate namespaces for isolation
 oc create namespace datalyptica-operators
 oc create namespace datalyptica-storage
 oc create namespace datalyptica-catalog
@@ -83,6 +105,14 @@ oc create namespace datalyptica-iam
 # Verify namespaces
 oc get namespaces | grep datalyptica
 ```
+
+**Use When:**
+- Strict resource isolation required
+- Multi-tenancy requirements
+- Different teams managing different layers
+- Enterprise compliance mandates
+
+**Note:** The rest of this guide uses the **single project approach**. For multi-project, replace `datalyptica` with the appropriate namespace for each component.
 
 ### 2. Configure Security Context Constraints (SCC)
 
@@ -133,9 +163,13 @@ volumes:
 - secret
 EOF
 
-# Apply SCC to service accounts (repeat for each namespace)
+# Apply SCC to the datalyptica project's default service account
 oc adm policy add-scc-to-user datalyptica-scc \
-  system:serviceaccount:datalyptica-storage:default
+  system:serviceaccount:datalyptica:default
+
+# For operators that create their own service accounts
+oc adm policy add-scc-to-group datalyptica-scc \
+  system:serviceaccounts:datalyptica
 ```
 
 ### 3. Create Storage Classes
@@ -190,19 +224,23 @@ openssl rand -base64 32 > secrets/passwords/postgres_password
 openssl rand -base64 32 > secrets/passwords/minio_root_password
 openssl rand -base64 32 > secrets/passwords/keycloak_admin_password
 
-# Create Kubernetes secrets for storage namespace
+# Create Kubernetes secrets in the datalyptica project
 oc create secret generic postgres-credentials \
   --from-file=password=secrets/passwords/postgres_password \
-  -n datalyptica-storage
+  -n datalyptica
 
 oc create secret generic minio-credentials \
   --from-file=root-password=secrets/passwords/minio_root_password \
-  -n datalyptica-storage
+  -n datalyptica
+
+oc create secret generic keycloak-credentials \
+  --from-file=admin-password=secrets/passwords/keycloak_admin_password \
+  -n datalyptica
 
 # Create secrets for IAM namespace
 oc create secret generic keycloak-credentials \
   --from-file=admin-password=secrets/passwords/keycloak_admin_password \
-  -n datalyptica-iam
+  -n datalyptica
 ```
 
 ---
@@ -212,25 +250,25 @@ oc create secret generic keycloak-credentials \
 ### 1.1 Install Strimzi Kafka Operator (v0.49.0)
 
 ```bash
-# Create OperatorGroup
+# Create OperatorGroup for single project
 cat <<EOF | oc apply -f -
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
-  name: strimzi-operator-group
-  namespace: datalyptica-operators
+  name: datalyptica-operator-group
+  namespace: datalyptica
 spec:
   targetNamespaces:
-  - datalyptica-streaming
+  - datalyptica
 EOF
 
-# Create Subscription
+# Create Subscription for Strimzi
 cat <<EOF | oc apply -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: strimzi-kafka-operator
-  namespace: datalyptica-operators
+  namespace: datalyptica
 spec:
   channel: stable
   name: strimzi-kafka-operator
@@ -242,10 +280,10 @@ EOF
 
 # Wait for operator to be ready
 oc wait --for=condition=Ready pod -l name=strimzi-cluster-operator \
-  -n datalyptica-operators --timeout=300s
+  -n datalyptica --timeout=300s
 
 # Verify installation
-oc get csv -n datalyptica-operators | grep strimzi
+oc get csv -n datalyptica | grep strimzi
 ```
 
 ### 1.2 Install Crunchy PostgreSQL Operator (v5.8.5)
@@ -268,25 +306,13 @@ spec:
       interval: 45m
 EOF
 
-# Create OperatorGroup
-cat <<EOF | oc apply -f -
-apiVersion: operators.coreos.com/v1
-kind: OperatorGroup
-metadata:
-  name: postgres-operator-group
-  namespace: datalyptica-operators
-spec:
-  targetNamespaces:
-  - datalyptica-storage
-EOF
-
-# Create Subscription
+# Create Subscription for PostgreSQL Operator
 cat <<EOF | oc apply -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: crunchy-postgres-operator
-  namespace: datalyptica-operators
+  namespace: datalyptica
 spec:
   channel: v5
   name: postgresql
@@ -298,10 +324,10 @@ EOF
 
 # Wait for operator to be ready
 oc wait --for=condition=Ready pod -l postgres-operator.crunchydata.com/control-plane=postgres-operator \
-  -n datalyptica-operators --timeout=300s
+  -n datalyptica --timeout=300s
 
 # Verify installation
-oc get csv -n datalyptica-operators | grep postgres
+oc get csv -n datalyptica | grep postgres
 ```
 
 ### 1.3 Install Flink Kubernetes Operator (v1.13.0)
@@ -311,26 +337,75 @@ oc get csv -n datalyptica-operators | grep postgres
 helm repo add flink-operator-repo https://downloads.apache.org/flink/flink-kubernetes-operator-1.13.0/
 helm repo update
 
-# Install operator using Helm
+# Install operator using Helm in the datalyptica project
 helm install flink-kubernetes-operator flink-operator-repo/flink-kubernetes-operator \
-  --namespace datalyptica-operators \
-  --set watchNamespaces={datalyptica-processing} \
+  --namespace datalyptica \
+  --set watchNamespaces={datalyptica} \
   --version 1.13.0
 
 # Wait for operator to be ready
 oc wait --for=condition=Ready pod -l app.kubernetes.io/name=flink-kubernetes-operator \
-  -n datalyptica-operators --timeout=300s
+  -n datalyptica --timeout=300s
 
 # Verify installation
-oc get pods -n datalyptica-operators | grep flink-kubernetes-operator
+oc get pods -n datalyptica | grep flink-kubernetes-operator
+```
+
+### 1.4 Install Additional Operators (Optional but Recommended)
+
+```bash
+# Install Keycloak Operator
+cat <<EOF | oc apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: keycloak-operator
+  namespace: datalyptica
+spec:
+  channel: stable
+  name: keycloak-operator
+  source: community-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+EOF
+
+# Install Prometheus Operator (if not using OpenShift monitoring)
+cat <<EOF | oc apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: prometheus-operator
+  namespace: datalyptica
+spec:
+  channel: beta
+  name: prometheus
+  source: community-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+EOF
+
+# Install Grafana Operator
+cat <<EOF | oc apply -f -
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: grafana-operator
+  namespace: datalyptica
+spec:
+  channel: v5
+  name: grafana-operator
+  source: community-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+EOF
 ```
 
 ### Verify All Operators
 
 ```bash
 # Check all operators are running
-oc get csv -n datalyptica-operators
-oc get pods -n datalyptica-operators
+oc get csv -n datalyptica
+oc get pods -n datalyptica | grep operator
 
 # Expected output: All operators in "Succeeded" phase
 ```
@@ -348,7 +423,11 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: minio-data
-  namespace: datalyptica-storage
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: storage
+    datalyptica.io/component: minio
 spec:
   accessModes:
   - ReadWriteOnce
@@ -364,7 +443,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: minio
-  namespace: datalyptica-storage
+  namespace: datalyptica
 spec:
   replicas: 1
   selector:
@@ -430,7 +509,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: minio
-  namespace: datalyptica-storage
+  namespace: datalyptica
 spec:
   type: ClusterIP
   ports:
@@ -450,7 +529,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: minio-console
-  namespace: datalyptica-storage
+  namespace: datalyptica
 spec:
   to:
     kind: Service
@@ -464,10 +543,10 @@ EOF
 
 # Wait for MinIO to be ready
 oc wait --for=condition=Ready pod -l app=minio \
-  -n datalyptica-storage --timeout=300s
+  -n datalyptica --timeout=300s
 
 # Get MinIO console URL
-oc get route minio-console -n datalyptica-storage -o jsonpath='{.spec.host}'
+oc get route minio-console -n datalyptica -o jsonpath='{.spec.host}'
 ```
 
 ### 2.2 Deploy PostgreSQL (via Crunchy Operator)
@@ -479,7 +558,7 @@ apiVersion: postgres-operator.crunchydata.com/v1beta1
 kind: PostgresCluster
 metadata:
   name: datalyptica-postgres
-  namespace: datalyptica-storage
+  namespace: datalyptica
 spec:
   postgresVersion: 16
   image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres:ubi8-16.6-0
@@ -542,11 +621,11 @@ EOF
 
 # Wait for PostgreSQL cluster to be ready
 oc wait --for=condition=Ready postgrescluster/datalyptica-postgres \
-  -n datalyptica-storage --timeout=600s
+  -n datalyptica --timeout=600s
 
 # Get PostgreSQL connection info
 oc get secret datalyptica-postgres-pguser-datalyptica-postgres \
-  -n datalyptica-storage -o jsonpath='{.data.uri}' | base64 -d
+  -n datalyptica -o jsonpath='{.data.uri}' | base64 -d
 ```
 
 ---
@@ -562,7 +641,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: redis-config
-  namespace: datalyptica-catalog
+  namespace: datalyptica
 data:
   redis.conf: |
     maxmemory 2gb
@@ -580,7 +659,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: redis-data
-  namespace: datalyptica-catalog
+  namespace: datalyptica
 spec:
   accessModes:
   - ReadWriteOnce
@@ -596,7 +675,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis
-  namespace: datalyptica-catalog
+  namespace: datalyptica
 spec:
   serviceName: redis
   replicas: 1
@@ -656,7 +735,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis
-  namespace: datalyptica-catalog
+  namespace: datalyptica
 spec:
   type: ClusterIP
   ports:
@@ -669,7 +748,7 @@ EOF
 
 # Wait for Redis to be ready
 oc wait --for=condition=Ready pod -l app=redis \
-  -n datalyptica-catalog --timeout=300s
+  -n datalyptica --timeout=300s
 ```
 
 ### 3.2 Deploy Nessie (v0.105.7)
@@ -681,7 +760,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nessie
-  namespace: datalyptica-catalog
+  namespace: datalyptica
 spec:
   replicas: 2
   selector:
@@ -737,7 +816,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: nessie
-  namespace: datalyptica-catalog
+  namespace: datalyptica
 spec:
   type: ClusterIP
   ports:
@@ -750,7 +829,7 @@ EOF
 
 # Wait for Nessie to be ready
 oc wait --for=condition=Ready pod -l app=nessie \
-  -n datalyptica-catalog --timeout=300s
+  -n datalyptica --timeout=300s
 ```
 
 ---
@@ -766,7 +845,7 @@ apiVersion: kafka.strimzi.io/v1
 kind: Kafka
 metadata:
   name: datalyptica-kafka
-  namespace: datalyptica-streaming
+  namespace: datalyptica
 spec:
   kafka:
     version: 4.1.1
@@ -837,11 +916,11 @@ EOF
 
 # Wait for Kafka cluster to be ready (this may take 5-10 minutes)
 oc wait kafka/datalyptica-kafka --for=condition=Ready \
-  -n datalyptica-streaming --timeout=900s
+  -n datalyptica --timeout=900s
 
 # Verify Kafka cluster
-oc get kafka -n datalyptica-streaming
-oc get pods -n datalyptica-streaming | grep kafka
+oc get kafka -n datalyptica
+oc get pods -n datalyptica | grep kafka
 ```
 
 ### 4.2 Deploy Trino (v478)
@@ -853,7 +932,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: trino-config
-  namespace: datalyptica-query
+  namespace: datalyptica
 data:
   config.properties: |
     coordinator=true
@@ -880,7 +959,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: trino
-  namespace: datalyptica-query
+  namespace: datalyptica
 spec:
   replicas: 3
   selector:
@@ -931,7 +1010,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: trino
-  namespace: datalyptica-query
+  namespace: datalyptica
 spec:
   type: ClusterIP
   ports:
@@ -944,7 +1023,7 @@ EOF
 
 # Wait for Trino to be ready
 oc wait --for=condition=Ready pod -l app=trino \
-  -n datalyptica-query --timeout=300s
+  -n datalyptica --timeout=300s
 ```
 
 ### 4.3 Deploy Spark (v4.0.1)
@@ -956,7 +1035,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: spark-master
-  namespace: datalyptica-processing
+  namespace: datalyptica
 spec:
   replicas: 1
   selector:
@@ -997,7 +1076,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: spark-worker
-  namespace: datalyptica-processing
+  namespace: datalyptica
 spec:
   replicas: 3
   selector:
@@ -1042,7 +1121,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: spark-master
-  namespace: datalyptica-processing
+  namespace: datalyptica
 spec:
   type: ClusterIP
   ports:
@@ -1058,7 +1137,7 @@ EOF
 
 # Wait for Spark to be ready
 oc wait --for=condition=Ready pod -l app=spark-master \
-  -n datalyptica-processing --timeout=300s
+  -n datalyptica --timeout=300s
 ```
 
 ---
@@ -1069,7 +1148,7 @@ oc wait --for=condition=Ready pod -l app=spark-master \
 
 ```bash
 # Create Airflow Database in PostgreSQL
-oc exec -it datalyptica-postgres-instance1-xxxx -n datalyptica-storage -- \
+oc exec -it datalyptica-postgres-instance1-xxxx -n datalyptica -- \
   psql -U postgres -c "CREATE DATABASE airflow;"
 
 # Create Airflow ConfigMap
@@ -1078,11 +1157,11 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: airflow-config
-  namespace: datalyptica-analytics
+  namespace: datalyptica
 data:
   AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:password@datalyptica-postgres-primary.datalyptica-storage.svc:5432/airflow
   AIRFLOW__CORE__EXECUTOR: KubernetesExecutor
-  AIRFLOW__KUBERNETES__NAMESPACE: datalyptica-analytics
+  AIRFLOW__KUBERNETES__namespace: datalyptica
   AIRFLOW__WEBSERVER__BASE_URL: http://airflow:8080
 EOF
 
@@ -1092,7 +1171,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: airflow-webserver
-  namespace: datalyptica-analytics
+  namespace: datalyptica
 spec:
   replicas: 2
   selector:
@@ -1141,7 +1220,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: airflow-scheduler
-  namespace: datalyptica-analytics
+  namespace: datalyptica
 spec:
   replicas: 1
   selector:
@@ -1174,7 +1253,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: airflow
-  namespace: datalyptica-analytics
+  namespace: datalyptica
 spec:
   type: ClusterIP
   ports:
@@ -1191,7 +1270,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: airflow
-  namespace: datalyptica-analytics
+  namespace: datalyptica
 spec:
   to:
     kind: Service
@@ -1203,7 +1282,7 @@ spec:
 EOF
 
 # Get Airflow URL
-oc get route airflow -n datalyptica-analytics -o jsonpath='{.spec.host}'
+oc get route airflow -n datalyptica -o jsonpath='{.spec.host}'
 ```
 
 ### 5.2 Deploy MLflow (v3.6.0)
@@ -1215,7 +1294,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mlflow
-  namespace: datalyptica-analytics
+  namespace: datalyptica
 spec:
   replicas: 2
   selector:
@@ -1264,7 +1343,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mlflow
-  namespace: datalyptica-analytics
+  namespace: datalyptica
 spec:
   type: ClusterIP
   ports:
@@ -1277,7 +1356,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: mlflow
-  namespace: datalyptica-analytics
+  namespace: datalyptica
 spec:
   to:
     kind: Service
@@ -1300,7 +1379,7 @@ EOF
 oc create configmap prometheus-config \
   --from-file=prometheus.yml=configs/prometheus/prometheus.yml \
   --from-file=alerts.yml=configs/prometheus/alerts.yml \
-  -n datalyptica-monitoring
+  -n datalyptica
 
 # Create Prometheus PVC
 cat <<EOF | oc apply -f -
@@ -1308,7 +1387,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: prometheus-data
-  namespace: datalyptica-monitoring
+  namespace: datalyptica
 spec:
   accessModes:
   - ReadWriteOnce
@@ -1324,7 +1403,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: prometheus
-  namespace: datalyptica-monitoring
+  namespace: datalyptica
 spec:
   replicas: 1
   selector:
@@ -1373,7 +1452,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: prometheus
-  namespace: datalyptica-monitoring
+  namespace: datalyptica
 spec:
   type: ClusterIP
   ports:
@@ -1386,7 +1465,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: prometheus
-  namespace: datalyptica-monitoring
+  namespace: datalyptica
 spec:
   to:
     kind: Service
@@ -1405,7 +1484,7 @@ EOF
 oc create configmap grafana-datasources \
   --from-file=prometheus.yml=configs/grafana/provisioning/datasources/prometheus.yml \
   --from-file=loki.yml=configs/grafana/provisioning/datasources/loki.yml \
-  -n datalyptica-monitoring
+  -n datalyptica
 
 # Create Grafana PVC
 cat <<EOF | oc apply -f -
@@ -1413,7 +1492,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: grafana-data
-  namespace: datalyptica-monitoring
+  namespace: datalyptica
 spec:
   accessModes:
   - ReadWriteOnce
@@ -1429,7 +1508,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: grafana
-  namespace: datalyptica-monitoring
+  namespace: datalyptica
 spec:
   replicas: 1
   selector:
@@ -1481,7 +1560,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: grafana
-  namespace: datalyptica-monitoring
+  namespace: datalyptica
 spec:
   type: ClusterIP
   ports:
@@ -1494,7 +1573,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: grafana
-  namespace: datalyptica-monitoring
+  namespace: datalyptica
 spec:
   to:
     kind: Service
@@ -1514,7 +1593,7 @@ EOF
 
 ```bash
 # Create Keycloak Database
-oc exec -it datalyptica-postgres-instance1-xxxx -n datalyptica-storage -- \
+oc exec -it datalyptica-postgres-instance1-xxxx -n datalyptica -- \
   psql -U postgres -c "CREATE DATABASE keycloak;"
 
 # Create Keycloak Deployment
@@ -1523,7 +1602,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keycloak
-  namespace: datalyptica-iam
+  namespace: datalyptica
 spec:
   replicas: 2
   selector:
@@ -1591,7 +1670,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: keycloak
-  namespace: datalyptica-iam
+  namespace: datalyptica
 spec:
   type: ClusterIP
   ports:
@@ -1604,7 +1683,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: keycloak
-  namespace: datalyptica-iam
+  namespace: datalyptica
 spec:
   to:
     kind: Service
@@ -1616,7 +1695,7 @@ spec:
 EOF
 
 # Get Keycloak URL
-oc get route keycloak -n datalyptica-iam -o jsonpath='{.spec.host}'
+oc get route keycloak -n datalyptica -o jsonpath='{.spec.host}'
 ```
 
 ---
@@ -1627,31 +1706,31 @@ oc get route keycloak -n datalyptica-iam -o jsonpath='{.spec.host}'
 
 ```bash
 # Check operators
-oc get pods -n datalyptica-operators
+oc get pods -n datalyptica
 
 # Check storage
-oc get pods -n datalyptica-storage
+oc get pods -n datalyptica
 
 # Check catalog
-oc get pods -n datalyptica-catalog
+oc get pods -n datalyptica
 
 # Check streaming
-oc get pods -n datalyptica-streaming
+oc get pods -n datalyptica
 
 # Check processing
-oc get pods -n datalyptica-processing
+oc get pods -n datalyptica
 
 # Check query
-oc get pods -n datalyptica-query
+oc get pods -n datalyptica
 
 # Check analytics
-oc get pods -n datalyptica-analytics
+oc get pods -n datalyptica
 
 # Check monitoring
-oc get pods -n datalyptica-monitoring
+oc get pods -n datalyptica
 
 # Check IAM
-oc get pods -n datalyptica-iam
+oc get pods -n datalyptica
 
 # Get all routes
 oc get routes --all-namespaces | grep datalyptica
@@ -1661,18 +1740,18 @@ oc get routes --all-namespaces | grep datalyptica
 
 ```bash
 # Test MinIO
-oc exec -it deployment/minio -n datalyptica-storage -- \
+oc exec -it deployment/minio -n datalyptica -- \
   mc alias set local http://localhost:9000 admin PASSWORD
 
 # Test PostgreSQL
-oc exec -it datalyptica-postgres-instance1-xxxx -n datalyptica-storage -- \
+oc exec -it datalyptica-postgres-instance1-xxxx -n datalyptica -- \
   psql -U postgres -c "SELECT version();"
 
 # Test Redis
-oc exec -it redis-0 -n datalyptica-catalog -- redis-cli ping
+oc exec -it redis-0 -n datalyptica -- redis-cli ping
 
 # Test Kafka
-oc exec -it datalyptica-kafka-kafka-0 -n datalyptica-streaming -- \
+oc exec -it datalyptica-kafka-kafka-0 -n datalyptica -- \
   /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
 ```
 
@@ -1769,3 +1848,4 @@ All services should now be running on OpenShift. Use the routes to access the we
 - Airflow Web UI
 - MLflow UI
 - Keycloak Admin Console
+
