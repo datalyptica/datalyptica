@@ -12,8 +12,7 @@ metadata:
     datalyptica.io/component: flink
 data:
   flink-conf.yaml: |
-    # JobManager Configuration
-    jobmanager.rpc.address: flink-jobmanager
+    # JobManager Configuration (no fixed RPC address in HA mode)
     jobmanager.rpc.port: 6123
     jobmanager.memory.process.size: 2048m
     jobmanager.memory.jvm-overhead.max: 512m
