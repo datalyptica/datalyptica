@@ -13,7 +13,7 @@ metadata:
 data:
   spark-defaults.conf: |
     # Spark Core Configuration
-    spark.master                     spark://spark-master.datalyptica.svc.cluster.local:7077
+    spark.master                     spark://spark-svc.datalyptica.svc.cluster.local:7077
     spark.driver.memory              2g
     spark.driver.maxResultSize       1g
     spark.executor.memory            2g
@@ -82,11 +82,35 @@ spec:
         datalyptica.io/tier: processing
         app.kubernetes.io/component: master
     spec:
+      initContainers:
+      - name: download-jars
+        image: apache/spark:3.5.1-scala2.12-java17-python3-ubuntu
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /jars
+          cd /jars
+          wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.9.1/iceberg-spark-runtime-3.5_2.12-1.9.1.jar
+          wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-nessie/1.9.1/iceberg-nessie-1.9.1.jar
+          wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar
+          wget https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar
+          ls -lh /jars
+        volumeMounts:
+        - name: iceberg-jars
+          mountPath: /jars
       containers:
       - name: spark-master
-        image: spark:3.5.1-iceberg-1.9.1
+        image: apache/spark:3.5.1-scala2.12-java17-python3-ubuntu
         command: ["/opt/spark/bin/spark-class"]
-        args: ["org.apache.spark.deploy.master.Master"]
+        args: 
+        - "org.apache.spark.deploy.master.Master"
+        - "--host"
+        - "0.0.0.0"
+        - "--port"
+        - "7077"
+        - "--webui-port"
+        - "8080"
         ports:
         - containerPort: 7077
           name: spark
@@ -95,10 +119,6 @@ spec:
           name: webui
           protocol: TCP
         env:
-        - name: SPARK_MODE
-          value: "master"
-        - name: SPARK_MASTER_HOST
-          value: "spark-master"
         - name: S3_ACCESS_KEY
           valueFrom:
             secretKeyRef:
@@ -109,30 +129,12 @@ spec:
             secretKeyRef:
               name: minio-credentials
               key: root-password
-        - name: SPARK_CONF_spark_hadoop_fs_s3a_access_key
-          valueFrom:
-            secretKeyRef:
-              name: minio-credentials
-              key: root-user
-        - name: SPARK_CONF_spark_hadoop_fs_s3a_secret_key
-          valueFrom:
-            secretKeyRef:
-              name: minio-credentials
-              key: root-password
-        - name: SPARK_CONF_spark_sql_catalog_iceberg_s3_access__key__id
-          valueFrom:
-            secretKeyRef:
-              name: minio-credentials
-              key: root-user
-        - name: SPARK_CONF_spark_sql_catalog_iceberg_s3_secret__access__key
-          valueFrom:
-            secretKeyRef:
-              name: minio-credentials
-              key: root-password
         volumeMounts:
         - name: spark-config
           mountPath: /opt/spark/conf/spark-defaults.conf
           subPath: spark-defaults.conf
+        - name: iceberg-jars
+          mountPath: /opt/spark/jars/iceberg
         livenessProbe:
           httpGet:
             path: /
@@ -160,6 +162,8 @@ spec:
       - name: spark-config
         configMap:
           name: spark-config
+      - name: iceberg-jars
+        emptyDir: {}
 ---
 # Spark Worker Deployment
 apiVersion: apps/v1
@@ -186,26 +190,37 @@ spec:
         datalyptica.io/tier: processing
         app.kubernetes.io/component: worker
     spec:
+      initContainers:
+      - name: download-jars
+        image: apache/spark:3.5.1-scala2.12-java17-python3-ubuntu
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /jars
+          cd /jars
+          wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.9.1/iceberg-spark-runtime-3.5_2.12-1.9.1.jar
+          wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-nessie/1.9.1/iceberg-nessie-1.9.1.jar
+          wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar
+          wget https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar
+          ls -lh /jars
+        volumeMounts:
+        - name: iceberg-jars
+          mountPath: /jars
       containers:
       - name: spark-worker
-        image: spark:3.5.1-iceberg-1.9.1
+        image: apache/spark:3.5.1-scala2.12-java17-python3-ubuntu
         command: ["/opt/spark/bin/spark-class"]
         args: 
         - "org.apache.spark.deploy.worker.Worker"
-        - "spark://spark-master.datalyptica.svc.cluster.local:7077"
+        - "spark://spark-svc.datalyptica.svc.cluster.local:7077"
+        - "--work-dir"
+        - "/tmp/spark-work"
         ports:
         - containerPort: 8081
           name: webui
           protocol: TCP
         env:
-        - name: SPARK_MODE
-          value: "worker"
-        - name: SPARK_MASTER_URL
-          value: "spark://spark-master.datalyptica.svc.cluster.local:7077"
-        - name: SPARK_WORKER_CORES
-          value: "2"
-        - name: SPARK_WORKER_MEMORY
-          value: "2g"
         - name: S3_ACCESS_KEY
           valueFrom:
             secretKeyRef:
@@ -216,20 +231,14 @@ spec:
             secretKeyRef:
               name: minio-credentials
               key: root-password
-        - name: SPARK_CONF_spark_hadoop_fs_s3a_access_key
-          valueFrom:
-            secretKeyRef:
-              name: minio-credentials
-              key: root-user
-        - name: SPARK_CONF_spark_hadoop_fs_s3a_secret_key
-          valueFrom:
-            secretKeyRef:
-              name: minio-credentials
-              key: root-password
         volumeMounts:
         - name: spark-config
           mountPath: /opt/spark/conf/spark-defaults.conf
           subPath: spark-defaults.conf
+        - name: iceberg-jars
+          mountPath: /opt/spark/jars/iceberg
+        - name: spark-work
+          mountPath: /tmp/spark-work
         livenessProbe:
           httpGet:
             path: /
@@ -257,12 +266,16 @@ spec:
       - name: spark-config
         configMap:
           name: spark-config
+      - name: iceberg-jars
+        emptyDir: {}
+      - name: spark-work
+        emptyDir: {}
 ---
 # Spark Master Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: spark-master
+  name: spark-svc
   namespace: datalyptica
   labels:
     app.kubernetes.io/name: spark
@@ -298,7 +311,7 @@ metadata:
 spec:
   to:
     kind: Service
-    name: spark-master
+    name: spark-svc
   port:
     targetPort: webui
   tls:

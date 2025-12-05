@@ -23,10 +23,6 @@ data:
     taskmanager.memory.managed.fraction: 0.4
     taskmanager.numberOfTaskSlots: 4
     
-    # High Availability Configuration
-    high-availability.type: kubernetes
-    high-availability.storageDir: s3://lakehouse/flink-ha
-    
     # State Backend Configuration (Iceberg)
     state.backend: rocksdb
     state.checkpoints.dir: s3://lakehouse/flink-checkpoints
@@ -150,9 +146,24 @@ spec:
         app.kubernetes.io/component: jobmanager
     spec:
       serviceAccountName: flink
+      initContainers:
+      - name: download-connectors
+        image: flink:1.18.0-scala_2.12-java11
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /connectors
+          cd /connectors
+          curl -L -o flink-sql-connector-kafka.jar https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-kafka/1.18.0/flink-sql-connector-kafka-1.18.0.jar
+          curl -L -o iceberg-flink-runtime.jar https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-flink-runtime-1.18/1.4.3/iceberg-flink-runtime-1.18-1.4.3.jar
+          ls -lh /connectors
+        volumeMounts:
+        - name: flink-connectors
+          mountPath: /connectors
       containers:
       - name: jobmanager
-        image: flink:1.18.0-iceberg-1.4.3
+        image: flink:1.18.0-scala_2.12-java11
         args: ["jobmanager"]
         ports:
         - containerPort: 6123
@@ -201,6 +212,8 @@ spec:
         - name: flink-sql-config
           mountPath: /opt/flink/conf/sql-client-defaults.yaml
           subPath: sql-client-defaults.yaml
+        - name: flink-connectors
+          mountPath: /opt/flink/lib/connectors
         livenessProbe:
           httpGet:
             path: /overview
@@ -231,6 +244,8 @@ spec:
       - name: flink-sql-config
         configMap:
           name: flink-sql-config
+      - name: flink-connectors
+        emptyDir: {}
 ---
 # Flink TaskManager Deployment
 apiVersion: apps/v1
@@ -258,9 +273,24 @@ spec:
         app.kubernetes.io/component: taskmanager
     spec:
       serviceAccountName: flink
+      initContainers:
+      - name: download-connectors
+        image: flink:1.18.0-scala_2.12-java11
+        command:
+        - sh
+        - -c
+        - |
+          mkdir -p /connectors
+          cd /connectors
+          curl -L -o flink-sql-connector-kafka.jar https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-kafka/1.18.0/flink-sql-connector-kafka-1.18.0.jar
+          curl -L -o iceberg-flink-runtime.jar https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-flink-runtime-1.18/1.4.3/iceberg-flink-runtime-1.18-1.4.3.jar
+          ls -lh /connectors
+        volumeMounts:
+        - name: flink-connectors
+          mountPath: /connectors
       containers:
       - name: taskmanager
-        image: flink:1.18.0-iceberg-1.4.3
+        image: flink:1.18.0-scala_2.12-java11
         args: ["taskmanager"]
         ports:
         - containerPort: 6122
@@ -304,20 +334,28 @@ spec:
         - name: flink-sql-config
           mountPath: /opt/flink/conf/sql-client-defaults.yaml
           subPath: sql-client-defaults.yaml
+        - name: flink-connectors
+          mountPath: /opt/flink/lib/connectors
         livenessProbe:
-          tcpSocket:
-            port: 6122
+          exec:
+            command:
+            - sh
+            - -c
+            - "ps aux | grep -v grep | grep taskmanager"
           initialDelaySeconds: 30
-          periodSeconds: 10
+          periodSeconds: 30
           timeoutSeconds: 5
-          failureThreshold: 3
+          failureThreshold: 5
         readinessProbe:
-          tcpSocket:
-            port: 6122
-          initialDelaySeconds: 10
-          periodSeconds: 5
+          exec:
+            command:
+            - sh
+            - -c
+            - "ps aux | grep -v grep | grep taskmanager"
+          initialDelaySeconds: 20
+          periodSeconds: 10
           timeoutSeconds: 3
-          failureThreshold: 3
+          failureThreshold: 5
         resources:
           requests:
             memory: "2Gi"
@@ -332,6 +370,8 @@ spec:
       - name: flink-sql-config
         configMap:
           name: flink-sql-config
+      - name: flink-connectors
+        emptyDir: {}
 ---
 # Flink ServiceAccount
 apiVersion: v1
