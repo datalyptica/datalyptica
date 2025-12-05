@@ -42,36 +42,40 @@
 
 ### Step-by-Step Deployment Guides (Layer-by-Layer)
 
-4. **[DEPLOYMENT-01-PREREQUISITES.md](./DEPLOYMENT-01-PREREQUISITES.md)**
+**Location**: [`deploy/openshift/docs/`](../deploy/openshift/docs/)
+
+4. **[DEPLOYMENT-01-PREREQUISITES.md](../deploy/openshift/docs/DEPLOYMENT-01-PREREQUISITES.md)**
    - OpenShift cluster requirements
    - Storage class configuration
    - Network policies and security
    - Namespace and RBAC setup
 
-5. **[DEPLOYMENT-02-OPERATORS.md](./DEPLOYMENT-02-OPERATORS.md)**
+5. **[DEPLOYMENT-02-OPERATORS.md](../deploy/openshift/docs/DEPLOYMENT-02-OPERATORS.md)**
    - Strimzi Kafka Operator
    - Crunchy PostgreSQL Operator
    - Spark & Flink Operators
    - OperatorHub installation
 
-6. **[DEPLOYMENT-03-STORAGE.md](./DEPLOYMENT-03-STORAGE.md)**
+6. **[DEPLOYMENT-03-STORAGE.md](../deploy/openshift/docs/DEPLOYMENT-03-STORAGE.md)**
    - MinIO object storage (4 replicas, 800Gi)
    - PostgreSQL databases (3 replicas, 600Gi)
    - Redis cache (3+3 replicas, 150Gi)
    - All with HA configuration
 
-7. **[DEPLOYMENT-04-CATALOG.md](./DEPLOYMENT-04-CATALOG.md)**
+7. **[DEPLOYMENT-04-CATALOG.md](../deploy/openshift/docs/DEPLOYMENT-04-CATALOG.md)**
    - Nessie catalog server (3 replicas)
    - Git-like data versioning
    - Iceberg table catalog
    - Time-travel queries
 
-8. **[DEPLOYMENT-05-PROCESSING.md](./DEPLOYMENT-05-PROCESSING.md)** ✨ **NEW**
+8. **[DEPLOYMENT-05-PROCESSING.md](../deploy/openshift/docs/DEPLOYMENT-05-PROCESSING.md)** ✨ **NEW**
    - **Spark 3.5.7** with Iceberg 1.8.0 (1 master + 5 workers)
    - **Flink 2.1.0** with Kubernetes HA (2 JobManagers + 5 TaskManagers)
    - Custom image builds with pre-baked JARs
    - Pod anti-affinity and PodDisruptionBudgets
    - RTO < 15s, RPO = 30s
+
+**Master Guide**: [deploy/openshift/docs/README.md](../deploy/openshift/docs/README.md) - Start here for complete deployment workflow
 
 ### Total Documentation: 70,000+ words | ~140 pages
 

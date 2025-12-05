@@ -16,10 +16,10 @@
 3. **MLflow** 2.19.0 → 3.6.0 (MAJOR 2.x → 3.x)
 4. **Kafka** 3.9.0 → 4.1.1 (MAJOR 3.x → 4.x)
 5. **Airflow** 2.10.4 → 3.1.3 (MAJOR 2.x → 3.x)
-6. **Flink** 1.20.0 → 2.1.1 (MAJOR 1.x → 2.x)
+6. **Flink** 1.18.0 → 2.1.0 (MAJOR 1.x → 2.x) - Deployed with Kubernetes HA
 7. **ClickHouse** 24.12.2.59 → 25.11.2.24 (MAJOR 24.x → 25.x)
 8. **Strimzi** 0.43+ → 0.49.0 (v1 API required)
-9. **Iceberg** 1.7.1 → 1.10.0 (now supports Spark 4.0 + Flink 2.0)
+9. **Iceberg** 1.4.3 → 1.8.0 (certified for Spark 3.5.x + Flink 2.1.x)
 
 **Security Updates:**
 
@@ -48,7 +48,7 @@
 | **Crunchy PostgreSQL Operator** | **5.8.5**     | registry.crunchydata.com/crunchydata/postgres-operator:ubi8-5.8.5-0 | Last week    | PostgreSQL HA with streaming replication    |
 | **ClickHouse Operator**         | **25.11+** ⚠️ | altinity/clickhouse-operator:latest                                 | Dec 2, 2025  | ClickHouse cluster management               |
 | **Spark Operator**              | **2.0+**      | spark-operator/spark-operator:v2.0.1                                | Latest       | Spark on Kubernetes                         |
-| **Flink Kubernetes Operator**   | **1.13.0**    | apache/flink-kubernetes-operator:1.13.0                             | Sep 29, 2025 | Flink application lifecycle                 |
+| **Flink Kubernetes Operator**   | **1.13.0**    | apache/flink-kubernetes-operator:1.13.0                             | Sep 29, 2025 | Flink application lifecycle (HA enabled)    |
 | **Keycloak Operator**           | **26.4.7** 🔒 | quay.io/keycloak/keycloak-operator:26.4.7                           | Dec 1, 2025  | Identity and access management              |
 | **Redis Operator**              | **8.4+** ⚠️   | quay.io/spotahome/redis-operator:latest                             | Nov 2025     | Redis cluster management                    |
 | **Prometheus Operator**         | **3.8.0**     | quay.io/prometheus-operator/prometheus-operator:v3.8.0              | Nov 28, 2025 | Monitoring (built-in to OpenShift)          |
@@ -82,9 +82,9 @@
 
 | Component          | Version ✅                | Image                                    | Release Date | Notes                                                                    |
 | ------------------ | ------------------------- | ---------------------------------------- | ------------ | ------------------------------------------------------------------------ |
-| **Apache Spark**   | **4.0.1** ⚠️ or **3.5.7** | apache/spark:4.0.1 or apache/spark:3.5.7 | Latest       | **4.0.1**: Scala 2.13 only (BREAKING); **3.5.7**: Scala 2.12/2.13 compat |
-| **Apache Iceberg** | **1.10.0** 🎉             | (bundled with Spark)                     | Sep 11, 2025 | **Supports Spark 4.0 + Flink 2.0!** Variant types, encryption            |
-| **Apache Flink**   | **2.1.1** ⚠️              | apache/flink:2.1.1                       | Nov 10, 2025 | **MAJOR 1→2**: Requires compatibility investigation                      |
+| **Apache Spark**   | **3.5.7** ✅              | apache/spark:3.5.7-scala2.12-java17      | Latest       | Deployed with HA (1 master + 5 workers), Scala 2.12/2.13 compatible      |
+| **Apache Iceberg** | **1.8.0** ✅              | (bundled with Spark/Flink)               | Latest       | Certified with Spark 3.5.x + Flink 2.1.x, Nessie catalog support         |
+| **Apache Flink**   | **2.1.0** ✅              | apache/flink:2.1.0-scala_2.12-java17     | Latest       | Deployed with Kubernetes HA (2 JobManagers + 5 TaskManagers)             |
 
 ### Query Engines
 
