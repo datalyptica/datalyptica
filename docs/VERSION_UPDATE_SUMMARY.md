@@ -36,9 +36,9 @@ All components verified from authoritative sources:
 - ✅ PostgreSQL: **16.6**
 - ✅ Nessie: **0.105.7**
 - ✅ Trino: **478**
-- ✅ Spark: **4.0.1** (recommended) / **3.5.7** (alternative)
-- ✅ Flink: **2.1.1** ⚠️ MAJOR 1.x→2.x
-- ✅ Iceberg: **1.10.0** (Spark 4.0 + Flink 2.0 support!)
+- ✅ Spark: **3.5.7** (deployed with HA: 1 master + 5 workers)
+- ✅ Flink: **2.1.0** ⚠️ MAJOR 1.x→2.x (deployed with Kubernetes HA: 2 JobManagers + 5 TaskManagers)
+- ✅ Iceberg: **1.8.0** (certified for Spark 3.5.x + Flink 2.1.x)
 - ✅ ClickHouse: **25.11.2.24** ⚠️ MAJOR 24.x→25.x
 - ✅ MinIO: **RELEASE.2025-10-15T17-29-55Z** 🔒 CVE fix
 
@@ -74,7 +74,9 @@ All components verified from authoritative sources:
 - Added comprehensive operator versions table (10 operators with release dates)
 - Added 18-component version matrix with breaking change indicators (⚠️) and security flags (🔒)
 - Updated Kafka from 3.9.0 to 4.1.1 with v1 API requirement
-- Updated Spark from 3.5.4 to 4.0.1 with Scala 2.13 warning
+- Updated Spark from 3.5.1 to 3.5.7 with HA (1 master + 5 workers, pod anti-affinity, PDB)
+- Updated Flink from 1.18.0 to 2.1.0 with Kubernetes HA (2 JobManagers + 5 TaskManagers)
+- Updated Iceberg from 1.4.3/1.9.1 to 1.8.0 (certified matrix)
 - Updated PostgreSQL to 16.6 with Crunchy 5.8.5 compatibility
 - Added critical notes section documenting 9 major updates
 

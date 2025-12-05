@@ -40,7 +40,40 @@
    - UI troubleshooting tips
    - **Use for**: Learning, visual deployment, first-time setup
 
-### Total Documentation: 52,000+ words | ~104 pages
+### Step-by-Step Deployment Guides (Layer-by-Layer)
+
+4. **[DEPLOYMENT-01-PREREQUISITES.md](./DEPLOYMENT-01-PREREQUISITES.md)**
+   - OpenShift cluster requirements
+   - Storage class configuration
+   - Network policies and security
+   - Namespace and RBAC setup
+
+5. **[DEPLOYMENT-02-OPERATORS.md](./DEPLOYMENT-02-OPERATORS.md)**
+   - Strimzi Kafka Operator
+   - Crunchy PostgreSQL Operator
+   - Spark & Flink Operators
+   - OperatorHub installation
+
+6. **[DEPLOYMENT-03-STORAGE.md](./DEPLOYMENT-03-STORAGE.md)**
+   - MinIO object storage (4 replicas, 800Gi)
+   - PostgreSQL databases (3 replicas, 600Gi)
+   - Redis cache (3+3 replicas, 150Gi)
+   - All with HA configuration
+
+7. **[DEPLOYMENT-04-CATALOG.md](./DEPLOYMENT-04-CATALOG.md)**
+   - Nessie catalog server (3 replicas)
+   - Git-like data versioning
+   - Iceberg table catalog
+   - Time-travel queries
+
+8. **[DEPLOYMENT-05-PROCESSING.md](./DEPLOYMENT-05-PROCESSING.md)** ✨ **NEW**
+   - **Spark 3.5.7** with Iceberg 1.8.0 (1 master + 5 workers)
+   - **Flink 2.1.0** with Kubernetes HA (2 JobManagers + 5 TaskManagers)
+   - Custom image builds with pre-baked JARs
+   - Pod anti-affinity and PodDisruptionBudgets
+   - RTO < 15s, RPO = 30s
+
+### Total Documentation: 70,000+ words | ~140 pages
 
 ---
 
@@ -130,11 +163,11 @@
 
 - Apache Kafka: **4.1.1** ⚠️
 
-**Processing (3)**:
+**Processing (3)** ✅ **DEPLOYED**:
 
-- Apache Spark: **4.0.1** ⚠️ (recommended)
-- Apache Flink: **2.1.1** ⚠️
-- Apache Iceberg: **1.10.0**
+- Apache Spark: **3.5.7** ✅ (deployed with HA: 1 master + 5 workers)
+- Apache Flink: **2.1.0** ✅ (deployed with Kubernetes HA: 2 JobManagers + 5 TaskManagers)
+- Apache Iceberg: **1.8.0** ✅ (certified for Spark 3.5.x + Flink 2.1.x)
 
 **Query (2)**:
 

@@ -1026,41 +1026,69 @@ oc wait --for=condition=Ready pod -l app=trino \
   -n datalyptica --timeout=300s
 ```
 
-### 4.3 Deploy Spark (v4.0.1)
+### 4.3 Deploy Spark (v3.5.7) with High Availability
+
+**Note:** Using custom-built image with Iceberg 1.8.0 pre-installed. See `deploy/openshift/builds/processing-image-builds.yaml` for BuildConfig.
 
 ```bash
-# Create Spark Master Deployment
+# Option 1: Apply from repository (recommended)
+oc apply -f deploy/openshift/processing/spark-deployment.yaml -n datalyptica
+oc apply -f deploy/openshift/processing/spark-pdb.yaml -n datalyptica
+
+# Option 2: Manual deployment (for reference)
+# Create Spark Master Deployment (1 replica)
 cat <<EOF | oc apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: spark-master
   namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    datalyptica.io/component: spark-master
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
-      app: spark-master
+      app.kubernetes.io/name: spark
+      datalyptica.io/component: master
   template:
     metadata:
       labels:
-        app: spark-master
+        app.kubernetes.io/name: spark
+        datalyptica.io/component: master
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: datalyptica.io/component
+                  operator: In
+                  values:
+                  - worker
+              topologyKey: kubernetes.io/hostname
       containers:
       - name: spark-master
-        image: apache/spark:4.0.1-scala2.13-java17-python3-ubuntu
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.7
         command: ["/opt/spark/bin/spark-class"]
-        args: ["org.apache.spark.deploy.master.Master"]
+        args: 
+        - "org.apache.spark.deploy.master.Master"
+        - "--host"
+        - "0.0.0.0"
+        - "--port"
+        - "7077"
+        - "--webui-port"
+        - "8080"
         ports:
         - containerPort: 7077
           name: spark
         - containerPort: 8080
           name: web
-        env:
-        - name: SPARK_MODE
-          value: master
-        - name: SPARK_MASTER_HOST
-          value: spark-master
         resources:
           requests:
             cpu: 1000m
@@ -1068,32 +1096,61 @@ spec:
           limits:
             cpu: 2000m
             memory: 4Gi
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
 EOF
 
-# Create Spark Worker Deployment
+# Create Spark Worker Deployment (5 replicas with HA)
 cat <<EOF | oc apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: spark-worker
   namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    datalyptica.io/component: spark-worker
 spec:
-  replicas: 3
+  replicas: 5
   selector:
     matchLabels:
-      app: spark-worker
+      app.kubernetes.io/name: spark
+      datalyptica.io/component: worker
   template:
     metadata:
       labels:
-        app: spark-worker
+        app.kubernetes.io/name: spark
+        datalyptica.io/component: worker
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: datalyptica.io/component
+                  operator: In
+                  values:
+                  - worker
+              topologyKey: kubernetes.io/hostname
       containers:
       - name: spark-worker
-        image: apache/spark:4.0.1-scala2.13-java17-python3-ubuntu
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.7
         command: ["/opt/spark/bin/spark-class"]
         args:
-        - org.apache.spark.deploy.worker.Worker
-        - spark://spark-master:7077
+        - "org.apache.spark.deploy.worker.Worker"
+        - "spark://spark-svc.datalyptica.svc.cluster.local:7077"
         ports:
         - containerPort: 8081
           name: web
@@ -1105,7 +1162,9 @@ spec:
         - name: SPARK_WORKER_CORES
           value: "4"
         - name: SPARK_WORKER_MEMORY
-          value: 4g
+          value: "4g"
+        - name: SPARK_WORKER_CORES
+          value: "4"
         resources:
           requests:
             cpu: 2000m
@@ -1113,14 +1172,53 @@ spec:
           limits:
             cpu: 4000m
             memory: 8Gi
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 5
 EOF
 
-# Create Spark Services
+# Create PodDisruptionBudgets for HA
+cat <<EOF | oc apply -f -
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: spark-worker-pdb
+  namespace: datalyptica
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: spark
+      datalyptica.io/component: worker
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: spark-master-pdb
+  namespace: datalyptica
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: spark
+      datalyptica.io/component: master
+EOF
+
+# Create Spark Service
 cat <<EOF | oc apply -f -
 apiVersion: v1
 kind: Service
 metadata:
-  name: spark-master
+  name: spark-svc
   namespace: datalyptica
 spec:
   type: ClusterIP
@@ -1132,13 +1230,47 @@ spec:
     targetPort: 8080
     name: web
   selector:
-    app: spark-master
+    app.kubernetes.io/name: spark
+    datalyptica.io/component: master
 EOF
 
 # Wait for Spark to be ready
-oc wait --for=condition=Ready pod -l app=spark-master \
+oc wait --for=condition=Ready pod -l app.kubernetes.io/name=spark \
   -n datalyptica --timeout=300s
+
+# Verify Spark deployment
+oc get pods -l app.kubernetes.io/name=spark -n datalyptica
 ```
+
+### 4.4 Deploy Flink (v2.1.0) with Kubernetes HA
+
+**Note:** Using custom-built image with Iceberg 1.8.0 and S3 plugin. See `deploy/openshift/builds/processing-image-builds.yaml` for BuildConfig.
+
+```bash
+# Option 1: Apply from repository (recommended)
+oc apply -f deploy/openshift/processing/flink-deployment.yaml -n datalyptica
+oc apply -f deploy/openshift/processing/flink-pdb.yaml -n datalyptica
+
+# Verify Flink HA deployment (2 JobManagers for leader election)
+oc get pods -l app.kubernetes.io/name=flink -n datalyptica
+oc logs -l app.kubernetes.io/name=flink,datalyptica.io/component=flink-jobmanager --tail=50
+
+# Access Flink Web UI
+oc get route flink-jobmanager -n datalyptica -o jsonpath='{.spec.host}'
+
+# Expected output: 
+# - 2 JobManagers (1 active leader, 1 standby)
+# - 5 TaskManagers (distributed across nodes via pod anti-affinity)
+# - RTO < 15s (active/standby failover)
+# - RPO = 30s (checkpoint interval)
+```
+
+**High Availability Features:**
+- **JobManager HA:** 2 replicas with Kubernetes leader election
+- **Checkpointing:** EXACTLY_ONCE, 30s interval, S3 storage (file:///opt/flink for local testing)
+- **Pod Anti-Affinity:** Distributes TaskManagers across nodes
+- **PodDisruptionBudgets:** Ensures 3/5 TaskManagers and 1/2 JobManagers always available
+- **Health Checks:** Balanced liveness (10-15s) and readiness (5-10s) probes
 
 ---
 

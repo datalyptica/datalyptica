@@ -425,9 +425,9 @@ With the Catalog Layer deployed, proceed to:
    - Configure topics and replication
    - Set up Kafka Connect
 
-2. **Processing Layer Deployment** (See: `DEPLOYMENT-06-PROCESSING.md`)
-   - Deploy Spark for batch processing
-   - Deploy Flink for stream processing
+2. **Processing Layer Deployment** (See: `DEPLOYMENT-05-PROCESSING.md`)
+   - Deploy Spark 3.5.7 for batch processing with Iceberg 1.8.0
+   - Deploy Flink 2.1.0 for stream processing with Kubernetes HA
    - Configure Nessie integration
 
 3. **Query Layer Deployment** (See: `DEPLOYMENT-07-QUERY.md`)
