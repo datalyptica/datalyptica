@@ -128,8 +128,6 @@ spec:
         - name: spark-config
           mountPath: /opt/spark/conf/spark-defaults.conf
           subPath: spark-defaults.conf
-        - name: iceberg-jars
-          mountPath: /opt/spark/jars/iceberg
         livenessProbe:
           httpGet:
             path: /
@@ -157,8 +155,6 @@ spec:
       - name: spark-config
         configMap:
           name: spark-config
-      - name: iceberg-jars
-        emptyDir: {}
 ---
 # Spark Worker Deployment
 apiVersion: apps/v1
