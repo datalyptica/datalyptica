@@ -14,6 +14,8 @@ data:
   spark-defaults.conf: |
     # Spark Core Configuration
     spark.master                     spark://spark-svc.datalyptica.svc.cluster.local:7077
+    spark.driver.host                _DRIVER_HOST_PLACEHOLDER_
+    spark.driver.bindAddress         0.0.0.0
     spark.driver.memory              2g
     spark.driver.maxResultSize       1g
     spark.executor.memory            2g
@@ -35,13 +37,17 @@ data:
     spark.sql.catalog.iceberg.io-impl org.apache.iceberg.aws.s3.S3FileIO
     spark.sql.catalog.iceberg.s3.endpoint http://minio.datalyptica.svc.cluster.local:9000
     spark.sql.catalog.iceberg.s3.path-style-access true
+    spark.sql.catalog.iceberg.s3.access-key-id minio
+    spark.sql.catalog.iceberg.s3.secret-access-key IEOqpNmbTC9h8PvgW67r0slDkcVifZy4
+    spark.sql.catalog.iceberg.client.region us-east-1
     spark.sql.defaultCatalog         iceberg
     
-    # S3 Configuration (Hadoop S3A)
+    # S3 Configuration (Hadoop S3A) - Direct credentials for standalone mode
     spark.hadoop.fs.s3a.endpoint    http://minio.datalyptica.svc.cluster.local:9000
     spark.hadoop.fs.s3a.path.style.access true
     spark.hadoop.fs.s3a.impl        org.apache.hadoop.fs.s3a.S3AFileSystem
-    spark.hadoop.fs.s3a.aws.credentials.provider org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
+    spark.hadoop.fs.s3a.access.key  minio
+    spark.hadoop.fs.s3a.secret.key  IEOqpNmbTC9h8PvgW67r0slDkcVifZy4
     
     # Spark UI Configuration
     spark.ui.port                    4040
@@ -54,6 +60,23 @@ data:
     spark.history.fs.cleaner.enabled true
     spark.history.fs.cleaner.interval 1d
     spark.history.fs.cleaner.maxAge  7d
+    
+    # Kubernetes Configuration (for native k8s mode)
+    spark.kubernetes.namespace       datalyptica
+    spark.kubernetes.container.image image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.7
+    spark.kubernetes.authenticate.driver.serviceAccountName spark
+    spark.kubernetes.executor.podNamePrefix spark-exec
+
+  spark-env.sh: |
+    #!/usr/bin/env bash
+    # Spark Environment Configuration for Kubernetes
+    
+    # For Driver pods: Set the hostname to Pod IP so executors can connect
+    # This is set via Downward API in the Master deployment
+    if [ -n "$SPARK_DRIVER_HOST" ]; then
+      export SPARK_PUBLIC_DNS="$SPARK_DRIVER_HOST"
+      export SPARK_LOCAL_IP="$SPARK_DRIVER_HOST"
+    fi
 ---
 # Spark Master Deployment
 apiVersion: apps/v1
@@ -82,6 +105,7 @@ spec:
         datalyptica.io/tier: processing
         app.kubernetes.io/component: master
     spec:
+      serviceAccountName: spark
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -114,12 +138,16 @@ spec:
           name: webui
           protocol: TCP
         env:
-        - name: S3_ACCESS_KEY
+        - name: SPARK_DRIVER_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
               name: minio-credentials
               key: root-user
-        - name: S3_SECRET_KEY
+        - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
               name: minio-credentials
@@ -128,6 +156,10 @@ spec:
         - name: spark-config
           mountPath: /opt/spark/conf/spark-defaults.conf
           subPath: spark-defaults.conf
+        - name: spark-config
+          mountPath: /opt/spark/conf/spark-env.sh
+          subPath: spark-env.sh
+          defaultMode: 0755
         livenessProbe:
           httpGet:
             path: /
@@ -181,6 +213,7 @@ spec:
         datalyptica.io/tier: processing
         app.kubernetes.io/component: worker
     spec:
+      serviceAccountName: spark
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -207,12 +240,12 @@ spec:
           name: webui
           protocol: TCP
         env:
-        - name: S3_ACCESS_KEY
+        - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
               name: minio-credentials
               key: root-user
-        - name: S3_SECRET_KEY
+        - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
               name: minio-credentials
@@ -278,6 +311,78 @@ spec:
   selector:
     app.kubernetes.io/name: spark
     app.kubernetes.io/component: master
+
+---
+# Spark Master Headless Service (for driver-executor communication)
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-master-headless
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+    datalyptica.io/component: spark-master
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+  - port: 7077
+    targetPort: 7077
+    protocol: TCP
+    name: spark
+  selector:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/component: master
+---
+# Spark ServiceAccount (for Kubernetes-native mode)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spark
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+---
+# Spark Role (for Kubernetes-native executor management)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: spark
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list"]
+---
+# Spark RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: spark
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: spark
+subjects:
+- kind: ServiceAccount
+  name: spark
+  namespace: datalyptica
 ---
 # Spark Master Route (WebUI)
 apiVersion: route.openshift.io/v1
