@@ -82,26 +82,21 @@ spec:
         datalyptica.io/tier: processing
         app.kubernetes.io/component: master
     spec:
-      initContainers:
-      - name: download-jars
-        image: apache/spark:3.5.1-scala2.12-java17-python3-ubuntu
-        command:
-        - sh
-        - -c
-        - |
-          mkdir -p /jars
-          cd /jars
-          wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.9.1/iceberg-spark-runtime-3.5_2.12-1.9.1.jar
-          wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-nessie/1.9.1/iceberg-nessie-1.9.1.jar
-          wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar
-          wget https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar
-          ls -lh /jars
-        volumeMounts:
-        - name: iceberg-jars
-          mountPath: /jars
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - worker
+              topologyKey: kubernetes.io/hostname
       containers:
       - name: spark-master
-        image: apache/spark:3.5.1-scala2.12-java17-python3-ubuntu
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.1
         command: ["/opt/spark/bin/spark-class"]
         args: 
         - "org.apache.spark.deploy.master.Master"
@@ -147,10 +142,10 @@ spec:
           httpGet:
             path: /
             port: 8080
-          initialDelaySeconds: 10
+          initialDelaySeconds: 15
           periodSeconds: 5
           timeoutSeconds: 3
-          failureThreshold: 3
+          failureThreshold: 2
         resources:
           requests:
             memory: "2Gi"
@@ -177,7 +172,7 @@ metadata:
     datalyptica.io/tier: processing
     datalyptica.io/component: spark-worker
 spec:
-  replicas: 2
+  replicas: 5
   selector:
     matchLabels:
       app.kubernetes.io/name: spark
@@ -190,26 +185,21 @@ spec:
         datalyptica.io/tier: processing
         app.kubernetes.io/component: worker
     spec:
-      initContainers:
-      - name: download-jars
-        image: apache/spark:3.5.1-scala2.12-java17-python3-ubuntu
-        command:
-        - sh
-        - -c
-        - |
-          mkdir -p /jars
-          cd /jars
-          wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.9.1/iceberg-spark-runtime-3.5_2.12-1.9.1.jar
-          wget https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-nessie/1.9.1/iceberg-nessie-1.9.1.jar
-          wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar
-          wget https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar
-          ls -lh /jars
-        volumeMounts:
-        - name: iceberg-jars
-          mountPath: /jars
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - worker
+              topologyKey: kubernetes.io/hostname
       containers:
       - name: spark-worker
-        image: apache/spark:3.5.1-scala2.12-java17-python3-ubuntu
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.1
         command: ["/opt/spark/bin/spark-class"]
         args: 
         - "org.apache.spark.deploy.worker.Worker"
@@ -235,8 +225,6 @@ spec:
         - name: spark-config
           mountPath: /opt/spark/conf/spark-defaults.conf
           subPath: spark-defaults.conf
-        - name: iceberg-jars
-          mountPath: /opt/spark/jars/iceberg
         - name: spark-work
           mountPath: /tmp/spark-work
         livenessProbe:
@@ -244,17 +232,17 @@ spec:
             path: /
             port: 8081
           initialDelaySeconds: 30
-          periodSeconds: 10
+          periodSeconds: 15
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /
             port: 8081
-          initialDelaySeconds: 10
-          periodSeconds: 5
+          initialDelaySeconds: 15
+          periodSeconds: 10
           timeoutSeconds: 3
-          failureThreshold: 3
+          failureThreshold: 2
         resources:
           requests:
             memory: "2Gi"
@@ -266,8 +254,6 @@ spec:
       - name: spark-config
         configMap:
           name: spark-config
-      - name: iceberg-jars
-        emptyDir: {}
       - name: spark-work
         emptyDir: {}
 ---

@@ -1,0 +1,34 @@
+---
+# Flink TaskManager PodDisruptionBudget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: flink-taskmanager-pdb
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: streaming
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flink
+      app.kubernetes.io/component: taskmanager
+---
+# Flink JobManager PodDisruptionBudget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: flink-jobmanager-pdb
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: streaming
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flink
+      app.kubernetes.io/component: jobmanager
