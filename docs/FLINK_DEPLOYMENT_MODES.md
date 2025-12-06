@@ -149,21 +149,43 @@ TaskManagers are created automatically by Flink.
 
 ## Recommendation
 
-### For Datalyptica Platform: **Keep Standalone Mode**
+### For Datalyptica Platform: **Hybrid Standalone Mode (Implemented)**
 
-**Reasons**:
-1. **Streaming Focus**: Datalyptica is primarily a streaming platform (Kafka → Flink → Iceberg)
-2. **Predictable Load**: Long-running streaming jobs with stable resource requirements
-3. **Operational Simplicity**: Easier to monitor and debug
-4. **Production-Ready Now**: Current setup is tested and working
-5. **Resource Efficiency**: With streaming, TaskManagers stay active anyway
+**The deployed solution uses Standalone mode with manual scaling, optimized for mixed workloads:**
 
-### When to Consider Native Kubernetes
+**Configuration**:
+- **Baseline**: 2 TaskManagers, 8 slots (for streaming workloads)
+- **Batch Scale-Up**: Scale to 4-10 TaskManagers (16-40 slots) as needed
+- **Scale Command**: `oc scale deployment flink-taskmanager --replicas=N -n datalyptica`
 
-- If you start running many batch jobs
-- If workload becomes highly variable
-- If you need multi-tenancy with job isolation
-- If you want to optimize costs with auto-scaling
+**Reasons for Hybrid Approach**:
+1. **Mixed Workloads**: Supports both streaming (continuous) and batch (on-demand) processing
+2. **Quick Scaling**: Scale up in ~30 seconds for batch jobs, scale down when complete
+3. **Operational Simplicity**: No Application Mode complexity, standard kubectl/oc commands
+4. **Cost Efficient**: Keep minimal resources for streaming, expand only when needed
+5. **Production-Ready**: Tested with parallelism up to 16, scales to 40+
+
+**Usage Pattern**:
+```bash
+# Normal streaming operations (2 TMs, 8 slots)
+oc scale deployment flink-taskmanager --replicas=2 -n datalyptica
+
+# Large batch job needed (scale to 6 TMs, 24 slots)
+oc scale deployment flink-taskmanager --replicas=6 -n datalyptica
+./bin/flink run -d -p 24 my-batch-job.jar
+
+# After batch completes, scale back down
+oc scale deployment flink-taskmanager --replicas=2 -n datalyptica
+```
+
+### When to Consider True Native Kubernetes
+
+- If you need fully automatic scaling without manual intervention
+- If you have unpredictable workload patterns with extreme variance
+- If you're running hundreds of short-lived batch jobs
+- If you require strict multi-tenant isolation per job
+
+For most enterprise use cases like Datalyptica, the hybrid approach provides the best balance.
 
 ---
 

@@ -67,7 +67,7 @@ data:
     taskmanager.memory.jvm-overhead.max: 768m
     taskmanager.numberOfTaskSlots: 4
     
-    # Kubernetes Resource Configuration
+    # Kubernetes Resource Configuration for Dynamic Allocation
     kubernetes.jobmanager.cpu: 2
     kubernetes.jobmanager.cpu.limit-factor: 2.0
     kubernetes.jobmanager.memory: "2048Mi"
@@ -75,9 +75,12 @@ data:
     kubernetes.taskmanager.cpu.limit-factor: 2.0
     kubernetes.taskmanager.memory: "4096Mi"
     
-    # Dynamic TaskManager Scaling
-    taskmanager.replicas: 2
-    kubernetes.taskmanager.replicas: 2
+    # Native Kubernetes Mode - Dynamic TaskManager Allocation
+    # TaskManagers will be created dynamically based on job requirements
+    # Minimum replicas for streaming workloads
+    kubernetes.taskmanager.replicas.min: 2
+    # Maximum replicas for batch workloads
+    kubernetes.taskmanager.replicas.max: 10
     
     # Pod Labels
     kubernetes.jobmanager.labels: app.kubernetes.io/name:flink,app.kubernetes.io/component:jobmanager,datalyptica.io/tier:streaming,app.kubernetes.io/part-of:datalyptica
@@ -191,6 +194,21 @@ data:
     
     # Slot Sharing Configuration
     cluster.evenly-spread-out-slots: true
+    
+    # Resource Manager Configuration for Native Kubernetes
+    resourcemanager.standalone.start-up-time: 5s
+    
+    # Slot Request Timeout (for dynamic allocation)
+    slotmanager.request-timeout: 300000
+    slotmanager.taskmanager-timeout: 60000
+    
+    # Scheduling Configuration for Mixed Workloads
+    scheduler-mode: reactive
+    jobmanager.scheduler: adaptive
+    
+    # Rest API Configuration
+    rest.bind-address: 0.0.0.0
+    rest.address: flink-jobmanager.datalyptica.svc.cluster.local
     
   log4j-console.properties: |
     # Root Logger Configuration
@@ -426,7 +444,24 @@ spec:
         emptyDir: {}
 
 ---
-# Deployment: Flink TaskManager
+# Deployment: Flink TaskManager (Optimized for Mixed Workloads)
+# ==============================================================================
+# HYBRID DEPLOYMENT MODE FOR MIXED STREAMING + BATCH WORKLOADS
+# ==============================================================================
+# This deployment uses Standalone mode with manual scaling, optimized for:
+# - Streaming: Pre-allocated TaskManagers (default: 2 replicas, 8 slots)
+# - Batch: Quick horizontal scaling via `oc scale` (up to 10+ replicas)
+#
+# Scaling commands:
+#   Scale for batch workload:   oc scale deployment flink-taskmanager --replicas=6 -n datalyptica
+#   Scale back for streaming:   oc scale deployment flink-taskmanager --replicas=2 -n datalyptica
+#   Check capacity:             oc exec <jobmanager-pod> -- curl -s http://localhost:8081/overview
+#
+# Each TaskManager provides:
+# - 4 slots (supports parallelism=4 per TM)
+# - 4Gi memory, 2 CPU
+# - Total capacity: replicas × 4 slots
+# ==============================================================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -438,7 +473,7 @@ metadata:
     app.kubernetes.io/part-of: datalyptica
     datalyptica.io/tier: streaming
 spec:
-  replicas: 2
+  replicas: 2  # Minimum for streaming, scale up for batch
   selector:
     matchLabels:
       app.kubernetes.io/name: flink
@@ -493,12 +528,15 @@ spec:
           value: "http://minio.datalyptica.svc.cluster.local:9000"
         - name: S3_PATH_STYLE_ACCESS
           value: "true"
-        # Flink Configuration (MUST override config file)
+        # Flink Configuration for Mixed Workloads
         - name: FLINK_PROPERTIES
           value: |
             jobmanager.rpc.address: flink-jobmanager
             taskmanager.rpc.port: 6122
             taskmanager.numberOfTaskSlots: 4
+            # Mixed workload optimization
+            taskmanager.memory.network.fraction: 0.15
+            taskmanager.memory.managed.fraction: 0.35
         volumeMounts:
         - name: flink-config
           mountPath: /opt/flink/conf/flink-conf.yaml
