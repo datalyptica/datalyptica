@@ -12,10 +12,17 @@ USER root
 # Strategy: Place JARs directly in /opt/spark/jars/ for automatic classpath inclusion
 # This works for both Standalone mode (explicit --jars) and K8s native mode (automatic)
 RUN cd /opt/spark/jars && \
+    # Remove old Hadoop 3.3.4 client JARs to avoid version conflicts
+    rm -f hadoop-client-api-3.3.4.jar hadoop-client-runtime-3.3.4.jar && \
+    # Download Hadoop 3.4.1 JARs (consistent version)
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.4.1/hadoop-common-3.4.1.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-api/3.4.1/hadoop-client-api-3.4.1.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-runtime/3.4.1/hadoop-client-runtime-3.4.1.jar && \
+    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.4.1/hadoop-aws-3.4.1.jar && \
+    # Download Iceberg JARs
     wget -q https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.10.0/iceberg-spark-runtime-3.5_2.12-1.10.0.jar && \
     wget -q https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-nessie/1.10.0/iceberg-nessie-1.10.0.jar && \
-    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.4.1/hadoop-common-3.4.1.jar && \
-    wget -q https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.4.1/hadoop-aws-3.4.1.jar && \
+    # Download AWS SDK JARs
     wget -q https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.772/aws-java-sdk-bundle-1.12.772.jar && \
     wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.28.11/bundle-2.28.11.jar && \
     wget -q https://repo1.maven.org/maven2/software/amazon/awssdk/url-connection-client/2.28.11/url-connection-client-2.28.11.jar && \
