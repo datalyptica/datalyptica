@@ -16,16 +16,78 @@ data:
     spark.master                     spark://spark-svc.datalyptica.svc.cluster.local:7077
     spark.driver.host                _DRIVER_HOST_PLACEHOLDER_
     spark.driver.bindAddress         0.0.0.0
-    spark.driver.memory              2g
-    spark.driver.maxResultSize       1g
-    spark.executor.memory            2g
+    spark.driver.memory              4g
+    spark.driver.maxResultSize       2g
+    spark.executor.memory            4g
+    spark.executor.memoryOverhead    512m
     spark.executor.cores             2
-    spark.executor.instances         2
-    spark.dynamicAllocation.enabled  false
-    spark.serializer                org.apache.spark.serializer.KryoSerializer
+    # spark.executor.instances removed - incompatible with dynamic allocation
+    
+    # Memory Management
+    spark.memory.fraction            0.8
+    spark.memory.storageFraction     0.3
+    
+    # Serialization & Performance
+    spark.serializer                 org.apache.spark.serializer.KryoSerializer
+    spark.kryo.registrationRequired  false
+    spark.kryoserializer.buffer.max  512m
+    
+    # Adaptive Query Execution
     spark.sql.adaptive.enabled       true
     spark.sql.adaptive.coalescePartitions.enabled true
     spark.sql.adaptive.skewJoin.enabled true
+    spark.sql.adaptive.advisoryPartitionSizeInBytes 128m
+    
+    # Shuffle Optimization
+    spark.sql.shuffle.partitions     400
+    spark.shuffle.compress           true
+    spark.shuffle.spill.compress     true
+    spark.io.compression.codec       snappy
+    spark.shuffle.file.buffer        1m
+    spark.reducer.maxSizeInFlight    96m
+    
+    # Network & Timeout Configuration
+    spark.network.timeout            300s
+    spark.executor.heartbeatInterval 20s
+    spark.rpc.message.maxSize        256
+    
+    # File Writing Optimization
+    spark.sql.files.maxRecordsPerFile 1000000
+    spark.sql.files.maxPartitionBytes 256m
+    
+    # Scheduler & Concurrency Configuration
+    spark.scheduler.mode             FAIR
+    spark.scheduler.allocation.file  /opt/spark/conf/fairscheduler.xml
+    spark.scheduler.minRegisteredResourcesRatio 0.8
+    spark.scheduler.maxRegisteredResourcesWaitingTime 30s
+    spark.locality.wait              3s
+    spark.locality.wait.node         3s
+    spark.locality.wait.process      3s
+    spark.locality.wait.rack         3s
+    
+    # Task Scheduling & Speculation
+    spark.task.cpus                  1
+    spark.task.maxFailures           4
+    spark.speculation                true
+    spark.speculation.interval       5000ms
+    spark.speculation.multiplier     1.5
+    spark.speculation.quantile       0.75
+    
+    # Dynamic Resource Allocation - ENABLED for better resource utilization
+    spark.dynamicAllocation.enabled  true
+    spark.dynamicAllocation.shuffleTracking.enabled true
+    spark.dynamicAllocation.executorIdleTimeout 30s
+    spark.dynamicAllocation.cachedExecutorIdleTimeout 120s
+    spark.dynamicAllocation.minExecutors 1
+    spark.dynamicAllocation.maxExecutors 3
+    spark.dynamicAllocation.initialExecutors 2
+    spark.dynamicAllocation.executorAllocationRatio 1
+    spark.dynamicAllocation.schedulerBacklogTimeout 3s
+    spark.dynamicAllocation.sustainedSchedulerBacklogTimeout 3s
+    
+    # Resource Limiting - Per application caps for concurrent jobs
+    spark.cores.max                  6
+    spark.executor.cores             2
     
     # Spark SQL Configuration with Iceberg Nessie Catalog
     spark.sql.extensions             org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
@@ -55,6 +117,10 @@ data:
     spark.ui.retainedStages          100
     spark.ui.retainedTasks           100
     
+    # External Shuffle Service - Required for Dynamic Allocation
+    spark.shuffle.service.enabled    true
+    spark.shuffle.service.port       7337
+    
     # Spark History Server Configuration
     spark.history.fs.logDirectory    s3a://lakehouse/spark-history
     spark.history.fs.cleaner.enabled true
@@ -66,6 +132,48 @@ data:
     spark.kubernetes.container.image image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.7
     spark.kubernetes.authenticate.driver.serviceAccountName spark
     spark.kubernetes.executor.podNamePrefix spark-exec
+
+  fairscheduler.xml: |
+    <?xml version="1.0"?>
+    <allocations>
+      <!-- Default pool for standard batch jobs -->
+      <pool name="default">
+        <schedulingMode>FAIR</schedulingMode>
+        <weight>1</weight>
+        <minShare>2</minShare>
+      </pool>
+      
+      <!-- High-priority pool for interactive queries and urgent jobs -->
+      <pool name="high-priority">
+        <schedulingMode>FAIR</schedulingMode>
+        <weight>3</weight>
+        <minShare>3</minShare>
+      </pool>
+      
+      <!-- Low-priority pool for long-running batch jobs -->
+      <pool name="low-priority">
+        <schedulingMode>FAIR</schedulingMode>
+        <weight>1</weight>
+        <minShare>1</minShare>
+      </pool>
+      
+      <!-- ETL pool for data pipeline jobs -->
+      <pool name="etl">
+        <schedulingMode>FAIR</schedulingMode>
+        <weight>2</weight>
+        <minShare>2</minShare>
+      </pool>
+      
+      <!-- Analytics pool for analytical queries -->
+      <pool name="analytics">
+        <schedulingMode>FAIR</schedulingMode>
+        <weight>2</weight>
+        <minShare>2</minShare>
+      </pool>
+      
+      <!-- Global settings -->
+      <poolName>default</poolName>
+    </allocations>
 
   spark-env.sh: |
     #!/usr/bin/env bash
@@ -130,6 +238,9 @@ spec:
         - "7077"
         - "--webui-port"
         - "8080"
+        env:
+        - name: SPARK_MASTER_OPTS
+          value: "-Dspark.deploy.spreadOut=true"
         ports:
         - containerPort: 7077
           name: spark
@@ -137,7 +248,6 @@ spec:
         - containerPort: 8080
           name: webui
           protocol: TCP
-        env:
         - name: SPARK_DRIVER_HOST
           valueFrom:
             fieldRef:
@@ -160,6 +270,9 @@ spec:
           mountPath: /opt/spark/conf/spark-env.sh
           subPath: spark-env.sh
           defaultMode: 0755
+        - name: spark-config
+          mountPath: /opt/spark/conf/fairscheduler.xml
+          subPath: fairscheduler.xml
         livenessProbe:
           httpGet:
             path: /
@@ -178,10 +291,10 @@ spec:
           failureThreshold: 2
         resources:
           requests:
-            memory: "2Gi"
+            memory: "4Gi"
             cpu: "1000m"
           limits:
-            memory: "4Gi"
+            memory: "6Gi"
             cpu: "2000m"
       volumes:
       - name: spark-config
@@ -274,10 +387,10 @@ spec:
           failureThreshold: 2
         resources:
           requests:
-            memory: "2Gi"
+            memory: "4Gi"
             cpu: "2000m"
           limits:
-            memory: "4Gi"
+            memory: "6Gi"
             cpu: "4000m"
       volumes:
       - name: spark-config

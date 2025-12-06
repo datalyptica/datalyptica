@@ -1,0 +1,305 @@
+---
+# Spark ConfigMap for Kubernetes Native Mode
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-k8s-config
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+    datalyptica.io/component: spark-k8s
+data:
+  spark-defaults.conf: |
+    # Kubernetes Native Mode Configuration
+    spark.master                     k8s://https://kubernetes.default.svc:443
+    spark.kubernetes.namespace       datalyptica
+    spark.kubernetes.authenticate.driver.serviceAccountName spark-driver
+    
+    # Container Images
+    spark.kubernetes.container.image image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.7
+    spark.kubernetes.container.image.pullPolicy IfNotPresent
+    
+    # JAR file locations - using local:// scheme for files already in container image
+    spark.jars                       local:///opt/spark/jars/iceberg/iceberg-spark-runtime-3.5_2.12-1.10.0.jar,local:///opt/spark/jars/iceberg/iceberg-nessie-1.10.0.jar,local:///opt/spark/jars/iceberg/bundle-2.28.11.jar,local:///opt/spark/jars/iceberg/url-connection-client-2.28.11.jar,local:///opt/spark/jars/iceberg/aws-java-sdk-bundle-1.12.772.jar,local:///opt/spark/jars/iceberg/hadoop-aws-3.4.1.jar
+    
+    # Driver Configuration
+    spark.driver.host                _DRIVER_HOST_PLACEHOLDER_
+    spark.driver.bindAddress         0.0.0.0
+    spark.driver.memory              4g
+    spark.driver.maxResultSize       2g
+    spark.driver.cores               2
+    spark.kubernetes.driver.label.app.kubernetes.io/name spark
+    spark.kubernetes.driver.label.app.kubernetes.io/component driver
+    spark.kubernetes.driver.label.datalyptica.io/tier processing
+    spark.kubernetes.driver.annotation.prometheus.io/scrape true
+    spark.kubernetes.driver.annotation.prometheus.io/port 4040
+    
+    # Executor Configuration
+    spark.executor.instances         2
+    spark.executor.memory            4g
+    spark.executor.memoryOverhead    512m
+    spark.executor.cores             2
+    spark.kubernetes.executor.label.app.kubernetes.io/name spark
+    spark.kubernetes.executor.label.app.kubernetes.io/component executor
+    spark.kubernetes.executor.label.datalyptica.io/tier processing
+    spark.kubernetes.executor.request.cores 2
+    spark.kubernetes.executor.limit.cores 2
+    
+    # Dynamic Allocation for K8s
+    spark.dynamicAllocation.enabled            true
+    spark.dynamicAllocation.shuffleTracking.enabled true
+    spark.dynamicAllocation.minExecutors       1
+    spark.dynamicAllocation.maxExecutors       5
+    spark.dynamicAllocation.initialExecutors   2
+    spark.dynamicAllocation.executorIdleTimeout 60s
+    spark.dynamicAllocation.cachedExecutorIdleTimeout 120s
+    spark.dynamicAllocation.schedulerBacklogTimeout 3s
+    
+    # Memory Management
+    spark.memory.fraction            0.8
+    spark.memory.storageFraction     0.3
+    
+    # Serialization & Performance
+    spark.serializer                 org.apache.spark.serializer.KryoSerializer
+    spark.kryo.registrationRequired  false
+    spark.kryoserializer.buffer.max  512m
+    
+    # Adaptive Query Execution
+    spark.sql.adaptive.enabled       true
+    spark.sql.adaptive.coalescePartitions.enabled true
+    spark.sql.adaptive.skewJoin.enabled true
+    spark.sql.adaptive.advisoryPartitionSizeInBytes 128m
+    
+    # Shuffle Optimization
+    spark.sql.shuffle.partitions     400
+    spark.shuffle.compress           true
+    spark.shuffle.spill.compress     true
+    spark.io.compression.codec       snappy
+    spark.shuffle.file.buffer        1m
+    spark.reducer.maxSizeInFlight    96m
+    
+    # Network & Timeout Configuration
+    spark.network.timeout            300s
+    spark.executor.heartbeatInterval 20s
+    
+    # File Handling & Output
+    spark.sql.files.maxPartitionBytes 134217728
+    spark.sql.files.maxRecordsPerFile 1000000
+    spark.sql.sources.partitionOverwriteMode dynamic
+    
+    # Fair Scheduler Configuration
+    spark.scheduler.mode             FAIR
+    spark.scheduler.allocation.file  /opt/spark/conf/fairscheduler.xml
+    spark.locality.wait              3s
+    
+    # Task Scheduling & Speculation
+    spark.task.cpus                  1
+    spark.task.maxFailures           4
+    spark.speculation                true
+    spark.speculation.interval       5000ms
+    spark.speculation.multiplier     1.5
+    
+    # Spark SQL Configuration with Iceberg Nessie Catalog
+    spark.sql.extensions             org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+    spark.sql.catalog.iceberg        org.apache.iceberg.spark.SparkCatalog
+    spark.sql.catalog.iceberg.catalog-impl org.apache.iceberg.nessie.NessieCatalog
+    spark.sql.catalog.iceberg.uri    http://nessie.datalyptica.svc.cluster.local:19120/api/v2
+    spark.sql.catalog.iceberg.ref    main
+    spark.sql.catalog.iceberg.warehouse s3://lakehouse/
+    spark.sql.catalog.iceberg.io-impl org.apache.iceberg.aws.s3.S3FileIO
+    spark.sql.catalog.iceberg.s3.endpoint http://minio.datalyptica.svc.cluster.local:9000
+    spark.sql.catalog.iceberg.s3.path-style-access true
+    spark.sql.catalog.iceberg.s3.access-key-id minio
+    spark.sql.catalog.iceberg.s3.secret-access-key IEOqpNmbTC9h8PvgW67r0slDkcVifZy4
+    spark.sql.catalog.iceberg.client.region us-east-1
+    spark.sql.defaultCatalog         iceberg
+    
+    # S3 Configuration (Hadoop S3A)
+    spark.hadoop.fs.s3a.endpoint    http://minio.datalyptica.svc.cluster.local:9000
+    spark.hadoop.fs.s3a.path.style.access true
+    spark.hadoop.fs.s3a.impl        org.apache.hadoop.fs.s3a.S3AFileSystem
+    spark.hadoop.fs.s3a.access.key  minio
+    spark.hadoop.fs.s3a.secret.key  IEOqpNmbTC9h8PvgW67r0slDkcVifZy4
+    
+    # Kubernetes Environment Variables to inject
+    spark.kubernetes.driver.env.AWS_ACCESS_KEY_ID minio
+    spark.kubernetes.driver.env.AWS_SECRET_ACCESS_KEY IEOqpNmbTC9h8PvgW67r0slDkcVifZy4
+    spark.kubernetes.executor.env.AWS_ACCESS_KEY_ID minio
+    spark.kubernetes.executor.env.AWS_SECRET_ACCESS_KEY IEOqpNmbTC9h8PvgW67r0slDkcVifZy4
+    
+    # Spark UI Configuration
+    spark.ui.port                    4040
+    spark.ui.enabled                 true
+
+  fairscheduler.xml: |
+    <?xml version="1.0"?>
+    <allocations>
+      <!-- Default pool for general workloads -->
+      <pool name="default">
+        <schedulingMode>FAIR</schedulingMode>
+        <weight>1</weight>
+        <minShare>2</minShare>
+      </pool>
+      
+      <!-- High priority pool for critical jobs -->
+      <pool name="high-priority">
+        <schedulingMode>FAIR</schedulingMode>
+        <weight>3</weight>
+        <minShare>3</minShare>
+      </pool>
+      
+      <!-- Low priority pool for background tasks -->
+      <pool name="low-priority">
+        <schedulingMode>FAIR</schedulingMode>
+        <weight>1</weight>
+        <minShare>1</minShare>
+      </pool>
+      
+      <!-- ETL pool for data engineering jobs -->
+      <pool name="etl">
+        <schedulingMode>FAIR</schedulingMode>
+        <weight>2</weight>
+        <minShare>2</minShare>
+      </pool>
+      
+      <!-- Analytics pool for analytical queries -->
+      <pool name="analytics">
+        <schedulingMode>FAIR</schedulingMode>
+        <weight>2</weight>
+        <minShare>2</minShare>
+      </pool>
+      
+      <poolName>default</poolName>
+    </allocations>
+
+---
+# ServiceAccount for Spark Driver pods (with permissions to create executor pods)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spark-driver
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+
+---
+# Role for Spark Driver to manage executor pods
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: spark-driver-role
+  namespace: datalyptica
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+- apiGroups: [""]
+  resources: ["pods/log", "pods/status"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+
+---
+# RoleBinding for Spark Driver
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: spark-driver-rolebinding
+  namespace: datalyptica
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: spark-driver-role
+subjects:
+- kind: ServiceAccount
+  name: spark-driver
+  namespace: datalyptica
+
+---
+# Spark Submit Pod (acts as entry point for job submission)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-submit
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+    datalyptica.io/component: spark-submit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: spark
+      app.kubernetes.io/component: submit
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: spark
+        app.kubernetes.io/part-of: datalyptica
+        datalyptica.io/tier: processing
+        app.kubernetes.io/component: submit
+    spec:
+      serviceAccountName: spark-driver
+      containers:
+      - name: spark-submit
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.7
+        command: ["/bin/bash"]
+        args: ["-c", "while true; do sleep 30; done"]
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-user
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: root-password
+        - name: SPARK_HOME
+          value: "/opt/spark"
+        volumeMounts:
+        - name: spark-config
+          mountPath: /opt/spark/conf/spark-defaults.conf
+          subPath: spark-defaults.conf
+        - name: spark-config
+          mountPath: /opt/spark/conf/fairscheduler.xml
+          subPath: fairscheduler.xml
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+      volumes:
+      - name: spark-config
+        configMap:
+          name: spark-k8s-config
+
+---
+# Service for Spark UI access (optional)
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-submit-svc
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/component: submit
+spec:
+  selector:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/component: submit
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP
