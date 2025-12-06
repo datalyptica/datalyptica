@@ -16,7 +16,7 @@ data:
     kubernetes.cluster-id: datalyptica-flink-native
     kubernetes.namespace: datalyptica
     kubernetes.service-account: flink
-    kubernetes.container.image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:1.20.0
+    kubernetes.container.image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
     kubernetes.container.image.pull-policy: Always
     
     # JobManager Configuration
@@ -192,13 +192,13 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9249"
     spec:
-      serviceAccountName: flink-operator
+      serviceAccountName: flink
       containers:
       - name: jobmanager
         image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
-        imagePullPolicy: IfNotPresent
-        command: ["/bin/bash"]
-        args: ["-c", "/opt/flink/bin/standalone-job.sh start-foreground --job-classname org.apache.flink.streaming.api.environment.StreamExecutionEnvironment"]
+        imagePullPolicy: Always
+        command: ["/bin/bash", "-c"]
+        args: ["$FLINK_HOME/bin/jobmanager.sh start-foreground"]
         ports:
         - name: rpc
           containerPort: 6123
