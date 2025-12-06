@@ -19,7 +19,8 @@ data:
     
     # Container Images
     spark.kubernetes.container.image image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.7
-    spark.kubernetes.container.image.pullPolicy IfNotPresent
+    # Per Spark K8s docs: Use Always to ensure latest image is pulled
+    spark.kubernetes.container.image.pullPolicy Always
     
     # JAR Dependencies: Iceberg JARs are symlinked to /opt/spark/jars/ in the image
     # No need for explicit spark.jars - they're automatically on the classpath
@@ -30,6 +31,10 @@ data:
     spark.driver.memory              4g
     spark.driver.maxResultSize       2g
     spark.driver.cores               2
+    # Per Spark K8s docs: Set driver pod name for proper executor garbage collection
+    spark.kubernetes.driver.pod.name spark-driver
+    # K8s-specific resource requests (takes precedence over spark.driver.cores)
+    spark.kubernetes.driver.request.cores 2
     spark.kubernetes.driver.label.app.kubernetes.io/name spark
     spark.kubernetes.driver.label.app.kubernetes.io/component driver
     spark.kubernetes.driver.label.datalyptica.io/tier processing
@@ -39,11 +44,13 @@ data:
     # Executor Configuration
     spark.executor.instances         2
     spark.executor.memory            4g
-    spark.executor.memoryOverhead    512m
     spark.executor.cores             2
+    # Per Spark K8s docs: memoryOverheadFactor for non-JVM memory (default 0.1 for JVM jobs)
+    spark.kubernetes.memoryOverheadFactor 0.1
     spark.kubernetes.executor.label.app.kubernetes.io/name spark
     spark.kubernetes.executor.label.app.kubernetes.io/component executor
     spark.kubernetes.executor.label.datalyptica.io/tier processing
+    # K8s-specific resource requests (takes precedence over spark.executor.cores)
     spark.kubernetes.executor.request.cores 2
     spark.kubernetes.executor.limit.cores 2
     
@@ -111,8 +118,7 @@ data:
     spark.sql.catalog.iceberg.io-impl org.apache.iceberg.aws.s3.S3FileIO
     spark.sql.catalog.iceberg.s3.endpoint http://minio.datalyptica.svc.cluster.local:9000
     spark.sql.catalog.iceberg.s3.path-style-access true
-    spark.sql.catalog.iceberg.s3.access-key-id minio
-    spark.sql.catalog.iceberg.s3.secret-access-key IEOqpNmbTC9h8PvgW67r0slDkcVifZy4
+    # Credentials provided via environment variables (from Secrets)
     spark.sql.catalog.iceberg.client.region us-east-1
     spark.sql.defaultCatalog         iceberg
     
@@ -120,14 +126,13 @@ data:
     spark.hadoop.fs.s3a.endpoint    http://minio.datalyptica.svc.cluster.local:9000
     spark.hadoop.fs.s3a.path.style.access true
     spark.hadoop.fs.s3a.impl        org.apache.hadoop.fs.s3a.S3AFileSystem
-    spark.hadoop.fs.s3a.access.key  minio
-    spark.hadoop.fs.s3a.secret.key  IEOqpNmbTC9h8PvgW67r0slDkcVifZy4
+    # Credentials provided via AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY env vars
     
-    # Kubernetes Environment Variables to inject
-    spark.kubernetes.driver.env.AWS_ACCESS_KEY_ID minio
-    spark.kubernetes.driver.env.AWS_SECRET_ACCESS_KEY IEOqpNmbTC9h8PvgW67r0slDkcVifZy4
-    spark.kubernetes.executor.env.AWS_ACCESS_KEY_ID minio
-    spark.kubernetes.executor.env.AWS_SECRET_ACCESS_KEY IEOqpNmbTC9h8PvgW67r0slDkcVifZy4
+    # Credentials injected via secretKeyRef (see Spark K8s docs on Secret Management)
+    spark.kubernetes.driver.secretKeyRef.AWS_ACCESS_KEY_ID=minio-credentials:root-user
+    spark.kubernetes.driver.secretKeyRef.AWS_SECRET_ACCESS_KEY=minio-credentials:root-password
+    spark.kubernetes.executor.secretKeyRef.AWS_ACCESS_KEY_ID=minio-credentials:root-user
+    spark.kubernetes.executor.secretKeyRef.AWS_SECRET_ACCESS_KEY=minio-credentials:root-password
     
     # Spark UI Configuration
     spark.ui.port                    4040
@@ -193,9 +198,10 @@ metadata:
   name: spark-driver-role
   namespace: datalyptica
 rules:
+# Per Spark K8s docs: Driver needs to create/watch pods and services
 - apiGroups: [""]
-  resources: ["pods", "services", "configmaps", "persistentvolumeclaims"]
-  verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 - apiGroups: [""]
   resources: ["pods/log", "pods/status"]
   verbs: ["get", "list", "watch"]

@@ -22,10 +22,12 @@ RUN cd /opt/spark/jars && \
     ls -lh iceberg*.jar hadoop*.jar aws*.jar bundle*.jar url*.jar
 
 # Fix permissions for OpenShift (uses random UIDs)
+# Per Spark K8s docs: Use UID 185 as the default unprivileged user
+# This user must include root group (GID 0) in supplementary groups for Spark executables
 RUN mkdir -p /tmp/spark-work /tmp/spark-events && \
     chmod -R 777 /tmp/spark-work /tmp/spark-events /opt/spark/work 2>/dev/null || true
 
-# Run as non-root user
-USER 1000
+# Run as non-root user (UID 185 per Spark K8s security guidelines)
+USER 185
 
 WORKDIR /opt/spark
