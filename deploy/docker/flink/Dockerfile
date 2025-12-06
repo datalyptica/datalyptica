@@ -34,8 +34,12 @@ RUN cd /opt/flink/lib && \
       https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-nessie/1.10.0/iceberg-nessie-1.10.0.jar && \
     curl -L -o bundle-2.28.11.jar \
       https://repo.maven.apache.org/maven2/org/projectnessie/nessie-client/2.28.11/nessie-client-2.28.11-bundle.jar && \
+    curl -L -o woodstox-core-6.5.1.jar \
+      https://repo.maven.apache.org/maven2/com/fasterxml/woodstox/woodstox-core/6.5.1/woodstox-core-6.5.1.jar && \
+    curl -L -o stax2-api-4.2.1.jar \
+      https://repo.maven.apache.org/maven2/org/codehaus/woodstox/stax2-api/4.2.1/stax2-api-4.2.1.jar && \
     echo "Flink connectors installed in /opt/flink/lib/" && \
-    ls -lh flink-sql*.jar iceberg*.jar hadoop*.jar aws*.jar bundle*.jar
+    ls -lh flink-sql*.jar iceberg*.jar hadoop*.jar aws*.jar bundle*.jar woodstox*.jar stax2*.jar
 
 # Download S3 filesystem plugin
 RUN mkdir -p /opt/flink/plugins/s3-fs-hadoop && \
