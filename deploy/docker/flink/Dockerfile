@@ -1,4 +1,4 @@
-FROM apache/flink:2.1.0-scala_2.12-java17
+FROM apache/flink:1.20.3-scala_2.12-java11
 
 USER root
 
@@ -6,46 +6,51 @@ USER root
 RUN apt-get update && \
     apt-get install -y python3 python3-pip python3-dev && \
     ln -sf /usr/bin/python3 /usr/bin/python && \
-    pip3 install --no-cache-dir apache-flink==2.1.0 && \
+    pip3 install --no-cache-dir apache-flink==1.20.3 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Download Flink connectors to /opt/flink/lib/ for automatic classpath
-# Per Flink docs: JARs in /opt/flink/lib/ are on classpath for all modes
-# Using Flink 2.1.0 with compatible versions:
-# - Kafka Connector 3.4.0 (certified for Flink 2.1+)
-# - Iceberg 1.10.0 (certified for Flink 2.0+)
-# - Hadoop 3.4.1 (required by Iceberg for S3/HDFS operations)
-# - Nessie 1.10.0 (Iceberg catalog for versioning)
+# Using Flink 1.20.3 LTS with proven stable versions
 RUN cd /opt/flink/lib && \
-    curl -L -o flink-sql-connector-kafka-3.4.0-2.0.jar \
-      https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.4.0-2.0/flink-sql-connector-kafka-3.4.0-2.0.jar && \
-    curl -L -o iceberg-flink-runtime-2.0-1.10.0.jar \
-      https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-flink-runtime-2.0/1.10.0/iceberg-flink-runtime-2.0-1.10.0.jar && \
-    curl -L -o hadoop-common-3.4.1.jar \
-      https://repo.maven.apache.org/maven2/org/apache/hadoop/hadoop-common/3.4.1/hadoop-common-3.4.1.jar && \
-    curl -L -o hadoop-aws-3.4.1.jar \
-      https://repo.maven.apache.org/maven2/org/apache/hadoop/hadoop-aws/3.4.1/hadoop-aws-3.4.1.jar && \
-    curl -L -o hadoop-hdfs-client-3.4.1.jar \
-      https://repo.maven.apache.org/maven2/org/apache/hadoop/hadoop-hdfs-client/3.4.1/hadoop-hdfs-client-3.4.1.jar && \
-    curl -L -o aws-java-sdk-bundle-1.12.772.jar \
-      https://repo.maven.apache.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.772/aws-java-sdk-bundle-1.12.772.jar && \
-    curl -L -o iceberg-nessie-1.10.0.jar \
-      https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-nessie/1.10.0/iceberg-nessie-1.10.0.jar && \
-    curl -L -o bundle-2.28.11.jar \
-      https://repo.maven.apache.org/maven2/org/projectnessie/nessie-client/2.28.11/nessie-client-2.28.11-bundle.jar && \
-    curl -L -o woodstox-core-6.5.1.jar \
-      https://repo.maven.apache.org/maven2/com/fasterxml/woodstox/woodstox-core/6.5.1/woodstox-core-6.5.1.jar && \
-    curl -L -o stax2-api-4.2.1.jar \
-      https://repo.maven.apache.org/maven2/org/codehaus/woodstox/stax2-api/4.2.1/stax2-api-4.2.1.jar && \
-    echo "Flink connectors installed in /opt/flink/lib/" && \
-    ls -lh flink-sql*.jar iceberg*.jar hadoop*.jar aws*.jar bundle*.jar woodstox*.jar stax2*.jar
+    curl -L -o flink-sql-connector-kafka-3.4.0-1.20.jar \
+      https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.4.0-1.20/flink-sql-connector-kafka-3.4.0-1.20.jar && \
+    curl -L -o iceberg-flink-runtime-1.20-1.7.1.jar \
+      https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-flink-runtime-1.20/1.7.1/iceberg-flink-runtime-1.20-1.7.1.jar && \
+    curl -L -o flink-sql-connector-hive-2.3.9_2.12-1.20.3.jar \
+      https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-hive-2.3.9_2.12/1.20.3/flink-sql-connector-hive-2.3.9_2.12-1.20.3.jar && \
+    curl -L -o hadoop-common-2.8.3.jar \
+      https://repo.maven.apache.org/maven2/org/apache/hadoop/hadoop-common/2.8.3/hadoop-common-2.8.3.jar && \
+    curl -L -o flink-shaded-hadoop-2-uber-2.8.3-10.0.jar \
+      https://repo.maven.apache.org/maven2/org/apache/flink/flink-shaded-hadoop-2-uber/2.8.3-10.0/flink-shaded-hadoop-2-uber-2.8.3-10.0.jar && \
+    curl -L -o bundle-2.29.39.jar \
+      https://repo.maven.apache.org/maven2/software/amazon/awssdk/bundle/2.29.39/bundle-2.29.39.jar && \
+    curl -L -o s3-2.29.39.jar \
+      https://repo.maven.apache.org/maven2/software/amazon/awssdk/s3/2.29.39/s3-2.29.39.jar && \
+    curl -L -o kafka_2.13-3.9.0.jar \
+      https://repo.maven.apache.org/maven2/org/apache/kafka/kafka_2.13/3.9.0/kafka_2.13-3.9.0.jar && \
+    curl -L -o kafka-clients-3.9.0.jar \
+      https://repo.maven.apache.org/maven2/org/apache/kafka/kafka-clients/3.9.0/kafka-clients-3.9.0.jar && \
+    curl -L -o flink-parquet-1.20.3.jar \
+      https://repo.maven.apache.org/maven2/org/apache/flink/flink-parquet/1.20.3/flink-parquet-1.20.3.jar && \
+    curl -L -o avro-1.11.3.jar \
+      https://repo.maven.apache.org/maven2/org/apache/avro/avro/1.11.3/avro-1.11.3.jar && \
+    curl -L -o parquet-hadoop-1.13.1.jar \
+      https://repo.maven.apache.org/maven2/org/apache/parquet/parquet-hadoop/1.13.1/parquet-hadoop-1.13.1.jar && \
+    curl -L -o parquet-avro-1.13.1.jar \
+      https://repo.maven.apache.org/maven2/org/apache/parquet/parquet-avro/1.13.1/parquet-avro-1.13.1.jar && \
+    curl -L -o parquet-column-1.13.1.jar \
+      https://repo.maven.apache.org/maven2/org/apache/parquet/parquet-column/1.13.1/parquet-column-1.13.1.jar && \
+    curl -L -o parquet-common-1.13.1.jar \
+      https://repo.maven.apache.org/maven2/org/apache/parquet/parquet-common/1.13.1/parquet-common-1.13.1.jar && \
+    echo "Flink connectors installed successfully" && \
+    ls -lh
 
 # Download S3 filesystem plugin
 RUN mkdir -p /opt/flink/plugins/s3-fs-hadoop && \
     cd /opt/flink/plugins/s3-fs-hadoop && \
-    curl -L -o flink-s3-fs-hadoop-2.1.0.jar \
-      https://repo.maven.apache.org/maven2/org/apache/flink/flink-s3-fs-hadoop/2.1.0/flink-s3-fs-hadoop-2.1.0.jar && \
+    curl -L -o flink-s3-fs-hadoop-1.20.3.jar \
+      https://repo.maven.apache.org/maven2/org/apache/flink/flink-s3-fs-hadoop/1.20.3/flink-s3-fs-hadoop-1.20.3.jar && \
     ls -lh
 
 # Fix permissions for OpenShift
