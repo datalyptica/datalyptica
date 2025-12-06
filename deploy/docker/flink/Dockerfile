@@ -10,14 +10,14 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Download Flink connectors during build (no compilation, just download)
+# Download Flink connectors to /opt/flink/lib/ for automatic classpath
+# Per Flink docs: JARs in /opt/flink/lib/ are on classpath for all modes
 # Using Flink 2.1 with compatible versions:
 # - Kafka Connector 3.4.0 (certified for Flink 2.1)
 # - Iceberg 1.10.0 (latest stable for Flink 2.0+)
 # - Hadoop 3.4.1 (required by Iceberg for S3/HDFS operations)
 # - Nessie 1.10.0 (Iceberg catalog for versioning)
-RUN mkdir -p /opt/flink/lib/connectors && \
-    cd /opt/flink/lib/connectors && \
+RUN cd /opt/flink/lib && \
     curl -L -o flink-sql-connector-kafka-3.4.0-2.1.jar \
       https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.4.0-2.1/flink-sql-connector-kafka-3.4.0-2.1.jar && \
     curl -L -o iceberg-flink-runtime-2.0-1.10.0.jar \
@@ -32,7 +32,8 @@ RUN mkdir -p /opt/flink/lib/connectors && \
       https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-nessie/1.10.0/iceberg-nessie-1.10.0.jar && \
     curl -L -o bundle-2.28.11.jar \
       https://repo.maven.apache.org/maven2/org/projectnessie/nessie-client/2.28.11/nessie-client-2.28.11-bundle.jar && \
-    ls -lh
+    echo "Flink connectors installed in /opt/flink/lib/" && \
+    ls -lh flink-sql*.jar iceberg*.jar hadoop*.jar aws*.jar bundle*.jar
 
 # Download S3 filesystem plugin
 RUN mkdir -p /opt/flink/plugins/s3-fs-hadoop && \

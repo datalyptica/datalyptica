@@ -1,0 +1,364 @@
+---
+# Flink ConfigMap for Kubernetes Native Mode
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flink-k8s-config
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: streaming
+    datalyptica.io/component: flink-k8s
+data:
+  flink-conf.yaml: |
+    # Kubernetes Native Mode Configuration
+    kubernetes.cluster-id: datalyptica-flink-native
+    kubernetes.namespace: datalyptica
+    kubernetes.service-account: flink
+    kubernetes.container.image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
+    kubernetes.container.image.pull-policy: IfNotPresent
+    
+    # JobManager Configuration
+    jobmanager.rpc.address: flink-jobmanager-native
+    jobmanager.rpc.port: 6123
+    jobmanager.memory.process.size: 2048m
+    jobmanager.memory.jvm-overhead.max: 512m
+    
+    # TaskManager Configuration - Dynamic allocation
+    taskmanager.memory.process.size: 2048m
+    taskmanager.memory.managed.fraction: 0.4
+    taskmanager.numberOfTaskSlots: 4
+    kubernetes.taskmanager.cpu: 2
+    kubernetes.taskmanager.memory: "2048Mi"
+    
+    # Dynamic Resource Allocation
+    kubernetes.jobmanager.cpu: 1
+    kubernetes.jobmanager.memory: "2048Mi"
+    
+    # Pod Labels for K8s native mode
+    kubernetes.jobmanager.labels: app.kubernetes.io/name:flink,app.kubernetes.io/component:jobmanager,datalyptica.io/tier:streaming
+    kubernetes.taskmanager.labels: app.kubernetes.io/name:flink,app.kubernetes.io/component:taskmanager,datalyptica.io/tier:streaming
+    
+    # Pod Annotations
+    kubernetes.jobmanager.annotations: prometheus.io/scrape:true,prometheus.io/port:9249
+    kubernetes.taskmanager.annotations: prometheus.io/scrape:true,prometheus.io/port:9249
+    
+    # State Backend Configuration
+    state.backend: rocksdb
+    state.checkpoints.dir: s3://lakehouse/flink/checkpoints
+    state.savepoints.dir: s3://lakehouse/flink/savepoints
+    state.backend.incremental: true
+    
+    # Execution Configuration
+    execution.checkpointing.interval: 30s
+    execution.checkpointing.mode: EXACTLY_ONCE
+    execution.checkpointing.min-pause: 10s
+    execution.checkpointing.max-concurrent-checkpoints: 1
+    execution.checkpointing.timeout: 10min
+    execution.checkpointing.tolerable-failed-checkpoints: 3
+    
+    # REST API Configuration
+    rest.port: 8081
+    rest.address: 0.0.0.0
+    rest.bind-address: 0.0.0.0
+    
+    # Web UI Configuration
+    web.submit.enable: true
+    web.cancel.enable: true
+    web.checkpoints.history: 10
+    
+    # Restart Strategy
+    restart-strategy: fixed-delay
+    restart-strategy.fixed-delay.attempts: 3
+    restart-strategy.fixed-delay.delay: 10s
+    
+    # Metrics Configuration
+    metrics.reporters: prom
+    metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+    metrics.reporter.prom.port: 9249
+    
+    # S3 Configuration for MinIO
+    s3.endpoint: http://minio.datalyptica.svc.cluster.local:9000
+    s3.path.style.access: true
+    s3.access-key: minio
+    s3.secret-key: IEOqpNmbTC9h8PvgW67r0slDkcVifZy4
+    
+    # Hadoop S3A Configuration
+    fs.s3a.endpoint: http://minio.datalyptica.svc.cluster.local:9000
+    fs.s3a.path.style.access: true
+    fs.s3a.access.key: minio
+    fs.s3a.secret.key: IEOqpNmbTC9h8PvgW67r0slDkcVifZy4
+    fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
+    
+    # Table Configuration
+    table.exec.resource.default-parallelism: 4
+    
+    # Iceberg Catalog Configuration
+    table.sql-dialect: default
+    
+  log4j-console.properties: |
+    rootLogger.level = INFO
+    rootLogger.appenderRef.console.ref = ConsoleAppender
+    
+    appender.console.name = ConsoleAppender
+    appender.console.type = CONSOLE
+    appender.console.layout.type = PatternLayout
+    appender.console.layout.pattern = %d{yyyy-MM-dd HH:mm:ss,SSS} %-5p %-60c %x - %m%n
+    
+    logger.akka.name = akka
+    logger.akka.level = INFO
+    
+    logger.kafka.name= org.apache.kafka
+    logger.kafka.level = INFO
+    
+    logger.hadoop.name = org.apache.hadoop
+    logger.hadoop.level = INFO
+    
+    logger.zookeeper.name = org.apache.zookeeper
+    logger.zookeeper.level = INFO
+
+---
+# ServiceAccount for Flink (JobManager & TaskManagers)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flink
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/part-of: datalyptica
+
+---
+# Role for Flink to manage TaskManager pods dynamically
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: flink-role
+  namespace: datalyptica
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch"]
+
+---
+# RoleBinding for Flink
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: flink-rolebinding
+  namespace: datalyptica
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: flink-role
+subjects:
+- kind: ServiceAccount
+  name: flink
+  namespace: datalyptica
+
+---
+# Flink JobManager Deployment (K8s Native Mode)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-jobmanager-native
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: streaming
+    datalyptica.io/component: jobmanager-native
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flink
+      app.kubernetes.io/component: jobmanager-native
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: flink
+        app.kubernetes.io/part-of: datalyptica
+        datalyptica.io/tier: streaming
+        app.kubernetes.io/component: jobmanager-native
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9249"
+    spec:
+      serviceAccountName: flink-operator
+      containers:
+      - name: jobmanager
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/bash"]
+        args: ["-c", "/opt/flink/bin/standalone-job.sh start-foreground --job-classname org.apache.flink.streaming.api.environment.StreamExecutionEnvironment"]
+        ports:
+        - name: rpc
+          containerPort: 6123
+        - name: ui
+          containerPort: 8081
+        - name: metrics
+          containerPort: 9249
+        env:
+        - name: FLINK_PROPERTIES
+          value: |
+            jobmanager.rpc.address: flink-jobmanager-native
+            blob.server.port: 6124
+            query.server.port: 6125
+        - name: AWS_ACCESS_KEY_ID
+          value: "minio"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "IEOqpNmbTC9h8PvgW67r0slDkcVifZy4"
+        - name: S3_ENDPOINT
+          value: "http://minio.datalyptica.svc.cluster.local:9000"
+        - name: S3_PATH_STYLE_ACCESS
+          value: "true"
+        volumeMounts:
+        - name: flink-config
+          mountPath: /opt/flink/conf/flink-conf.yaml
+          subPath: flink-conf.yaml
+        - name: flink-config
+          mountPath: /opt/flink/conf/log4j-console.properties
+          subPath: log4j-console.properties
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "2560Mi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /overview
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /overview
+            port: 8081
+          initialDelaySeconds: 20
+          periodSeconds: 5
+      volumes:
+      - name: flink-config
+        configMap:
+          name: flink-k8s-config
+
+---
+# Flink JobManager Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: flink-jobmanager-native
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/component: jobmanager-native
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/component: jobmanager-native
+  ports:
+  - name: rpc
+    port: 6123
+    targetPort: 6123
+    protocol: TCP
+  - name: ui
+    port: 8081
+    targetPort: 8081
+    protocol: TCP
+  - name: metrics
+    port: 9249
+    targetPort: 9249
+    protocol: TCP
+
+---
+# Flink JobManager REST Service (for external access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: flink-jobmanager-rest-native
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/component: jobmanager-native
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/component: jobmanager-native
+  ports:
+  - name: rest
+    port: 8081
+    targetPort: 8081
+    protocol: TCP
+
+---
+# Flink Submit Pod (for job submission)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-submit-native
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: streaming
+    datalyptica.io/component: flink-submit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flink
+      app.kubernetes.io/component: flink-submit
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: flink
+        app.kubernetes.io/part-of: datalyptica
+        datalyptica.io/tier: streaming
+        app.kubernetes.io/component: flink-submit
+    spec:
+      serviceAccountName: flink
+      containers:
+      - name: flink-submit
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/bash"]
+        args: ["-c", "while true; do sleep 30; done"]
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          value: "minio"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "IEOqpNmbTC9h8PvgW67r0slDkcVifZy4"
+        - name: FLINK_PROPERTIES
+          value: |
+            jobmanager.rpc.address: flink-jobmanager-native
+            rest.address: flink-jobmanager-native
+            rest.port: 8081
+        volumeMounts:
+        - name: flink-config
+          mountPath: /opt/flink/conf/flink-conf.yaml
+          subPath: flink-conf.yaml
+        - name: flink-config
+          mountPath: /opt/flink/conf/log4j-console.properties
+          subPath: log4j-console.properties
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+      volumes:
+      - name: flink-config
+        configMap:
+          name: flink-k8s-config
