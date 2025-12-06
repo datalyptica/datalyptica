@@ -26,6 +26,8 @@ RUN cd /opt/flink/lib && \
       https://repo.maven.apache.org/maven2/org/apache/hadoop/hadoop-common/3.4.1/hadoop-common-3.4.1.jar && \
     curl -L -o hadoop-aws-3.4.1.jar \
       https://repo.maven.apache.org/maven2/org/apache/hadoop/hadoop-aws/3.4.1/hadoop-aws-3.4.1.jar && \
+    curl -L -o hadoop-hdfs-client-3.4.1.jar \
+      https://repo.maven.apache.org/maven2/org/apache/hadoop/hadoop-hdfs-client/3.4.1/hadoop-hdfs-client-3.4.1.jar && \
     curl -L -o aws-java-sdk-bundle-1.12.772.jar \
       https://repo.maven.apache.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.772/aws-java-sdk-bundle-1.12.772.jar && \
     curl -L -o iceberg-nessie-1.10.0.jar \
