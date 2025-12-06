@@ -498,6 +498,7 @@ spec:
           value: |
             jobmanager.rpc.address: flink-jobmanager
             taskmanager.rpc.port: 6122
+            taskmanager.numberOfTaskSlots: 4
         volumeMounts:
         - name: flink-config
           mountPath: /opt/flink/conf/flink-conf.yaml
