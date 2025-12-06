@@ -21,6 +21,8 @@ RUN cd /opt/flink/lib && \
       https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-hive-2.3.9_2.12/1.20.3/flink-sql-connector-hive-2.3.9_2.12-1.20.3.jar && \
     curl -L -o hadoop-common-3.4.2.jar \
       https://repo.maven.apache.org/maven2/org/apache/hadoop/hadoop-common/3.4.2/hadoop-common-3.4.2.jar && \
+    curl -L -o hadoop-aws-3.4.2.jar \
+      https://repo.maven.apache.org/maven2/org/apache/hadoop/hadoop-aws/3.4.2/hadoop-aws-3.4.2.jar && \
     curl -L -o flink-shaded-hadoop-3-uber-3.4.2-10.0.jar \
       https://repo.maven.apache.org/maven2/org/apache/flink/flink-shaded-hadoop-3-uber/3.4.2-10.0/flink-shaded-hadoop-3-uber-3.4.2-10.0.jar && \
     curl -L -o bundle-2.29.39.jar \
