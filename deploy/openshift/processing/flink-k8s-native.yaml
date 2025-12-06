@@ -16,8 +16,8 @@ data:
     kubernetes.cluster-id: datalyptica-flink-native
     kubernetes.namespace: datalyptica
     kubernetes.service-account: flink
-    kubernetes.container.image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
-    kubernetes.container.image.pull-policy: IfNotPresent
+    kubernetes.container.image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:1.20.0
+    kubernetes.container.image.pull-policy: Always
     
     # JobManager Configuration
     jobmanager.rpc.address: flink-jobmanager-native
