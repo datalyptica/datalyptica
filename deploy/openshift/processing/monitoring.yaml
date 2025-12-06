@@ -1,0 +1,204 @@
+---
+# ==============================================================================
+# ServiceMonitor for Spark Components (Prometheus Operator)
+# ==============================================================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: spark-monitoring
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: spark
+  endpoints:
+  - port: spark-ui
+    interval: 30s
+    path: /metrics/json
+    scheme: http
+  namespaceSelector:
+    matchNames:
+    - datalyptica
+
+---
+# ==============================================================================
+# ServiceMonitor for Flink Components (Prometheus Operator)
+# ==============================================================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: flink-monitoring
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: streaming
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flink
+  endpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics
+    scheme: http
+  namespaceSelector:
+    matchNames:
+    - datalyptica
+
+---
+# ==============================================================================
+# PodMonitor for Spark Driver and Executor Pods
+# ==============================================================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: spark-pods
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: spark
+    app.kubernetes.io/part-of: datalyptica
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: spark
+  podMetricsEndpoints:
+  - port: spark-ui
+    interval: 30s
+    path: /metrics/json
+  namespaceSelector:
+    matchNames:
+    - datalyptica
+
+---
+# ==============================================================================
+# PodMonitor for Flink JobManager and TaskManager Pods
+# ==============================================================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: flink-pods
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/name: flink
+    app.kubernetes.io/part-of: datalyptica
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flink
+  podMetricsEndpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics
+  namespaceSelector:
+    matchNames:
+    - datalyptica
+
+---
+# ==============================================================================
+# PrometheusRule: Alerting Rules for Processing Layer
+# ==============================================================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: processing-layer-alerts
+  namespace: datalyptica
+  labels:
+    app.kubernetes.io/part-of: datalyptica
+    datalyptica.io/tier: processing
+spec:
+  groups:
+  - name: spark-alerts
+    interval: 30s
+    rules:
+    - alert: SparkSubmitPodDown
+      expr: up{job="spark-submit-svc"} == 0
+      for: 5m
+      labels:
+        severity: warning
+        component: spark
+      annotations:
+        summary: "Spark Submit Pod is down"
+        description: "Spark submit pod has been down for more than 5 minutes"
+    
+    - alert: SparkHistoryServerDown
+      expr: up{job="spark-history-svc"} == 0
+      for: 5m
+      labels:
+        severity: warning
+        component: spark
+      annotations:
+        summary: "Spark History Server is down"
+        description: "Spark History Server has been down for more than 5 minutes"
+    
+    - alert: SparkJobFailed
+      expr: increase(spark_job_failed_total[5m]) > 0
+      for: 1m
+      labels:
+        severity: critical
+        component: spark
+      annotations:
+        summary: "Spark job has failed"
+        description: "One or more Spark jobs have failed in the last 5 minutes"
+  
+  - name: flink-alerts
+    interval: 30s
+    rules:
+    - alert: FlinkJobManagerDown
+      expr: up{job="flink-jobmanager"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: flink
+      annotations:
+        summary: "Flink JobManager is down"
+        description: "Flink JobManager has been down for more than 2 minutes"
+    
+    - alert: FlinkTaskManagerDown
+      expr: count(up{job="flink-taskmanager"} == 1) < 1
+      for: 5m
+      labels:
+        severity: warning
+        component: flink
+      annotations:
+        summary: "No Flink TaskManagers available"
+        description: "No Flink TaskManagers are running"
+    
+    - alert: FlinkCheckpointFailureRate
+      expr: rate(flink_jobmanager_job_numFailedCheckpoints[5m]) > 0.1
+      for: 5m
+      labels:
+        severity: warning
+        component: flink
+      annotations:
+        summary: "High checkpoint failure rate"
+        description: "Flink checkpoint failure rate is above 10%"
+    
+    - alert: FlinkJobRestartingFrequently
+      expr: rate(flink_jobmanager_job_numRestarts[15m]) > 0.2
+      for: 5m
+      labels:
+        severity: warning
+        component: flink
+      annotations:
+        summary: "Flink job restarting frequently"
+        description: "Flink job is restarting more than once per 5 minutes"
+    
+    - alert: FlinkTaskManagerMemoryHigh
+      expr: flink_taskmanager_Status_JVM_Memory_Heap_Used / flink_taskmanager_Status_JVM_Memory_Heap_Max > 0.85
+      for: 5m
+      labels:
+        severity: warning
+        component: flink
+      annotations:
+        summary: "Flink TaskManager memory usage high"
+        description: "TaskManager {{ $labels.pod }} heap memory usage is above 85%"

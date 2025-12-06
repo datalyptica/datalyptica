@@ -16,7 +16,7 @@ defaultAddCapabilities: []
 fsGroup:
   type: MustRunAs
   ranges:
-    - min: 1000
+    - min: 185
       max: 65535
 groups: []
 priority: 10
@@ -28,7 +28,7 @@ requiredDropCapabilities:
   - SETGID
 runAsUser:
   type: MustRunAsRange
-  uidRangeMin: 1000
+  uidRangeMin: 185
   uidRangeMax: 65535
 seLinuxContext:
   type: MustRunAs
