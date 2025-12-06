@@ -40,7 +40,7 @@ data:
     kubernetes.cluster-id: datalyptica-flink
     kubernetes.namespace: datalyptica
     kubernetes.service-account: flink
-    kubernetes.container.image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:1.20.0
+    kubernetes.container.image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
     kubernetes.container.image.pull-policy: Always
     
     # JobManager Configuration
@@ -344,7 +344,7 @@ spec:
         fsGroup: 1000
       containers:
       - name: jobmanager
-        image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:1.20.0
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
         imagePullPolicy: Always
         command: ["/bin/bash", "-c"]
         args:
@@ -468,7 +468,7 @@ spec:
         fsGroup: 1000
       containers:
       - name: taskmanager
-        image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:1.20.0
+        image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
         imagePullPolicy: Always
         command: ["/bin/bash", "-c"]
         args:
