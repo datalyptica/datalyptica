@@ -21,8 +21,8 @@ data:
     spark.kubernetes.container.image image-registry.openshift-image-registry.svc:5000/datalyptica/spark-iceberg:3.5.7
     spark.kubernetes.container.image.pullPolicy IfNotPresent
     
-    # JAR file locations - using local:// scheme for files already in container image
-    spark.jars                       local:///opt/spark/jars/iceberg/iceberg-spark-runtime-3.5_2.12-1.10.0.jar,local:///opt/spark/jars/iceberg/iceberg-nessie-1.10.0.jar,local:///opt/spark/jars/iceberg/bundle-2.28.11.jar,local:///opt/spark/jars/iceberg/url-connection-client-2.28.11.jar,local:///opt/spark/jars/iceberg/aws-java-sdk-bundle-1.12.772.jar,local:///opt/spark/jars/iceberg/hadoop-aws-3.4.1.jar
+    # JAR Dependencies: Iceberg JARs are symlinked to /opt/spark/jars/ in the image
+    # No need for explicit spark.jars - they're automatically on the classpath
     
     # Driver Configuration
     spark.driver.host                _DRIVER_HOST_PLACEHOLDER_
