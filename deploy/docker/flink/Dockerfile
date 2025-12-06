@@ -2,7 +2,7 @@ FROM apache/flink:2.1.0-scala_2.12-java17
 
 USER root
 
-# Install Python 3 and PyFlink dependencies
+# Install Python 3 and PyFlink dependencies (optional for Python jobs)
 RUN apt-get update && \
     apt-get install -y python3 python3-pip python3-dev && \
     ln -sf /usr/bin/python3 /usr/bin/python && \

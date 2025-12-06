@@ -44,7 +44,7 @@ data:
     kubernetes.container.image.pull-policy: Always
     
     # JobManager Configuration
-    jobmanager.rpc.address: flink-jobmanager
+    jobmanager.rpc.address: flink-jobmanager.datalyptica.svc.cluster.local
     jobmanager.rpc.port: 6123
     jobmanager.bind-host: 0.0.0.0
     jobmanager.memory.process.size: 2048m
@@ -55,7 +55,6 @@ data:
     
     # TaskManager Configuration
     taskmanager.bind-host: 0.0.0.0
-    taskmanager.host: 0.0.0.0
     taskmanager.rpc.port: 6122
     taskmanager.memory.process.size: 4096m
     taskmanager.memory.flink.size: 3072m
@@ -346,13 +345,8 @@ spec:
       - name: jobmanager
         image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
         imagePullPolicy: Always
-        command: ["/bin/bash", "-c"]
-        args:
-        - |
-          set -e
-          echo "Starting Flink JobManager..."
-          echo "Flink version: $(flink --version)"
-          $FLINK_HOME/bin/jobmanager.sh start-foreground
+        command: ["/docker-entrypoint.sh"]
+        args: ["jobmanager"]
         ports:
         - name: rpc
           containerPort: 6123
@@ -470,12 +464,8 @@ spec:
       - name: taskmanager
         image: image-registry.openshift-image-registry.svc:5000/datalyptica/flink-connectors:2.1.0
         imagePullPolicy: Always
-        command: ["/bin/bash", "-c"]
-        args:
-        - |
-          set -e
-          echo "Starting Flink TaskManager..."
-          $FLINK_HOME/bin/taskmanager.sh start-foreground
+        command: ["/docker-entrypoint.sh"]
+        args: ["taskmanager"]
         ports:
         - name: data
           containerPort: 6121
@@ -503,14 +493,11 @@ spec:
           value: "http://minio.datalyptica.svc.cluster.local:9000"
         - name: S3_PATH_STYLE_ACCESS
           value: "true"
-        # Flink Configuration
+        # Flink Configuration (MUST override config file)
         - name: FLINK_PROPERTIES
           value: |
             jobmanager.rpc.address: flink-jobmanager
             taskmanager.rpc.port: 6122
-        # JVM Options
-        - name: FLINK_TM_HEAP
-          value: "3072m"
         volumeMounts:
         - name: flink-config
           mountPath: /opt/flink/conf/flink-conf.yaml
